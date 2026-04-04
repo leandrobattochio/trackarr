@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# TrackArr Frontend
 
-TODO: Document your project here
+Frontend application for the TrackArr dashboard.
