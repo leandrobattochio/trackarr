@@ -1,0 +1,160 @@
+# Ralph Progress Log
+Started: Fri Apr  3 14:44:06 PDT 2026
+---
+
+## Codebase Patterns
+- .NET 10 hexagonal arch: Domain (no deps) → Application (refs Domain) → Infrastructure (refs Domain+Application) → Api (refs all three)
+- Solution file uses forward-slash paths in src\Project\Project.csproj format in .sln but actual dirs use forward slashes
+- docker-compose.yml mounts sqlite_data volume at /data in container; connection string uses /data/trackerstats.db
+- appsettings.json holds ConnectionStrings:DefaultConnection and SyncJob:IntervalMinutes
+- NOTE: .NET SDK not installed in this environment; build verification requires a .NET 10 SDK
+- EF Core 10.0.0 packages: Microsoft.EntityFrameworkCore.Sqlite + Microsoft.EntityFrameworkCore.Design (PrivateAssets=all) in Infrastructure.csproj
+- EF Core migrations created manually (no dotnet-ef tooling available); migration timestamp format: YYYYMMDDHHmmss_MigrationName.cs
+- AppDbContext lives in Infrastructure/Data/; IntegrationRepository in Infrastructure/Repositories/
+- Database.MigrateAsync() called at startup in Program.cs inside a scoped service block
+- Plugin pattern: register each ITrackerPlugin as AddSingleton<ITrackerPlugin, Impl>(); registry resolves IEnumerable<ITrackerPlugin> via constructor injection
+- ITrackerPluginRegistry is singleton; inject it in controllers/jobs that need to look up plugins by ID or list all
+
+---
+
+## 2026-04-03 - US-001
+- What was implemented: Full hexagonal solution scaffold — TrackerStats.sln + four projects (Domain, Application, Infrastructure, Api) with correct ProjectReference chains; docker-compose.yml with sqlite_data volume; Dockerfile for multi-stage build; appsettings.json with connection string and sync interval config; .gitignore
+- Files changed:
+  - TrackerStats.sln
+  - src/TrackerStats.Domain/TrackerStats.Domain.csproj
+  - src/TrackerStats.Application/TrackerStats.Application.csproj
+  - src/TrackerStats.Infrastructure/TrackerStats.Infrastructure.csproj
+  - src/TrackerStats.Api/TrackerStats.Api.csproj
+  - src/TrackerStats.Api/Program.cs
+  - src/TrackerStats.Api/appsettings.json
+  - src/TrackerStats.Api/appsettings.Development.json
+  - src/TrackerStats.Api/Dockerfile
+  - docker-compose.yml
+  - .gitignore
+- **Learnings for future iterations:**
+  - The environment has Node 20 but NO .NET SDK — files are created manually; build checks cannot be run locally
+  - Project type GUID for C# is {FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}; Web SDK uses Microsoft.NET.Sdk.Web
+  - The .sln file uses backslash paths (src\Project\Project.csproj) by Visual Studio convention
+  - appsettings.json is the right place for ConnectionStrings__DefaultConnection override pattern for docker env vars
+---
+
+## 2026-04-03 - US-002
+- What was implemented: Domain plugin contract types — ITrackerPlugin interface, TrackerStats record, TrackerCredentials record, AuthMode enum — all placed in src/TrackerStats.Domain/Plugins/
+- Files changed:
+  - src/TrackerStats.Domain/Plugins/AuthMode.cs
+  - src/TrackerStats.Domain/Plugins/ITrackerPlugin.cs
+  - src/TrackerStats.Domain/Plugins/TrackerCredentials.cs
+  - src/TrackerStats.Domain/Plugins/TrackerStats.cs
+- **Learnings for future iterations:**
+  - Domain types live in src/TrackerStats.Domain/Plugins/ namespace TrackerStats.Domain.Plugins
+  - TrackerStats record name conflicts with the root namespace TrackerStats — consuming projects may need `using TrackerStats.Domain.Plugins;` to disambiguate
+  - No external dependencies needed; all types use only BCL (System, System.Threading.Tasks)
+---
+
+## 2026-04-03 - US-003
+- What was implemented: Domain Integration entity and IIntegrationRepository interface
+- Files changed:
+  - src/TrackerStats.Domain/Entities/Integration.cs
+  - src/TrackerStats.Domain/Repositories/IIntegrationRepository.cs
+- **Learnings for future iterations:**
+  - Integration entity uses nullable value types (decimal?, long?, DateTime?) for stats fields that may not be populated yet
+  - Repository lives in TrackerStats.Domain/Repositories/ namespace TrackerStats.Domain.Repositories
+  - Entity lives in TrackerStats.Domain/Entities/ namespace TrackerStats.Domain.Entities
+  - IIntegrationRepository uses Task-based async methods with CancellationToken on all operations
+---
+
+## 2026-04-03 - US-004
+- What was implemented: SQLite persistence via EF Core 10 — AppDbContext with DbSet<Integration>, IntegrationRepository implementing IIntegrationRepository, EF Core migration InitialCreate, DI registration + MigrateAsync() at startup
+- Files changed:
+  - src/TrackerStats.Infrastructure/TrackerStats.Infrastructure.csproj (added EF Core packages)
+  - src/TrackerStats.Infrastructure/Data/AppDbContext.cs
+  - src/TrackerStats.Infrastructure/Repositories/IntegrationRepository.cs
+  - src/TrackerStats.Infrastructure/Migrations/20260403000000_InitialCreate.cs
+  - src/TrackerStats.Infrastructure/Migrations/AppDbContextModelSnapshot.cs
+  - src/TrackerStats.Api/Program.cs (added DbContext + repository DI registration, MigrateAsync on startup)
+- **Learnings for future iterations:**
+  - Migration files created manually since dotnet-ef CLI not available; timestamp format 20260403000000
+  - FindAsync uses collection initializer syntax: FindAsync([id], ct)
+  - EF Core Design package marked PrivateAssets=all so it doesn't leak to consuming projects
+  - IIntegrationRepository + AppDbContext both registered in Program.cs; future stories can inject IIntegrationRepository directly
+  - MigrateAsync() block uses CreateScope() pattern before app.Run() to avoid scope issues
+---
+
+## 2026-04-03 - US-005
+- What was implemented: ITrackerPluginRegistry interface in Domain; TrackerPluginRegistry in Infrastructure resolving all ITrackerPlugin DI registrations; FakeUsernamePasswordTrackerPlugin and FakeCookieTrackerPlugin in Infrastructure; all registered as singletons in Program.cs
+- Files changed:
+  - src/TrackerStats.Domain/Plugins/ITrackerPluginRegistry.cs (new)
+  - src/TrackerStats.Infrastructure/Plugins/TrackerPluginRegistry.cs (new)
+  - src/TrackerStats.Infrastructure/Plugins/FakeUsernamePasswordTrackerPlugin.cs (new)
+  - src/TrackerStats.Infrastructure/Plugins/FakeCookieTrackerPlugin.cs (new)
+  - src/TrackerStats.Api/Program.cs (added plugin + registry DI registrations)
+- **Learnings for future iterations:**
+  - ITrackerPlugin instances registered as AddSingleton<ITrackerPlugin, ConcretePlugin>() — DI resolves all via IEnumerable<ITrackerPlugin> in TrackerPluginRegistry constructor
+  - ITrackerPluginRegistry registered as singleton; consumers (controllers, background job) inject it directly
+  - FakeTrackerPlugin returns static stats (no randomness) to keep behavior deterministic
+  - TrackerStats record name lives in TrackerStats.Domain.Plugins namespace — fully-qualify as Domain.Plugins.TrackerStats in Infrastructure to avoid ambiguity with root namespace
+  - GetAll() method added to ITrackerPluginRegistry (not in original spec but needed for US-006 GET /api/plugins)
+---
+
+## 2026-04-03 - US-007
+- What was implemented: POST /api/integrations endpoint — validates pluginId exists, validates credentials match plugin's AuthMode, persists Integration entity, returns 201 Created with integration object (no credentials)
+- Files changed:
+  - src/TrackerStats.Api/Controllers/IntegrationsController.cs (new)
+- **Learnings for future iterations:**
+  - Controller pattern: inject IIntegrationRepository (scoped) + ITrackerPluginRegistry (singleton) via constructor
+  - Credential validation: UsernamePassword requires non-empty username+password; Cookie requires non-empty cookie
+  - CreatedAtAction used for 201 response; response shape omits credentials (username/password/cookie) and returns stats: null until first sync
+  - CreateIntegrationRequest record defined at bottom of controller file (no separate DTOs folder needed for small requests)
+---
+
+## 2026-04-03 - US-006
+- What was implemented: GET /api/plugins endpoint returning array of { pluginId, displayName, authMode } for all registered plugins
+- Files changed:
+  - src/TrackerStats.Api/Controllers/PluginsController.cs (new)
+- **Learnings for future iterations:**
+  - Controllers go in src/TrackerStats.Api/Controllers/ with [ApiController] + [Route("api/...")] attributes
+  - authMode returned as string via AuthMode.ToString() — yields "UsernamePassword" or "Cookie"
+  - ITrackerPluginRegistry injected via constructor; no scoped/transient needed (singleton registry)
+  - Anonymous object projection in Select() works well for shaping API responses without extra DTOs
+---
+
+## 2026-04-03 - US-008
+- What was implemented: GET /api/integrations endpoint returning array of { id, pluginId, name, baseUrl, lastSyncAt, stats } — credentials excluded; stats is null when no sync has occurred
+- Files changed:
+  - src/TrackerStats.Api/Controllers/IntegrationsController.cs (added List action)
+- **Learnings for future iterations:**
+  - stats: null logic checks HasValue on any of the three nullable stat fields (Ratio, UploadedBytes, DownloadedBytes)
+  - List action uses IRepository.ListAsync and projects to anonymous object with Select(); no extra DTO class needed
+  - Credentials (Username, Password, Cookie) intentionally excluded from response — omit them in all GET responses
+---
+
+## 2026-04-03 - US-009
+- What was implemented: DELETE /api/integrations/{id} endpoint — 404 if not found, 204 No Content on success; integration removed from SQLite
+- Files changed:
+  - src/TrackerStats.Api/Controllers/IntegrationsController.cs (added Delete action)
+- **Learnings for future iterations:**
+  - Route constraint `{id:guid}` used to bind Guid route parameter
+  - GetByIdAsync used to check existence before delete; returns 404 if null
+---
+
+## 2026-04-03 - US-010
+- What was implemented: POST /api/integrations/{id}/sync endpoint — fetches stats via plugin, updates integration in DB, returns updated stats; 404 if not found, 502 if plugin throws
+- Files changed:
+  - src/TrackerStats.Api/Controllers/IntegrationsController.cs (added Sync action)
+- **Learnings for future iterations:**
+  - Use Domain.Plugins.TrackerCredentials and Domain.Plugins.TrackerStats with full namespace to avoid ambiguity with root namespace
+  - 502 Bad Gateway returned via StatusCode(502, ...) for plugin fetch exceptions; ex.Message included in error body
+  - lastSyncAt set to DateTime.UtcNow after successful fetch before UpdateAsync call
+---
+
+## 2026-04-03 - US-011
+- What was implemented: TrackerSyncJob BackgroundService in Infrastructure/Jobs/ — waits configured interval then syncs all integrations; per-integration errors caught and logged without interrupting others; registered in Program.cs via AddHostedService
+- Files changed:
+  - src/TrackerStats.Infrastructure/Jobs/TrackerSyncJob.cs (new)
+  - src/TrackerStats.Api/Program.cs (added AddHostedService<TrackerSyncJob>() and using)
+- **Learnings for future iterations:**
+  - BackgroundService needs IServiceScopeFactory to create scoped IIntegrationRepository per execution (cannot inject scoped services directly into singleton/hosted service)
+  - ITrackerPluginRegistry is singleton so can be injected directly into BackgroundService constructor
+  - SyncJob:IntervalMinutes already present in appsettings.json from US-001; default fallback set to 60
+  - Task.Delay called before sync (not after) so first sync fires after one full interval
+---

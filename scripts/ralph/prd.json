@@ -1,0 +1,177 @@
+{
+  "project": "TrackerStats",
+  "branchName": "ralph/tracker-stats-backend",
+  "description": "Tracker Stats Backend - .NET 10 hexagonal API to manage torrent tracker integrations, exposing REST endpoints and auto-syncing stats hourly via a background job",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Set up solution with hexagonal architecture project structure",
+      "description": "As a developer, I want the codebase organized in hexagonal architecture so that domain logic is decoupled from infrastructure and delivery.",
+      "acceptanceCriteria": [
+        "Solution file TrackerStats.sln exists at the root",
+        "Project TrackerStats.Domain exists with no external dependencies (no EF Core, no ASP.NET)",
+        "Project TrackerStats.Application exists and references only TrackerStats.Domain",
+        "Project TrackerStats.Infrastructure exists and references Domain and Application",
+        "Project TrackerStats.Api exists and references all three projects",
+        "docker-compose.yml exists at root with the API service and a volume for the SQLite .db file",
+        "Typecheck/build passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Define domain plugin contract types",
+      "description": "As a developer, I want a well-defined plugin interface so that any tracker can be integrated without changing the core system.",
+      "acceptanceCriteria": [
+        "Interface ITrackerPlugin exists in TrackerStats.Domain with: string PluginId, string DisplayName, AuthMode AuthMode, Task<TrackerStats> FetchStatsAsync(TrackerCredentials credentials, CancellationToken ct)",
+        "Record TrackerStats exists in TrackerStats.Domain with: decimal Ratio, long UploadedBytes, long DownloadedBytes",
+        "Record TrackerCredentials exists in TrackerStats.Domain with: string BaseUrl, string? Username, string? Password, string? Cookie",
+        "Enum AuthMode exists in TrackerStats.Domain with values UsernamePassword and Cookie",
+        "None of these types reference any infrastructure or framework libraries",
+        "Typecheck/build passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Define domain integration entity and repository interface",
+      "description": "As a developer, I want a domain entity and repository interface for integrations so that use cases can persist and retrieve tracker integrations.",
+      "acceptanceCriteria": [
+        "Class/record Integration exists in TrackerStats.Domain/Entities with: Guid Id, string PluginId, string Name, string BaseUrl, string? Username, string? Password, string? Cookie, DateTime? LastSyncAt, decimal? Ratio, long? UploadedBytes, long? DownloadedBytes",
+        "Interface IIntegrationRepository exists in TrackerStats.Domain/Repositories with methods: Task<Integration> AddAsync(Integration integration, CancellationToken ct), Task<IReadOnlyList<Integration>> ListAsync(CancellationToken ct), Task<Integration?> GetByIdAsync(Guid id, CancellationToken ct), Task UpdateAsync(Integration integration, CancellationToken ct), Task DeleteAsync(Guid id, CancellationToken ct)",
+        "Typecheck/build passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Implement SQLite persistence with EF Core",
+      "description": "As a developer, I want data stored in SQLite so that the system is easy to run locally without external dependencies.",
+      "acceptanceCriteria": [
+        "TrackerStats.Infrastructure references EF Core with SQLite provider",
+        "AppDbContext exists with DbSet<Integration> Integrations",
+        "IntegrationRepository implements IIntegrationRepository using AppDbContext",
+        "EF Core migrations are generated and applied automatically on startup via Database.MigrateAsync()",
+        "SQLite .db file path is configurable via appsettings.json (key: ConnectionStrings:DefaultConnection or similar)",
+        "Typecheck/build passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Implement plugin registry with FakeTrackerPlugin",
+      "description": "As a developer, I want plugins to be registered via dependency injection so that the system discovers them automatically at startup.",
+      "acceptanceCriteria": [
+        "Interface ITrackerPluginRegistry exists in TrackerStats.Domain with method ITrackerPlugin? GetById(string pluginId)",
+        "TrackerPluginRegistry in TrackerStats.Infrastructure implements ITrackerPluginRegistry by resolving all ITrackerPlugin instances from DI",
+        "GetById returns null when pluginId is not found",
+        "FakeTrackerPlugin exists in TrackerStats.Infrastructure implementing ITrackerPlugin, returning static or random stats",
+        "FakeTrackerPlugin implements one AuthMode.UsernamePassword variant and one AuthMode.Cookie variant (two fake plugins registered)",
+        "All plugins and registry are registered in the DI container in Program.cs",
+        "Typecheck/build passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Implement GET /api/plugins endpoint",
+      "description": "As a frontend developer, I want to list available tracker plugins so that the user can choose which tracker to add.",
+      "acceptanceCriteria": [
+        "GET /api/plugins returns 200 OK with array of { pluginId, displayName, authMode }",
+        "authMode is returned as string: 'UsernamePassword' or 'Cookie'",
+        "The list reflects exactly the plugins registered in DI",
+        "Typecheck/build passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Implement POST /api/integrations endpoint",
+      "description": "As a user, I want to add a new tracker integration so that the system can start collecting my stats.",
+      "acceptanceCriteria": [
+        "POST /api/integrations accepts body: { pluginId, name, baseUrl, username?, password?, cookie? }",
+        "Returns 201 Created with the created integration object including generated id",
+        "Returns 400 Bad Request if pluginId does not exist in the registry",
+        "Returns 400 Bad Request if required credential fields for the plugin's authMode are missing (UsernamePassword requires username+password; Cookie requires cookie)",
+        "Integration is persisted in SQLite",
+        "Typecheck/build passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Implement GET /api/integrations endpoint",
+      "description": "As a frontend developer, I want to list all integrations so that the dashboard can display each tracker's info.",
+      "acceptanceCriteria": [
+        "GET /api/integrations returns 200 OK with array of objects: { id, pluginId, name, baseUrl, lastSyncAt, stats: { ratio, uploadedBytes, downloadedBytes } | null }",
+        "Credentials (username, password, cookie) are NOT included in the response",
+        "Integrations without synced stats return with stats: null",
+        "Typecheck/build passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Implement DELETE /api/integrations/{id} endpoint",
+      "description": "As a user, I want to remove a tracker integration so that it no longer appears in my dashboard.",
+      "acceptanceCriteria": [
+        "DELETE /api/integrations/{id} returns 204 No Content on success",
+        "Returns 404 Not Found if the integration does not exist",
+        "The integration is removed from SQLite",
+        "Typecheck/build passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Implement POST /api/integrations/{id}/sync endpoint",
+      "description": "As a user, I want to trigger a sync for a specific tracker so that I can refresh its data on demand.",
+      "acceptanceCriteria": [
+        "POST /api/integrations/{id}/sync triggers FetchStatsAsync for that integration",
+        "Returns 200 OK with updated stats after sync",
+        "Returns 404 Not Found if the integration does not exist",
+        "Returns 502 Bad Gateway if the plugin throws an exception when fetching data (with error message)",
+        "lastSyncAt is updated in the database after a successful sync",
+        "Typecheck/build passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Implement background sync job (every 1 hour)",
+      "description": "As a user, I want my tracker stats to be refreshed automatically every hour so that the dashboard always shows up-to-date data.",
+      "acceptanceCriteria": [
+        "A BackgroundService (TrackerSyncJob) exists in TrackerStats.Infrastructure that runs on a configurable interval",
+        "Default interval is 60 minutes, configurable via appsettings.json (e.g. SyncJob:IntervalMinutes)",
+        "Each execution iterates all registered integrations and calls FetchStatsAsync for each",
+        "Errors on individual trackers are caught and logged; they do not interrupt sync of remaining trackers",
+        "Stats and lastSyncAt are updated in the database after each successful sync",
+        "BackgroundService is registered in Program.cs",
+        "Typecheck/build passes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}

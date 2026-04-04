@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TrackerStats.Domain\TrackerStats.Domain.csproj" />
+    <ProjectReference Include="..\TrackerStats.Application\TrackerStats.Application.csproj" />
+    <ProjectReference Include="..\TrackerStats.Infrastructure\TrackerStats.Infrastructure.csproj" />
+    <ProjectReference Include="..\Plugins\TrackerStats.Plugin.Core.Unit3D\TrackerStats.Plugin.Core.Unit3D.csproj" />
+    <ProjectReference Include="..\Plugins\TrackerStats.Plugin.BjShare\TrackerStats.Plugin.BjShare.csproj" />
+    <ProjectReference Include="..\Plugins\TrackerStats.Plugin.Fearnopeer\TrackerStats.Plugin.Fearnopeer.csproj" />
+    <ProjectReference Include="..\Plugins\TrackerStats.Plugin.Seedpool\TrackerStats.Plugin.Seedpool.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
+    <PackageReference Include="Hangfire.Storage.SQLite" Version="0.4.3" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Scalar.AspNetCore" Version="2.13.19" />
+  </ItemGroup>
+
+</Project>

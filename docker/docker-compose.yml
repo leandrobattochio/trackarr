@@ -1,0 +1,22 @@
+services:
+  trackarr:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
+    container_name: trackarr
+    ports:
+      - "3000:3000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Database__Directory: /data
+      Hangfire__Directory: /data
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
+      TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
+    volumes:
+      - trackarr_data:/data
+    restart: unless-stopped
+
+volumes:
+  trackarr_data:

@@ -1,0 +1,10 @@
+.git
+.claude
+.idea
+frontend/node_modules
+frontend/dist
+backend/**/bin
+backend/**/obj
+backend/src/TrackerStats.Api/*.db
+backend/src/TrackerStats.Api/*.db-shm
+backend/src/TrackerStats.Api/*.db-wal

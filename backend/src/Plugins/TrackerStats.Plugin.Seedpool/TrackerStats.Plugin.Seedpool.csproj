@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\TrackerStats.Domain\TrackerStats.Domain.csproj" />
+    <ProjectReference Include="..\TrackerStats.Plugin.Core.Unit3D\TrackerStats.Plugin.Core.Unit3D.csproj" />
+  </ItemGroup>
+
+</Project>
