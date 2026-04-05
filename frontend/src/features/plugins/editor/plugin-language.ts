@@ -256,8 +256,7 @@ export function installPluginYamlDiagnostics(
   let timeoutId: number | null = null;
 
   const runValidation = () => {
-    const result = validatePluginYamlDocument(model.getValue(), getOptions());
-    monaco.editor.setModelMarkers(model, "trackarr-plugin-semantic", result.markers);
+    syncPluginYamlDiagnostics(monaco, model, getOptions());
   };
 
   const queueValidation = () => {
@@ -282,6 +281,16 @@ export function installPluginYamlDiagnostics(
     subscription.dispose();
     monaco.editor.setModelMarkers(model, "trackarr-plugin-semantic", []);
   };
+}
+
+export function syncPluginYamlDiagnostics(
+  monaco: typeof Monaco,
+  model: Monaco.editor.ITextModel,
+  options: PluginYamlValidationOptions | (() => PluginYamlValidationOptions),
+) {
+  const resolvedOptions = typeof options === "function" ? options() : options;
+  const result = validatePluginYamlDocument(model.getValue(), resolvedOptions);
+  monaco.editor.setModelMarkers(model, "trackarr-plugin-semantic", result.markers);
 }
 
 export function validatePluginYamlDocument(

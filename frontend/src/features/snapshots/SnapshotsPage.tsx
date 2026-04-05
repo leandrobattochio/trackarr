@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ArrowLeft, ChartLine, Loader2 } from "lucide-react";
@@ -120,6 +120,7 @@ export default function SnapshotsPage() {
     to: initialTo,
   });
   const [activeFilterAction, setActiveFilterAction] = useState<"apply" | "reset" | null>(null);
+  const [isFilterTransitionPending, startFilterTransition] = useTransition();
   const [visibleTransferSeries, setVisibleTransferSeries] = useState<Record<TransferSeriesKey, boolean>>({
     uploadedBytes: true,
     downloadedBytes: true,
@@ -167,9 +168,11 @@ export default function SnapshotsPage() {
     }, { replace: true });
   }, [initialFrom, initialIntegrationId, initialTo, setSearchParams]);
 
+  const deferredSnapshotItems = useDeferredValue(snapshotsQuery.data?.items ?? []);
+
   const chartData = useMemo(
     () =>
-      (snapshotsQuery.data?.items ?? []).map((item) => ({
+      deferredSnapshotItems.map((item) => ({
         ...item,
         uploadedBytes: item.uploadedBytes ?? 0,
         downloadedBytes: item.downloadedBytes ?? 0,
@@ -178,7 +181,7 @@ export default function SnapshotsPage() {
         activeTorrents: item.activeTorrents ?? 0,
         label: formatAxisTime(item.capturedAt),
       })),
-    [snapshotsQuery.data?.items],
+    [deferredSnapshotItems],
   );
 
   function toggleTransferSeries(key: TransferSeriesKey, checked: boolean) {
@@ -200,17 +203,19 @@ export default function SnapshotsPage() {
       return;
     }
 
-    setActiveFilterAction("apply");
-    setSubmittedFilters({
-      integrationId,
-      from,
-      to,
-    });
+    startFilterTransition(() => {
+      setActiveFilterAction("apply");
+      setSubmittedFilters({
+        integrationId,
+        from,
+        to,
+      });
 
-    setSearchParams({
-      integrationId,
-      from,
-      to,
+      setSearchParams({
+        integrationId,
+        from,
+        to,
+      });
     });
   }
 
@@ -223,20 +228,22 @@ export default function SnapshotsPage() {
       return;
     }
 
-    setActiveFilterAction("reset");
-    setFrom(defaultRange.from);
-    setTo(defaultRange.to);
+    startFilterTransition(() => {
+      setActiveFilterAction("reset");
+      setFrom(defaultRange.from);
+      setTo(defaultRange.to);
 
-    setSubmittedFilters({
-      integrationId,
-      from: defaultRange.from,
-      to: defaultRange.to,
-    });
+      setSubmittedFilters({
+        integrationId,
+        from: defaultRange.from,
+        to: defaultRange.to,
+      });
 
-    setSearchParams({
-      integrationId,
-      from: defaultRange.from,
-      to: defaultRange.to,
+      setSearchParams({
+        integrationId,
+        from: defaultRange.from,
+        to: defaultRange.to,
+      });
     });
   }
 
@@ -290,9 +297,9 @@ export default function SnapshotsPage() {
               <Button
                 className="w-full lg:w-auto"
                 onClick={handleApplyFilters}
-                disabled={!integrationId || snapshotsQuery.isFetching}
+                disabled={!integrationId || snapshotsQuery.isFetching || isFilterTransitionPending}
               >
-                {activeFilterAction === "apply" && snapshotsQuery.isFetching && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {activeFilterAction === "apply" && (snapshotsQuery.isFetching || isFilterTransitionPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Apply
               </Button>
             </div>
@@ -301,9 +308,9 @@ export default function SnapshotsPage() {
                 variant="outline"
                 className="w-full lg:w-auto"
                 onClick={handleResetFilters}
-                disabled={snapshotsQuery.isFetching}
+                disabled={snapshotsQuery.isFetching || isFilterTransitionPending}
               >
-                {activeFilterAction === "reset" && snapshotsQuery.isFetching && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {activeFilterAction === "reset" && (snapshotsQuery.isFetching || isFilterTransitionPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Reset
               </Button>
             </div>

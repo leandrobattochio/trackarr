@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useEffectEvent, useMemo, useRef, useState, useTransition } from "react";
 import Editor from "@monaco-editor/react";
 import { load } from "js-yaml";
 import { Database, FolderOpen, Loader2, Plus, Save, Trash2 } from "lucide-react";
@@ -36,6 +36,7 @@ import {
   configurePluginYamlMonaco,
   installPluginYamlDiagnostics,
   PLUGIN_EDITOR_MODEL_URI,
+  syncPluginYamlDiagnostics,
   validatePluginYamlDocument,
 } from "@/features/plugins/editor/plugin-language";
 
@@ -69,6 +70,7 @@ export default function ManagePluginsPage() {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const diagnosticsCleanupRef = useRef<(() => void) | null>(null);
+  const [isSwitchingEditorState, startEditorTransition] = useTransition();
 
   const createMutation = useCreatePluginDefinition();
   const updateMutation = useUpdatePluginDefinition();
@@ -110,19 +112,23 @@ export default function ManagePluginsPage() {
   }, [definitionQuery.data, isCreatingNew]);
 
   function handleSelectPlugin(pluginId: string) {
-    setIsCreatingNew(false);
-    setSelectedPluginId(pluginId);
-    setEditorValue("");
-    setBaselineValue("");
-    setSubmitError(null);
+    startEditorTransition(() => {
+      setIsCreatingNew(false);
+      setSelectedPluginId(pluginId);
+      setEditorValue("");
+      setBaselineValue("");
+      setSubmitError(null);
+    });
   }
 
   function handleCreatePlugin() {
-    setIsCreatingNew(true);
-    setSelectedPluginId(null);
-    setEditorValue(NEW_PLUGIN_TEMPLATE);
-    setBaselineValue(NEW_PLUGIN_TEMPLATE);
-    setSubmitError(null);
+    startEditorTransition(() => {
+      setIsCreatingNew(true);
+      setSelectedPluginId(null);
+      setEditorValue(NEW_PLUGIN_TEMPLATE);
+      setBaselineValue(NEW_PLUGIN_TEMPLATE);
+      setSubmitError(null);
+    });
   }
 
   function validateYaml(yaml: string): boolean {
@@ -145,7 +151,9 @@ export default function ManagePluginsPage() {
     setEditorValue(value);
 
     if (submitError) {
-      setSubmitError(null);
+      startTransition(() => {
+        setSubmitError(null);
+      });
     }
   }
 
@@ -239,6 +247,22 @@ export default function ManagePluginsPage() {
     }));
   }
 
+  const getValidationOptions = useEffectEvent(() => ({
+    expectedPluginId: isCreatingNew ? null : selectedPluginId,
+  }));
+
+  const refreshEditorDiagnostics = useEffectEvent(() => {
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+    const model = editor?.getModel();
+
+    if (!editor || !monaco || !model) {
+      return;
+    }
+
+    syncPluginYamlDiagnostics(monaco, model, getValidationOptions);
+  });
+
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) {
@@ -266,13 +290,17 @@ export default function ManagePluginsPage() {
     };
   }, [isCreatingNew, selectedPluginId]);
 
+  useEffect(() => {
+    refreshEditorDiagnostics();
+  }, [refreshEditorDiagnostics, isCreatingNew, selectedPluginId]);
+
   const activeSourceMeta = selectedPlugin ? getSourceMeta(selectedPlugin.source) : null;
   const selectedFieldCount = selectedPlugin?.fields.length ?? 0;
   const isDirty = editorValue !== baselineValue;
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const isDeleting = deleteMutation.isPending;
   const canDelete = Boolean(selectedPlugin && selectedPlugin.source === "database" && !isCreatingNew);
-  const isEditorBusy = definitionQuery.isLoading || isSaving || isDeleting;
+  const isEditorBusy = definitionQuery.isLoading || isSaving || isDeleting || isSwitchingEditorState;
 
   return (
     <DashboardLayout>
