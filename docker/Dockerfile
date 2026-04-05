@@ -12,7 +12,6 @@ RUN yarn build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
 WORKDIR /src
-COPY backend/TrackerStats.sln ./backend/
 COPY backend/src/TrackerStats.Api/TrackerStats.Api.csproj ./backend/src/TrackerStats.Api/
 COPY backend/src/TrackerStats.Application/TrackerStats.Application.csproj ./backend/src/TrackerStats.Application/
 COPY backend/src/TrackerStats.Domain/TrackerStats.Domain.csproj ./backend/src/TrackerStats.Domain/
