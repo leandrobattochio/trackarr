@@ -20,6 +20,24 @@ TrackArr is a self-hosted dashboard for private tracker monitoring. It lets you 
 - In-app YAML editor for plugin authoring and overrides with schema-aware validation, completions, snippets, and hover docs
 - Built-in plugin catalog seeded to disk on first run
 
+## Screenshots
+
+### Dashboard
+
+The dashboard is the main operational view. It combines portfolio-level totals across all configured trackers with per-integration cards that surface ratio status, key metrics, last sync state, next automatic run, and quick actions for syncing, editing, opening snapshots, or deleting an integration.
+
+The screenshot below also shows the ratio-warning treatment in context: integrations that fall below the configured minimum ratio are visually highlighted so risky trackers stand out immediately.
+
+![TrackArr dashboard showing overview tiles and tracker cards with ratio status](screenshots/dashboard.png)
+
+### Manage Plugins
+
+The plugin-management screen is where built-in disk definitions and database overrides are inspected and edited. The catalog on the left shows the active source for each plugin, while the editor on the right exposes the full YAML definition that drives integration forms, HTTP steps, mappings, and dashboard metrics.
+
+This is also where the newer editor capabilities matter: YAML saves are blocked when the document is malformed or semantically invalid, and the editor provides TrackArr-specific validation and authoring help while you work.
+
+![TrackArr manage plugins page showing the plugin catalog and YAML editor](screenshots/manage_plugins.png)
+
 ## Architecture
 
 ### Frontend
