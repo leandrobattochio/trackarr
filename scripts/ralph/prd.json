@@ -222,7 +222,7 @@
         "Solution builds and typecheck passes"
       ],
       "priority": 13,
-      "passes": false,
+      "passes": true,
       "notes": "Only do this after all YAML plugins are verified to produce identical output. This is the final cleanup step."
     }
   ]

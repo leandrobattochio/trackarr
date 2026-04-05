@@ -3,6 +3,7 @@ Started: Sat Apr  4 21:15:00 -03 2026
 ---
 
 ## Codebase Patterns
+- Tracker implementations now live exclusively as YAML definitions in `backend/plugins/`; do not add per-tracker C# plugin projects back under `backend/src/Plugins`
 - YAML plugin model classes live in `TrackerStats.Domain/Plugins/Yaml/` namespace
 - Runtime plugin loading resolves `Plugins:Directory` relative to the API content root unless the config value is already absolute
 - Disk YAML definitions load first and DB-stored JSON definitions override them by `pluginId`; `/api/plugins` surfaces the merged source as `disk` or `database`
@@ -213,4 +214,22 @@ Started: Sat Apr  4 21:15:00 -03 2026
   - Client-side YAML syntax checks are useful before save, but schema problems should still be displayed from the backend error response in the editor panel
   - Delete should stay scoped to `database` plugin sources; disk definitions need save-to-override instead of exposing a guaranteed 404 path
   - Browser verification still needs a manual pass because no browser automation tool was available in this iteration
+---
+## 2026-04-04 22:15 - US-013
+- Removed the legacy BJ-Share, Fearnopeer, Seedpool, and shared Unit3D C# plugin projects so the backend now relies only on YAML-loaded plugin definitions
+- Files changed
+  - `backend/TrackerStats.sln`
+  - `backend/src/Plugins/TrackerStats.Plugin.BjShare/BjSharePageParser.cs`
+  - `backend/src/Plugins/TrackerStats.Plugin.BjShare/BjShareTrackerPlugin.cs`
+  - `backend/src/Plugins/TrackerStats.Plugin.BjShare/TrackerStats.Plugin.BjShare.csproj`
+  - `backend/src/Plugins/TrackerStats.Plugin.Core.Unit3D/TrackerStats.Plugin.Core.Unit3D.csproj`
+  - `backend/src/Plugins/TrackerStats.Plugin.Core.Unit3D/Unit3DTrackerPluginBase.cs`
+  - `backend/src/Plugins/TrackerStats.Plugin.Fearnopeer/FearnopeerTrackerPlugin.cs`
+  - `backend/src/Plugins/TrackerStats.Plugin.Fearnopeer/TrackerStats.Plugin.Fearnopeer.csproj`
+  - `backend/src/Plugins/TrackerStats.Plugin.Seedpool/SeedpoolTrackerPlugin.cs`
+  - `backend/src/Plugins/TrackerStats.Plugin.Seedpool/TrackerStats.Plugin.Seedpool.csproj`
+- **Learnings for future iterations:**
+  - The solution file was the last place still retaining the legacy plugin projects after the YAML registry work; removing those entries is enough to stop building the obsolete assemblies
+  - Legacy tracker-specific plugin code can be deleted wholesale once `backend/plugins/*.yaml` definitions and the YAML loader cover the same plugin IDs
+  - `dotnet build TrackerStats.sln` is sufficient verification for this cleanup because it proves the runtime projects no longer depend on the removed plugin assemblies
 ---
