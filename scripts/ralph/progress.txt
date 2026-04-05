@@ -4,6 +4,8 @@ Started: Sat Apr  4 21:15:00 -03 2026
 
 ## Codebase Patterns
 - YAML plugin model classes live in `TrackerStats.Domain/Plugins/Yaml/` namespace
+- Runtime plugin loading resolves `Plugins:Directory` relative to the API content root unless the config value is already absolute
+- Disk YAML definitions load first and DB-stored JSON definitions override them by `pluginId`; `/api/plugins` surfaces the merged source as `disk` or `database`
 - Domain project has no external dependencies — plain C# classes with `required` keyword for mandatory fields
 - Existing plugin domain types are in `TrackerStats.Domain/Plugins/` (ITrackerPlugin, TrackerStats, TrackerFetchResult, etc.)
 - Use `dotnet build src/TrackerStats.Domain/TrackerStats.Domain.csproj --no-restore` for quick typecheck of Domain layer
@@ -134,7 +136,28 @@ Started: Sat Apr  4 21:15:00 -03 2026
   - `backend/src/TrackerStats.Api/TrackerStats.Api.csproj`
 - **Learnings for future iterations:**
   - `YamlTrackerPlugin` should own HTTP client setup so `TrackerPluginHttpClientFactory` can keep treating YAML plugins like any other `ITrackerPlugin`
-  - `IYamlPluginEngine` is registered as a singleton because the singleton registry keeps YAML plugin prototypes alive for later cloning
-  - Until US-009 adds disk and database loading, `BuiltInYamlPluginDefinitions` is the temporary runtime source of truth for registered YAML plugins
-  - Shared implementation types break type-only registries; preserve per-plugin constructor state by cloning from prototypes instead
+- `IYamlPluginEngine` is registered as a singleton because the singleton registry keeps YAML plugin prototypes alive for later cloning
+- Until US-009 adds disk and database loading, `BuiltInYamlPluginDefinitions` is the temporary runtime source of truth for registered YAML plugins
+- Shared implementation types break type-only registries; preserve per-plugin constructor state by cloning from prototypes instead
+---
+## 2026-04-04 21:52 - US-009
+- Implemented a startup YAML plugin loader that reads `backend/plugins/*.yaml`, deserializes them with `YamlDotNet`, loads DB-stored JSON plugin definitions, and merges both sources with database precedence by `pluginId`
+- Reworked the plugin registry to build its catalog from loaded YAML definitions and exposed plugin source metadata through `GET /api/plugins`
+- Files changed
+  - `backend/src/TrackerStats.Api/Controllers/PluginsController.cs`
+  - `backend/src/TrackerStats.Api/Program.cs`
+  - `backend/src/TrackerStats.Api/appsettings.json`
+  - `backend/src/TrackerStats.Domain/Plugins/ITrackerPluginRegistry.cs`
+  - `backend/src/TrackerStats.Domain/Plugins/PluginCatalogEntry.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/TrackerPluginRegistry.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/IYamlPluginDefinitionLoader.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/LoadedYamlPluginDefinition.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/YamlPluginDefinitionLoader.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/BuiltInYamlPluginDefinitions.cs` (deleted)
+  - `backend/src/TrackerStats.Infrastructure/TrackerStats.Infrastructure.csproj`
+- **Learnings for future iterations:**
+  - Keep plugin directory config in `Plugins:Directory`; relative values are resolved from the API content root so production and local runs can share the same loader
+  - Registry metadata that needs to surface API-only fields like plugin source is easier to expose via a catalog DTO than by probing plugin implementations in controllers
+  - `YamlDotNet` with `CamelCaseNamingConvention` cleanly maps the existing lower-camel YAML schema onto the domain model classes
+- Quality checks: `dotnet build TrackerStats.sln`
 ---

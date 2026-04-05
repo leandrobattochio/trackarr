@@ -155,7 +155,7 @@
         "Typecheck passes"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Add YamlDotNet NuGet package for YAML parsing. Plugin directory path should be configurable via appsettings.json."
     },
     {

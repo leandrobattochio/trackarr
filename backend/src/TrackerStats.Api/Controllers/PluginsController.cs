@@ -10,11 +10,12 @@ public class PluginsController(ITrackerPluginRegistry registry) : ControllerBase
     [HttpGet]
     public IActionResult GetAll()
     {
-        var plugins = registry.GetAll().Select(p => new
+        var plugins = registry.GetCatalog().Select(p => new
         {
             pluginId = p.PluginId,
             pluginGroup = p.PluginGroup,
             displayName = p.DisplayName,
+            source = p.Source,
             fields = p.Fields.Select(f => new
             {
                 name = f.Name,

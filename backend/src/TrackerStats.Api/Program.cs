@@ -40,12 +40,14 @@ builder.Services.AddSingleton<IntegrationRecurringJobScheduler>();
 builder.Services.AddHostedService<IntegrationRecurringJobsBootstrapper>();
 
 builder.Services.AddSingleton<IYamlPluginEngine, YamlPluginEngine>();
-foreach (var definition in BuiltInYamlPluginDefinitions.CreateAll())
+builder.Services.AddSingleton<IYamlPluginDefinitionLoader, YamlPluginDefinitionLoader>();
+builder.Services.AddSingleton<ITrackerPluginRegistry>(sp =>
 {
-    builder.Services.AddTransient<ITrackerPlugin>(sp =>
-        new YamlTrackerPlugin(definition, sp.GetRequiredService<IYamlPluginEngine>()));
-}
-builder.Services.AddSingleton<ITrackerPluginRegistry, TrackerPluginRegistry>();
+    var loader = sp.GetRequiredService<IYamlPluginDefinitionLoader>();
+    var engine = sp.GetRequiredService<IYamlPluginEngine>();
+    var definitions = loader.LoadDefinitions();
+    return new TrackerPluginRegistry(sp, engine, definitions);
+});
 
 var app = builder.Build();
 
