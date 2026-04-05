@@ -12,7 +12,8 @@
       "Bash(findstr \"LISTENING\")",
       "Bash(taskkill:*)",
       "Bash(cmd:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(find:*)"
     ]
   }
 }

@@ -11,10 +11,6 @@
     <ProjectReference Include="..\TrackerStats.Domain\TrackerStats.Domain.csproj" />
     <ProjectReference Include="..\TrackerStats.Application\TrackerStats.Application.csproj" />
     <ProjectReference Include="..\TrackerStats.Infrastructure\TrackerStats.Infrastructure.csproj" />
-    <ProjectReference Include="..\Plugins\TrackerStats.Plugin.Core.Unit3D\TrackerStats.Plugin.Core.Unit3D.csproj" />
-    <ProjectReference Include="..\Plugins\TrackerStats.Plugin.BjShare\TrackerStats.Plugin.BjShare.csproj" />
-    <ProjectReference Include="..\Plugins\TrackerStats.Plugin.Fearnopeer\TrackerStats.Plugin.Fearnopeer.csproj" />
-    <ProjectReference Include="..\Plugins\TrackerStats.Plugin.Seedpool\TrackerStats.Plugin.Seedpool.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,6 +22,24 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Scalar.AspNetCore" Version="2.13.19" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\plugins\bj-share.yaml">
+      <Link>bj-share.yaml</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="..\..\plugins\fearnopeer.yaml">
+      <Link>fearnopeer.yaml</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="..\..\plugins\seedpool.yaml">
+      <Link>seedpool.yaml</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

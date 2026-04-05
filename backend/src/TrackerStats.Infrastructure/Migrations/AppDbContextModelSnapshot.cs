@@ -118,6 +118,34 @@ namespace TrackerStats.Infrastructure.Migrations
 
                     b.ToTable("IntegrationSnapshots");
                 });
+
+            modelBuilder.Entity("TrackerStats.Domain.Entities.PluginDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DefinitionJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PluginId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PluginId")
+                        .IsUnique();
+
+                    b.ToTable("PluginDefinitions");
+                });
 #pragma warning restore 612, 618
         }
     }

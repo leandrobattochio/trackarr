@@ -1,160 +1,235 @@
 # Ralph Progress Log
-Started: Fri Apr  3 14:44:06 PDT 2026
+Started: Sat Apr  4 21:15:00 -03 2026
 ---
 
 ## Codebase Patterns
-- .NET 10 hexagonal arch: Domain (no deps) → Application (refs Domain) → Infrastructure (refs Domain+Application) → Api (refs all three)
-- Solution file uses forward-slash paths in src\Project\Project.csproj format in .sln but actual dirs use forward slashes
-- docker-compose.yml mounts sqlite_data volume at /data in container; connection string uses /data/trackerstats.db
-- appsettings.json holds ConnectionStrings:DefaultConnection and SyncJob:IntervalMinutes
-- NOTE: .NET SDK not installed in this environment; build verification requires a .NET 10 SDK
-- EF Core 10.0.0 packages: Microsoft.EntityFrameworkCore.Sqlite + Microsoft.EntityFrameworkCore.Design (PrivateAssets=all) in Infrastructure.csproj
-- EF Core migrations created manually (no dotnet-ef tooling available); migration timestamp format: YYYYMMDDHHmmss_MigrationName.cs
-- AppDbContext lives in Infrastructure/Data/; IntegrationRepository in Infrastructure/Repositories/
-- Database.MigrateAsync() called at startup in Program.cs inside a scoped service block
-- Plugin pattern: register each ITrackerPlugin as AddSingleton<ITrackerPlugin, Impl>(); registry resolves IEnumerable<ITrackerPlugin> via constructor injection
-- ITrackerPluginRegistry is singleton; inject it in controllers/jobs that need to look up plugins by ID or list all
+- Tracker implementations now live exclusively as YAML definitions in `backend/plugins/`; do not add per-tracker C# plugin projects back under `backend/src/Plugins`
+- YAML plugin model classes live in `TrackerStats.Domain/Plugins/Yaml/` namespace
+- Runtime plugin loading resolves `Plugins:Directory` relative to the API content root unless the config value is already absolute
+- Disk YAML definitions load first and DB-stored JSON definitions override them by `pluginId`; `/api/plugins` surfaces the merged source as `disk` or `database`
+- `TrackerPluginRegistry` reloads definitions through `IYamlPluginDefinitionLoader` on each query so plugin CRUD changes are visible immediately without restarting the API
+- Frontend plugin detail fetches should use a text response helper: `GET /api/plugins/{pluginId}` returns raw YAML, not JSON
+- Plugin editor mutations should invalidate both the catalog query and the per-plugin definition query so save/delete actions show up immediately in the sidebar and editor
+- Domain project has no external dependencies — plain C# classes with `required` keyword for mandatory fields
+- Existing plugin domain types are in `TrackerStats.Domain/Plugins/` (ITrackerPlugin, TrackerStats, TrackerFetchResult, etc.)
+- Use `dotnet build src/TrackerStats.Domain/TrackerStats.Domain.csproj --no-restore` for quick typecheck of Domain layer
+- YAML plugin files go in `backend/plugins/` directory — use `python3 -c "import yaml; yaml.safe_load(open('file.yaml'))"` to validate
+- Mapping syntax: `steps.<stepName>.<varName>` for extracted values, `fields.<fieldName>` for config, arithmetic for computed
+- Unit3D plugins share identical structure: single GET to `api/user?api_token={{apiKey}}`, JSON response, HTTP-only auth failure (401/403)
+- EF Core migration: `dotnet ef migrations add <Name> -p src/TrackerStats.Infrastructure -s src/TrackerStats.Api` (requires global dotnet-ef tool)
+- DI registration pattern: interface in Domain, implementation in Infrastructure, `AddScoped` in Program.cs
+- Entity pattern: simple POCO in `Domain/Entities/`, Fluent API config in `AppDbContext.OnModelCreating()`
+- YAML engine: interface `IYamlPluginEngine` in Domain, implementation `YamlPluginEngine` in `Infrastructure/Plugins/Yaml/`
+- YAML plugin registry must clone plugin prototypes, because multiple plugin IDs can now share the same `YamlTrackerPlugin` implementation type
+- Template interpolation: `InterpolateFieldValues` (no URL encoding, for headers/baseUrl) vs `InterpolateTemplate` (URL-encodes, for step URLs)
+- Auth failure detection checks HTTP status codes first, then HTML patterns — returns early on first match
+- `YamlPluginEngine.ExtractValues` and `BuildResult` are `protected virtual` — US-007 overrides or extends them
 
+## 2026-04-04 - US-001
+- Implemented YAML plugin schema as C# model classes
+- Files created in `backend/src/TrackerStats.Domain/Plugins/Yaml/`:
+  - PluginDefinition.cs (root: pluginId, pluginGroup, displayName, fields, http, authFailure, steps, mapping)
+  - FieldDefinition.cs (name, label, type, required, sensitive)
+  - HttpConfig.cs (baseUrl, headers dict, cookies dict)
+  - AuthFailureConfig.cs (httpStatusCodes list, htmlPatterns list)
+  - StepDefinition.cs (name, method, url, responseType, extract dict, validate list)
+  - ExtractionRule.cs (regex, path, transform, countMatches)
+  - ValidationRule.cs (field, rule, onFail)
+  - MappingConfig.cs (maps to all TrackerStats fields, supports computed expressions)
+- **Learnings for future iterations:**
+  - Domain project targets net10.0 with nullable enabled and implicit usings
+  - Used mutable classes with `required` keyword (not records) for YAML deserialization compatibility
+  - MappingConfig uses string values to support both direct references and computed expressions (e.g., "seedingTorrents + leechingTorrents")
+---
+## 2026-04-04 - US-002
+- Translated BJ-Share C# plugin into declarative YAML at `backend/plugins/bj-share.yaml`
+- Files created: `backend/plugins/bj-share.yaml`
+- **Learnings for future iterations:**
+  - YAML plugin files go in `backend/plugins/` directory
+  - BJ-Pontos extraction in C# uses a complex multi-step approach (find `<li>` tags, filter for BJ-Pontos, strip HTML, then regex). Simplified in YAML to a single regex `BJ-Pontos\s*:\s*(?<value>[\d\.,]+)` — the engine will need to handle this as a direct regex match on the full HTML
+  - Torrent counting in C# first finds the table, then counts rows within it. In YAML, simplified to `countMatches` on the row pattern directly — the engine should count all matches of the regex in the response
+  - Auth failure detection combines HTTP status codes (401/403) AND HTML content pattern matching (Login, login.php, name="password", type="password")
+  - Mapping uses `steps.<stepName>.<varName>` for extracted values, `fields.<fieldName>` for config fields, and arithmetic expressions for computed values
+  - `python3 -c "import yaml; yaml.safe_load(open('file.yaml'))"` works for quick YAML validation
 ---
 
-## 2026-04-03 - US-001
-- What was implemented: Full hexagonal solution scaffold — TrackerStats.sln + four projects (Domain, Application, Infrastructure, Api) with correct ProjectReference chains; docker-compose.yml with sqlite_data volume; Dockerfile for multi-stage build; appsettings.json with connection string and sync interval config; .gitignore
-- Files changed:
-  - TrackerStats.sln
-  - src/TrackerStats.Domain/TrackerStats.Domain.csproj
-  - src/TrackerStats.Application/TrackerStats.Application.csproj
-  - src/TrackerStats.Infrastructure/TrackerStats.Infrastructure.csproj
-  - src/TrackerStats.Api/TrackerStats.Api.csproj
-  - src/TrackerStats.Api/Program.cs
-  - src/TrackerStats.Api/appsettings.json
-  - src/TrackerStats.Api/appsettings.Development.json
-  - src/TrackerStats.Api/Dockerfile
-  - docker-compose.yml
-  - .gitignore
+## 2026-04-04 - US-003
+- Translated Fearnopeer C# plugin (Unit3D-based) into declarative YAML at `backend/plugins/fearnopeer.yaml`
+- Files created: `backend/plugins/fearnopeer.yaml`
 - **Learnings for future iterations:**
-  - The environment has Node 20 but NO .NET SDK — files are created manually; build checks cannot be run locally
-  - Project type GUID for C# is {FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}; Web SDK uses Microsoft.NET.Sdk.Web
-  - The .sln file uses backslash paths (src\Project\Project.csproj) by Visual Studio convention
-  - appsettings.json is the right place for ConnectionStrings__DefaultConnection override pattern for docker env vars
+  - Unit3D plugins are simple: single GET to `api/user?api_token={{apiKey}}`, responseType=json
+  - Unit3D JSON response fields: username, group, uploaded, downloaded, ratio, buffer, seeding, leeching, seedbonus, hit_and_runs
+  - Unit3D auth failure is HTTP-only (401/403) — no HTML pattern matching needed (unlike BJ-Share)
+  - Validation: check `username` notEmpty to detect unknown errors (matches C# `string.IsNullOrWhiteSpace(user.Username)` check)
+  - Buffer and seedbonus are passed as strings (toString transform) since the C# code uses them directly as string/decimal fields
+  - Seedpool (US-004) is identical to Fearnopeer except for pluginId and displayName — copy and change metadata
 ---
 
-## 2026-04-03 - US-002
-- What was implemented: Domain plugin contract types — ITrackerPlugin interface, TrackerStats record, TrackerCredentials record, AuthMode enum — all placed in src/TrackerStats.Domain/Plugins/
-- Files changed:
-  - src/TrackerStats.Domain/Plugins/AuthMode.cs
-  - src/TrackerStats.Domain/Plugins/ITrackerPlugin.cs
-  - src/TrackerStats.Domain/Plugins/TrackerCredentials.cs
-  - src/TrackerStats.Domain/Plugins/TrackerStats.cs
+## 2026-04-04 - US-004
+- Translated Seedpool C# plugin (Unit3D-based) into declarative YAML at `backend/plugins/seedpool.yaml`
+- Copied from fearnopeer.yaml, changed pluginId to `seedpool` and displayName to `Seedpool`
+- Files created: `backend/plugins/seedpool.yaml`
 - **Learnings for future iterations:**
-  - Domain types live in src/TrackerStats.Domain/Plugins/ namespace TrackerStats.Domain.Plugins
-  - TrackerStats record name conflicts with the root namespace TrackerStats — consuming projects may need `using TrackerStats.Domain.Plugins;` to disambiguate
-  - No external dependencies needed; all types use only BCL (System, System.Threading.Tasks)
+  - Confirmed: Unit3D plugins are identical except for metadata — future Unit3D plugins can be created by copying any existing one and changing pluginId/displayName
 ---
 
-## 2026-04-03 - US-003
-- What was implemented: Domain Integration entity and IIntegrationRepository interface
-- Files changed:
-  - src/TrackerStats.Domain/Entities/Integration.cs
-  - src/TrackerStats.Domain/Repositories/IIntegrationRepository.cs
+## 2026-04-04 - US-005
+- Added PluginDefinitions database table with EF Core migration
+- Files created:
+  - `backend/src/TrackerStats.Domain/Entities/PluginDefinition.cs` (entity: Id, PluginId, DefinitionJson, CreatedAt, UpdatedAt)
+  - `backend/src/TrackerStats.Domain/Repositories/IPluginDefinitionRepository.cs` (CRUD + GetByPluginId)
+  - `backend/src/TrackerStats.Infrastructure/Repositories/PluginDefinitionRepository.cs`
+  - `backend/src/TrackerStats.Infrastructure/Migrations/20260405002454_AddPluginDefinitions.cs`
+- Files modified:
+  - `backend/src/TrackerStats.Infrastructure/Data/AppDbContext.cs` (added DbSet + Fluent API config)
+  - `backend/src/TrackerStats.Api/Program.cs` (registered IPluginDefinitionRepository DI)
 - **Learnings for future iterations:**
-  - Integration entity uses nullable value types (decimal?, long?, DateTime?) for stats fields that may not be populated yet
-  - Repository lives in TrackerStats.Domain/Repositories/ namespace TrackerStats.Domain.Repositories
-  - Entity lives in TrackerStats.Domain/Entities/ namespace TrackerStats.Domain.Entities
-  - IIntegrationRepository uses Task-based async methods with CancellationToken on all operations
+  - EF Core migration command: `dotnet ef migrations add <Name> -p src/TrackerStats.Infrastructure -s src/TrackerStats.Api`
+  - Need to `dotnet tool install --global dotnet-ef` first if not installed
+  - PluginId has a unique index — the DB enforces one definition per plugin
+  - DateTime fields use UTC value converters (same pattern as other entities)
+  - Auto-migration on startup via `db.Database.MigrateAsync()` means no manual DB update needed
 ---
 
-## 2026-04-03 - US-004
-- What was implemented: SQLite persistence via EF Core 10 — AppDbContext with DbSet<Integration>, IntegrationRepository implementing IIntegrationRepository, EF Core migration InitialCreate, DI registration + MigrateAsync() at startup
-- Files changed:
-  - src/TrackerStats.Infrastructure/TrackerStats.Infrastructure.csproj (added EF Core packages)
-  - src/TrackerStats.Infrastructure/Data/AppDbContext.cs
-  - src/TrackerStats.Infrastructure/Repositories/IntegrationRepository.cs
-  - src/TrackerStats.Infrastructure/Migrations/20260403000000_InitialCreate.cs
-  - src/TrackerStats.Infrastructure/Migrations/AppDbContextModelSnapshot.cs
-  - src/TrackerStats.Api/Program.cs (added DbContext + repository DI registration, MigrateAsync on startup)
+## 2026-04-04 - US-006
+- Built the core YAML plugin engine for HTTP client configuration and request execution
+- Files created:
+  - `backend/src/TrackerStats.Domain/Plugins/Yaml/IYamlPluginEngine.cs` (interface: ExecuteAsync with definition, config, httpClient, ct)
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/YamlPluginEngine.cs` (full implementation)
+- Files modified:
+  - `backend/src/TrackerStats.Api/Program.cs` (registered IYamlPluginEngine DI)
+- Engine capabilities:
+  - Validates plugin definition required fields (pluginId, pluginGroup, displayName, steps)
+  - Configures HttpClient from definition (baseUrl, headers, cookies with {{field}} interpolation)
+  - Executes ordered request steps sequentially (GET/POST/PUT/DELETE)
+  - Template interpolation: {{fieldName}} for config values, {{steps.stepName.varName}} for extracted step values
+  - Auth failure detection: HTTP status codes list + HTML content pattern matching
+  - Two interpolation modes: `InterpolateFieldValues` (raw, for headers) and `InterpolateTemplate` (URL-encoded, for step URLs)
+  - `ExtractValues` and `BuildResult` are `protected virtual` — placeholders for US-007 to implement parsing/transformations
 - **Learnings for future iterations:**
-  - Migration files created manually since dotnet-ef CLI not available; timestamp format 20260403000000
-  - FindAsync uses collection initializer syntax: FindAsync([id], ct)
-  - EF Core Design package marked PrivateAssets=all so it doesn't leak to consuming projects
-  - IIntegrationRepository + AppDbContext both registered in Program.cs; future stories can inject IIntegrationRepository directly
-  - MigrateAsync() block uses CreateScope() pattern before app.Run() to avoid scope issues
+  - Headers should NOT be URL-encoded (e.g., Cookie values, Accept header) — use `InterpolateFieldValues`
+  - Step URLs should URL-encode interpolated values — use `InterpolateTemplate`
+  - `partial class` with `[GeneratedRegex]` works well for compile-time regex in .NET 10
+  - Cookie header needs `TryAddWithoutValidation` (not `Add`) because HttpClient validates standard headers strictly
+  - User-Agent needs `UserAgent.ParseAdd()` — direct header add fails validation
 ---
-
-## 2026-04-03 - US-005
-- What was implemented: ITrackerPluginRegistry interface in Domain; TrackerPluginRegistry in Infrastructure resolving all ITrackerPlugin DI registrations; FakeUsernamePasswordTrackerPlugin and FakeCookieTrackerPlugin in Infrastructure; all registered as singletons in Program.cs
-- Files changed:
-  - src/TrackerStats.Domain/Plugins/ITrackerPluginRegistry.cs (new)
-  - src/TrackerStats.Infrastructure/Plugins/TrackerPluginRegistry.cs (new)
-  - src/TrackerStats.Infrastructure/Plugins/FakeUsernamePasswordTrackerPlugin.cs (new)
-  - src/TrackerStats.Infrastructure/Plugins/FakeCookieTrackerPlugin.cs (new)
-  - src/TrackerStats.Api/Program.cs (added plugin + registry DI registrations)
+## 2026-04-04 21:39 - US-007
+- Implemented response parsing and result materialization in the YAML plugin engine
+- Added HTML regex extraction, JSON dot-path extraction, `countMatches`, transforms (`byteSize`, `decimal`, `integer`, `toString`), validation handling, and mapping into `TrackerStats`
+- Matched legacy BJ-Share and Unit3D numeric normalization, including comma-decimal byte sizes and computed `+` expressions for fields like `activeTorrents`
+- Files changed
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/YamlPluginEngine.cs`
 - **Learnings for future iterations:**
-  - ITrackerPlugin instances registered as AddSingleton<ITrackerPlugin, ConcretePlugin>() — DI resolves all via IEnumerable<ITrackerPlugin> in TrackerPluginRegistry constructor
-  - ITrackerPluginRegistry registered as singleton; consumers (controllers, background job) inject it directly
-  - FakeTrackerPlugin returns static stats (no randomness) to keep behavior deterministic
-  - TrackerStats record name lives in TrackerStats.Domain.Plugins namespace — fully-qualify as Domain.Plugins.TrackerStats in Infrastructure to avoid ambiguity with root namespace
-  - GetAll() method added to ITrackerPluginRegistry (not in original spec but needed for US-006 GET /api/plugins)
+  - YAML extraction stores transformed step values as invariant strings, and mapping materializes the final typed `TrackerStats` record
+  - Mapping expressions currently support direct `steps.*` / `fields.*` references plus `+` arithmetic only
+  - Validation runs after extraction/transforms; `onFail` is converted into a `PluginProcessResult` via a dedicated validation exception
+  - JSON extraction is case-insensitive and supports dot-notation over nested objects
+- Solution build verification succeeded with `dotnet build TrackerStats.sln`
 ---
-
-## 2026-04-03 - US-007
-- What was implemented: POST /api/integrations endpoint — validates pluginId exists, validates credentials match plugin's AuthMode, persists Integration entity, returns 201 Created with integration object (no credentials)
-- Files changed:
-  - src/TrackerStats.Api/Controllers/IntegrationsController.cs (new)
+## 2026-04-04 21:46 - US-008
+- Implemented `YamlTrackerPlugin` so YAML definitions now participate in the existing `ITrackerPlugin` contract for metadata, auth mode, HTTP client configuration, and fetch execution
+- Reworked `TrackerPluginRegistry` to create plugins from stored prototypes instead of implementation types, enabling multiple YAML-backed plugins to share one runtime class safely
+- Registered built-in YAML definitions through DI and removed the API runtime registrations that pointed directly at hardcoded plugin assemblies
+- Files changed
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/YamlTrackerPlugin.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/BuiltInYamlPluginDefinitions.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/TrackerPluginRegistry.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/YamlPluginEngine.cs`
+  - `backend/src/TrackerStats.Api/Program.cs`
+  - `backend/src/TrackerStats.Api/TrackerStats.Api.csproj`
 - **Learnings for future iterations:**
-  - Controller pattern: inject IIntegrationRepository (scoped) + ITrackerPluginRegistry (singleton) via constructor
-  - Credential validation: UsernamePassword requires non-empty username+password; Cookie requires non-empty cookie
-  - CreatedAtAction used for 201 response; response shape omits credentials (username/password/cookie) and returns stats: null until first sync
-  - CreateIntegrationRequest record defined at bottom of controller file (no separate DTOs folder needed for small requests)
+  - `YamlTrackerPlugin` should own HTTP client setup so `TrackerPluginHttpClientFactory` can keep treating YAML plugins like any other `ITrackerPlugin`
+- `IYamlPluginEngine` is registered as a singleton because the singleton registry keeps YAML plugin prototypes alive for later cloning
+- Until US-009 adds disk and database loading, `BuiltInYamlPluginDefinitions` is the temporary runtime source of truth for registered YAML plugins
+- Shared implementation types break type-only registries; preserve per-plugin constructor state by cloning from prototypes instead
 ---
-
-## 2026-04-03 - US-006
-- What was implemented: GET /api/plugins endpoint returning array of { pluginId, displayName, authMode } for all registered plugins
-- Files changed:
-  - src/TrackerStats.Api/Controllers/PluginsController.cs (new)
+## 2026-04-04 21:52 - US-009
+- Implemented a startup YAML plugin loader that reads `backend/plugins/*.yaml`, deserializes them with `YamlDotNet`, loads DB-stored JSON plugin definitions, and merges both sources with database precedence by `pluginId`
+- Reworked the plugin registry to build its catalog from loaded YAML definitions and exposed plugin source metadata through `GET /api/plugins`
+- Files changed
+  - `backend/src/TrackerStats.Api/Controllers/PluginsController.cs`
+  - `backend/src/TrackerStats.Api/Program.cs`
+  - `backend/src/TrackerStats.Api/appsettings.json`
+  - `backend/src/TrackerStats.Domain/Plugins/ITrackerPluginRegistry.cs`
+  - `backend/src/TrackerStats.Domain/Plugins/PluginCatalogEntry.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/TrackerPluginRegistry.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/IYamlPluginDefinitionLoader.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/LoadedYamlPluginDefinition.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/YamlPluginDefinitionLoader.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/BuiltInYamlPluginDefinitions.cs` (deleted)
+  - `backend/src/TrackerStats.Infrastructure/TrackerStats.Infrastructure.csproj`
 - **Learnings for future iterations:**
-  - Controllers go in src/TrackerStats.Api/Controllers/ with [ApiController] + [Route("api/...")] attributes
-  - authMode returned as string via AuthMode.ToString() — yields "UsernamePassword" or "Cookie"
-  - ITrackerPluginRegistry injected via constructor; no scoped/transient needed (singleton registry)
-  - Anonymous object projection in Select() works well for shaping API responses without extra DTOs
+  - Keep plugin directory config in `Plugins:Directory`; relative values are resolved from the API content root so production and local runs can share the same loader
+  - Registry metadata that needs to surface API-only fields like plugin source is easier to expose via a catalog DTO than by probing plugin implementations in controllers
+  - `YamlDotNet` with `CamelCaseNamingConvention` cleanly maps the existing lower-camel YAML schema onto the domain model classes
+- Quality checks: `dotnet build TrackerStats.sln`
 ---
-
-## 2026-04-03 - US-008
-- What was implemented: GET /api/integrations endpoint returning array of { id, pluginId, name, baseUrl, lastSyncAt, stats } — credentials excluded; stats is null when no sync has occurred
-- Files changed:
-  - src/TrackerStats.Api/Controllers/IntegrationsController.cs (added List action)
+## 2026-04-04 21:58 - US-010
+- Implemented plugin CRUD API endpoints for raw YAML definitions: `GET /api/plugins/{pluginId}`, `POST /api/plugins`, `PUT /api/plugins/{pluginId}`, and `DELETE /api/plugins/{pluginId}`
+- Added YAML syntax/schema validation, duplicate plugin rejection on create, route/pluginId consistency checks on update, and DB override behavior for disk-backed plugins
+- Reworked the plugin registry to resolve plugin definitions through the loader on demand so API mutations are reflected immediately in catalog and integration lookups
+- Files changed
+  - `backend/src/TrackerStats.Api/Controllers/PluginsController.cs`
+  - `backend/src/TrackerStats.Api/Program.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/TrackerPluginRegistry.cs`
 - **Learnings for future iterations:**
-  - stats: null logic checks HasValue on any of the three nullable stat fields (Ratio, UploadedBytes, DownloadedBytes)
-  - List action uses IRepository.ListAsync and projects to anonymous object with Select(); no extra DTO class needed
-  - Credentials (Username, Password, Cookie) intentionally excluded from response — omit them in all GET responses
+  - API CRUD stores plugin definitions as camelCase JSON in the DB and serializes active definitions back to YAML with the same `CamelCaseNamingConvention`
+  - `PUT /api/plugins/{pluginId}` should treat disk-backed plugins as overrideable defaults by creating a DB row when one does not already exist
+  - Reloading definitions at registry query time keeps `/api/plugins`, integration validation, and sync execution aligned after plugin edits
 ---
-
-## 2026-04-03 - US-009
-- What was implemented: DELETE /api/integrations/{id} endpoint — 404 if not found, 204 No Content on success; integration removed from SQLite
-- Files changed:
-  - src/TrackerStats.Api/Controllers/IntegrationsController.cs (added Delete action)
+## 2026-04-04 22:05 - US-011
+- Implemented a new Manage Plugins page with sidebar navigation, plugin catalog cards, source badges, default selection, and a Monaco-based YAML editor panel
+- Added frontend plugin-management API/hooks/types plus a reusable text-fetch helper for loading raw YAML definitions from `GET /api/plugins/{pluginId}`
+- Installed Monaco dependencies and fixed existing frontend lint blockers in shared UI/tailwind config while leaving warning-only lint output unchanged
+- Files changed
+  - `frontend/package.json`
+  - `frontend/yarn.lock`
+  - `frontend/src/app/router.tsx`
+  - `frontend/src/components/ui/command.tsx`
+  - `frontend/src/components/ui/textarea.tsx`
+  - `frontend/src/features/integrations/types.ts`
+  - `frontend/src/features/plugins/ManagePluginsPage.tsx`
+  - `frontend/src/features/plugins/api.ts`
+  - `frontend/src/features/plugins/hooks.ts`
+  - `frontend/src/features/plugins/index.ts`
+  - `frontend/src/features/plugins/plugin-template.ts`
+  - `frontend/src/features/plugins/types.ts`
+  - `frontend/src/layouts/AppSidebar.tsx`
+  - `frontend/src/shared/api/http.ts`
+  - `frontend/tailwind.config.ts`
 - **Learnings for future iterations:**
-  - Route constraint `{id:guid}` used to bind Guid route parameter
-  - GetByIdAsync used to check existence before delete; returns 404 if null
+  - The plugin catalog response includes `source`, but the YAML definition endpoint returns plain text, so list/detail fetches need different client helpers
+  - Monaco adds substantial bundle weight; current `vite build` passes but reports the existing large-chunk warning for the main bundle
+  - Browser verification still needs a manual pass because no browser automation tool was available in this iteration
 ---
-
-## 2026-04-03 - US-010
-- What was implemented: POST /api/integrations/{id}/sync endpoint — fetches stats via plugin, updates integration in DB, returns updated stats; 404 if not found, 502 if plugin throws
-- Files changed:
-  - src/TrackerStats.Api/Controllers/IntegrationsController.cs (added Sync action)
+## 2026-04-04 22:11 - US-012
+- Added plugin definition create/update/delete mutations and connected the Manage Plugins editor to save new drafts, update existing definitions, and delete database-backed definitions with confirmation
+- Added client-side YAML syntax validation with `js-yaml`, inline validation/backend error messaging, dirty-state tracking, and success/error toast notifications
+- Files changed
+  - `frontend/src/features/plugins/ManagePluginsPage.tsx`
+  - `frontend/src/features/plugins/api.ts`
+  - `frontend/src/features/plugins/hooks.ts`
+  - `frontend/src/features/plugins/types.ts`
 - **Learnings for future iterations:**
-  - Use Domain.Plugins.TrackerCredentials and Domain.Plugins.TrackerStats with full namespace to avoid ambiguity with root namespace
-  - 502 Bad Gateway returned via StatusCode(502, ...) for plugin fetch exceptions; ex.Message included in error body
-  - lastSyncAt set to DateTime.UtcNow after successful fetch before UpdateAsync call
+  - Client-side YAML syntax checks are useful before save, but schema problems should still be displayed from the backend error response in the editor panel
+  - Delete should stay scoped to `database` plugin sources; disk definitions need save-to-override instead of exposing a guaranteed 404 path
+  - Browser verification still needs a manual pass because no browser automation tool was available in this iteration
 ---
-
-## 2026-04-03 - US-011
-- What was implemented: TrackerSyncJob BackgroundService in Infrastructure/Jobs/ — waits configured interval then syncs all integrations; per-integration errors caught and logged without interrupting others; registered in Program.cs via AddHostedService
-- Files changed:
-  - src/TrackerStats.Infrastructure/Jobs/TrackerSyncJob.cs (new)
-  - src/TrackerStats.Api/Program.cs (added AddHostedService<TrackerSyncJob>() and using)
+## 2026-04-04 22:15 - US-013
+- Removed the legacy BJ-Share, Fearnopeer, Seedpool, and shared Unit3D C# plugin projects so the backend now relies only on YAML-loaded plugin definitions
+- Files changed
+  - `backend/TrackerStats.sln`
+  - `backend/src/Plugins/TrackerStats.Plugin.BjShare/BjSharePageParser.cs`
+  - `backend/src/Plugins/TrackerStats.Plugin.BjShare/BjShareTrackerPlugin.cs`
+  - `backend/src/Plugins/TrackerStats.Plugin.BjShare/TrackerStats.Plugin.BjShare.csproj`
+  - `backend/src/Plugins/TrackerStats.Plugin.Core.Unit3D/TrackerStats.Plugin.Core.Unit3D.csproj`
+  - `backend/src/Plugins/TrackerStats.Plugin.Core.Unit3D/Unit3DTrackerPluginBase.cs`
+  - `backend/src/Plugins/TrackerStats.Plugin.Fearnopeer/FearnopeerTrackerPlugin.cs`
+  - `backend/src/Plugins/TrackerStats.Plugin.Fearnopeer/TrackerStats.Plugin.Fearnopeer.csproj`
+  - `backend/src/Plugins/TrackerStats.Plugin.Seedpool/SeedpoolTrackerPlugin.cs`
+  - `backend/src/Plugins/TrackerStats.Plugin.Seedpool/TrackerStats.Plugin.Seedpool.csproj`
 - **Learnings for future iterations:**
-  - BackgroundService needs IServiceScopeFactory to create scoped IIntegrationRepository per execution (cannot inject scoped services directly into singleton/hosted service)
-  - ITrackerPluginRegistry is singleton so can be injected directly into BackgroundService constructor
-  - SyncJob:IntervalMinutes already present in appsettings.json from US-001; default fallback set to 60
-  - Task.Delay called before sync (not after) so first sync fires after one full interval
+  - The solution file was the last place still retaining the legacy plugin projects after the YAML registry work; removing those entries is enough to stop building the obsolete assemblies
+  - Legacy tracker-specific plugin code can be deleted wholesale once `backend/plugins/*.yaml` definitions and the YAML loader cover the same plugin IDs
+  - `dotnet build TrackerStats.sln` is sufficient verification for this cleanup because it proves the runtime projects no longer depend on the removed plugin assemblies
 ---

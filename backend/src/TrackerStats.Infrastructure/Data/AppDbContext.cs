@@ -8,6 +8,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<Integration> Integrations => Set<Integration>();
     public DbSet<IntegrationSnapshot> IntegrationSnapshots => Set<IntegrationSnapshot>();
+    public DbSet<PluginDefinition> PluginDefinitions => Set<PluginDefinition>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,6 +36,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<IntegrationSnapshot>()
             .Property(s => s.CapturedAt)
+            .HasConversion(utcDateTimeConverter);
+
+        modelBuilder.Entity<PluginDefinition>()
+            .HasIndex(p => p.PluginId)
+            .IsUnique();
+
+        modelBuilder.Entity<PluginDefinition>()
+            .Property(p => p.CreatedAt)
+            .HasConversion(utcDateTimeConverter);
+
+        modelBuilder.Entity<PluginDefinition>()
+            .Property(p => p.UpdatedAt)
             .HasConversion(utcDateTimeConverter);
     }
 }

@@ -15,10 +15,22 @@ export interface ApiIntegrationStats {
   activeTorrents: number | null;
 }
 
+export interface ApiDashboardMetric {
+  stat: "ratio" | "uploadedBytes" | "downloadedBytes" | "seedBonus" | "buffer" | "hitAndRuns" | "requiredRatio" | "seedingTorrents" | "leechingTorrents" | "activeTorrents";
+  label: string;
+  format: "bytes" | "count" | "text";
+  icon: string;
+  tone: string;
+}
+
+export interface ApiDashboardConfig {
+  metrics: ApiDashboardMetric[];
+}
+
 export interface ApiIntegration {
   id: string;
   pluginId: string;
-  pluginGroup: string;
+  dashboard: ApiDashboardConfig | null;
   payload: Record<string, string | null>;
   url: string | null;
   requiredRatio: number | null;
@@ -40,8 +52,9 @@ export interface ApiPluginField {
 
 export interface ApiPlugin {
   pluginId: string;
-  pluginGroup: string;
   displayName: string;
+  source?: string;
+  dashboard: ApiDashboardConfig;
   fields: ApiPluginField[];
 }
 
@@ -64,7 +77,7 @@ export type IntegrationStatus = "success" | "authFailed" | "unknownError" | "pen
 export interface TrackerIntegration {
   id: string;
   pluginId: string;
-  pluginGroup: string;
+  dashboard: ApiDashboardConfig;
   name: string;
   payload: Record<string, string>;
   url: string | null;
@@ -150,7 +163,7 @@ export function mapIntegration(
   return {
     id: integration.id,
     pluginId: integration.pluginId,
-    pluginGroup: integration.pluginGroup || plugin?.pluginGroup || integration.pluginId,
+    dashboard: integration.dashboard ?? plugin!.dashboard,
     name: plugin?.displayName ?? integration.pluginId,
     payload: Object.fromEntries(
       Object.entries(integration.payload).map(([key, value]) => [key, value ?? ""]),

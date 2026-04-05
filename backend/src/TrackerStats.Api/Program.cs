@@ -4,14 +4,13 @@ using Hangfire.Storage.SQLite;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using TrackerStats.Domain.Plugins;
+using TrackerStats.Domain.Plugins.Yaml;
 using TrackerStats.Domain.Repositories;
 using TrackerStats.Infrastructure.Data;
 using TrackerStats.Infrastructure.Plugins;
+using TrackerStats.Infrastructure.Plugins.Yaml;
 using TrackerStats.Infrastructure.Repositories;
 using TrackerStats.Infrastructure.Services;
-using TrackerStats.Plugin.BjShare;
-using TrackerStats.Plugin.Fearnopeer;
-using TrackerStats.Plugin.Seedpool;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = ResolveConnectionString(builder.Configuration, builder.Environment, "DefaultConnection", "Database:Directory");
@@ -33,15 +32,15 @@ builder.Services.AddHangfireServer();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IIntegrationRepository, IntegrationRepository>();
 builder.Services.AddScoped<IIntegrationSnapshotRepository, IntegrationSnapshotRepository>();
+builder.Services.AddScoped<IPluginDefinitionRepository, PluginDefinitionRepository>();
 builder.Services.AddSingleton<ITrackerPluginHttpClientFactory, TrackerPluginHttpClientFactory>();
 builder.Services.AddScoped<IntegrationSyncService>();
 builder.Services.AddScoped<IntegrationRecurringSyncJob>();
 builder.Services.AddSingleton<IntegrationRecurringJobScheduler>();
 builder.Services.AddHostedService<IntegrationRecurringJobsBootstrapper>();
 
-builder.Services.AddTransient<ITrackerPlugin, BjShareTrackerPlugin>();
-builder.Services.AddTransient<ITrackerPlugin, FearnopeerTrackerPlugin>();
-builder.Services.AddTransient<ITrackerPlugin, SeedpoolTrackerPlugin>();
+builder.Services.AddSingleton<IYamlPluginEngine, YamlPluginEngine>();
+builder.Services.AddSingleton<IYamlPluginDefinitionLoader, YamlPluginDefinitionLoader>();
 builder.Services.AddSingleton<ITrackerPluginRegistry, TrackerPluginRegistry>();
 
 var app = builder.Build();

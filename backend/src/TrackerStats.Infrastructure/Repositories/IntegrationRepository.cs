@@ -20,6 +20,11 @@ public class IntegrationRepository(AppDbContext db) : IIntegrationRepository
     public async Task<Integration?> GetByIdAsync(Guid id, CancellationToken ct) =>
         await db.Integrations.FindAsync([id], ct);
 
+    public async Task<bool> ExistsByPluginIdAsync(string pluginId, CancellationToken ct) =>
+        await db.Integrations.AnyAsync(
+            integration => integration.PluginId == pluginId,
+            ct);
+
     public async Task UpdateAsync(Integration integration, CancellationToken ct)
     {
         db.Integrations.Update(integration);
