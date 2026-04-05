@@ -2,18 +2,6 @@ pluginId: seedpool
 displayName: Seedpool
 
 fields:
-  - name: cron
-    label: Cron Expression
-    type: cron
-    required: true
-  - name: required_ratio
-    label: Required Ratio
-    type: number
-    required: true
-  - name: baseUrl
-    label: Base URL
-    type: text
-    required: true
   - name: apiKey
     label: API Key
     type: password
@@ -21,15 +9,8 @@ fields:
     sensitive: true
 
 http:
-  baseUrl: "{{baseUrl}}"
   headers:
     Accept: application/json
-    User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
-
-authFailure:
-  httpStatusCodes:
-    - 401
-    - 403
 
 steps:
   - name: user
