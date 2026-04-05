@@ -33,6 +33,7 @@ builder.Services.AddHangfireServer();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IIntegrationRepository, IntegrationRepository>();
 builder.Services.AddScoped<IIntegrationSnapshotRepository, IntegrationSnapshotRepository>();
+builder.Services.AddScoped<IPluginDefinitionRepository, PluginDefinitionRepository>();
 builder.Services.AddSingleton<ITrackerPluginHttpClientFactory, TrackerPluginHttpClientFactory>();
 builder.Services.AddScoped<IntegrationSyncService>();
 builder.Services.AddScoped<IntegrationRecurringSyncJob>();
