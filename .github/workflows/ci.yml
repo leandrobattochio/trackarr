@@ -77,7 +77,26 @@ jobs:
 
       - run: corepack enable
       - run: yarn install --frozen-lockfile
-      - run: yarn audit --level moderate
+      - name: Audit moderate and above
+        shell: bash
+        run: |
+          audit_output=$(yarn audit --json || true)
+          echo "$audit_output"
+
+          summary=$(echo "$audit_output" | grep '"type":"auditSummary"' | tail -n 1)
+          if [ -z "$summary" ]; then
+            echo "Missing yarn audit summary"
+            exit 1
+          fi
+
+          moderate=$(echo "$summary" | sed -E 's/.*"moderate":([0-9]+).*/\1/')
+          high=$(echo "$summary" | sed -E 's/.*"high":([0-9]+).*/\1/')
+          critical=$(echo "$summary" | sed -E 's/.*"critical":([0-9]+).*/\1/')
+
+          if [ "$moderate" -gt 0 ] || [ "$high" -gt 0 ] || [ "$critical" -gt 0 ]; then
+            echo "Audit failed: moderate=$moderate high=$high critical=$critical"
+            exit 1
+          fi
 
   backend-build:
     runs-on: ubuntu-latest
