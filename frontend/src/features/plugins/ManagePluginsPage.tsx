@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { load } from "js-yaml";
-import { Braces, Database, FileCode2, FolderOpen, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { Database, FolderOpen, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import type * as Monaco from "monaco-editor";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { usePageTitle } from "@/shared/hooks/use-page-title";
 import {
@@ -31,6 +32,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { cn } from "@/shared/lib/utils";
 import type { ApiPluginListItem } from "@/features/plugins/types";
+import {
+  configurePluginYamlMonaco,
+  installPluginYamlDiagnostics,
+  PLUGIN_EDITOR_MODEL_URI,
+  validatePluginYamlDocument,
+} from "@/features/plugins/editor/plugin-language";
 
 const EDITOR_HEIGHT = "70vh";
 
@@ -58,7 +65,10 @@ export default function ManagePluginsPage() {
   const [editorValue, setEditorValue] = useState("");
   const [baselineValue, setBaselineValue] = useState("");
   const [isCreatingNew, setIsCreatingNew] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<typeof Monaco | null>(null);
+  const diagnosticsCleanupRef = useRef<(() => void) | null>(null);
 
   const createMutation = useCreatePluginDefinition();
   const updateMutation = useUpdatePluginDefinition();
@@ -77,6 +87,16 @@ export default function ManagePluginsPage() {
     [plugins, selectedPluginId],
   );
 
+  const liveValidation = useMemo(
+    () => validatePluginYamlDocument(editorValue, {
+      expectedPluginId: isCreatingNew ? null : selectedPluginId,
+    }),
+    [editorValue, isCreatingNew, selectedPluginId],
+  );
+
+  const liveValidationError = liveValidation.markers[0]?.message ?? null;
+  const activeError = submitError ?? liveValidationError;
+
   const definitionQuery = usePluginDefinition(selectedPluginId ?? "", Boolean(selectedPluginId) && !isCreatingNew);
 
   useEffect(() => {
@@ -86,7 +106,7 @@ export default function ManagePluginsPage() {
 
     setEditorValue(definitionQuery.data);
     setBaselineValue(definitionQuery.data);
-    setValidationError(null);
+    setSubmitError(null);
   }, [definitionQuery.data, isCreatingNew]);
 
   function handleSelectPlugin(pluginId: string) {
@@ -94,7 +114,7 @@ export default function ManagePluginsPage() {
     setSelectedPluginId(pluginId);
     setEditorValue("");
     setBaselineValue("");
-    setValidationError(null);
+    setSubmitError(null);
   }
 
   function handleCreatePlugin() {
@@ -102,22 +122,21 @@ export default function ManagePluginsPage() {
     setSelectedPluginId(null);
     setEditorValue(NEW_PLUGIN_TEMPLATE);
     setBaselineValue(NEW_PLUGIN_TEMPLATE);
-    setValidationError(null);
+    setSubmitError(null);
   }
 
   function validateYaml(yaml: string): boolean {
-    if (!yaml.trim()) {
-      setValidationError("Plugin YAML cannot be empty.");
+    if (liveValidation.markers.length > 0) {
       return false;
     }
 
     try {
       load(yaml);
-      setValidationError(null);
+      setSubmitError(null);
       return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid YAML syntax.";
-      setValidationError(message);
+      setSubmitError(message);
       return false;
     }
   }
@@ -125,8 +144,8 @@ export default function ManagePluginsPage() {
   function handleEditorChange(value: string) {
     setEditorValue(value);
 
-    if (validationError) {
-      setValidationError(null);
+    if (submitError) {
+      setSubmitError(null);
     }
   }
 
@@ -151,7 +170,7 @@ export default function ManagePluginsPage() {
           toast.success("Plugin created.");
         },
         onError: (mutationError) => {
-          setValidationError(mutationError.message);
+          setSubmitError(mutationError.message);
           toast.error(`Save failed: ${mutationError.message}`);
         },
       });
@@ -168,11 +187,11 @@ export default function ManagePluginsPage() {
       {
         onSuccess: () => {
           setBaselineValue(editorValue);
-          setValidationError(null);
+          setSubmitError(null);
           toast.success(`${selectedPlugin?.displayName ?? selectedPluginId} saved.`);
         },
         onError: (mutationError) => {
-          setValidationError(mutationError.message);
+          setSubmitError(mutationError.message);
           toast.error(`Save failed: ${mutationError.message}`);
         },
       },
@@ -187,18 +206,65 @@ export default function ManagePluginsPage() {
     deleteMutation.mutate(selectedPluginId, {
       onSuccess: () => {
         toast.success(`${selectedPlugin?.displayName ?? selectedPluginId} deleted.`);
-        setValidationError(null);
+        setSubmitError(null);
         setEditorValue("");
         setBaselineValue("");
         setSelectedPluginId(null);
         setIsCreatingNew(false);
       },
       onError: (mutationError) => {
-        setValidationError(mutationError.message);
+        setSubmitError(mutationError.message);
         toast.error(`Delete failed: ${mutationError.message}`);
       },
     });
   }
+
+  function handleEditorWillMount(monaco: typeof Monaco) {
+    monacoRef.current = monaco;
+    configurePluginYamlMonaco(monaco);
+  }
+
+  function handleEditorMount(editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+
+    diagnosticsCleanupRef.current?.();
+    const model = editor.getModel();
+    if (!model) {
+      return;
+    }
+
+    diagnosticsCleanupRef.current = installPluginYamlDiagnostics(monaco, model, () => ({
+      expectedPluginId: isCreatingNew ? null : selectedPluginId,
+    }));
+  }
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+
+    const model = editor.getModel();
+    if (!model) {
+      return;
+    }
+
+    const monaco = monacoRef.current;
+    if (!monaco) {
+      return;
+    }
+
+    diagnosticsCleanupRef.current?.();
+    diagnosticsCleanupRef.current = installPluginYamlDiagnostics(monaco, model, () => ({
+      expectedPluginId: isCreatingNew ? null : selectedPluginId,
+    }));
+
+    return () => {
+      diagnosticsCleanupRef.current?.();
+      diagnosticsCleanupRef.current = null;
+    };
+  }, [isCreatingNew, selectedPluginId]);
 
   const activeSourceMeta = selectedPlugin ? getSourceMeta(selectedPlugin.source) : null;
   const selectedFieldCount = selectedPlugin?.fields.length ?? 0;
@@ -352,10 +418,55 @@ export default function ManagePluginsPage() {
                   </div>
                 </div>
               </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {definitionQuery.isLoading && !isCreatingNew && (
+                <div className="flex h-[70vh] items-center justify-center rounded-xl border border-border/60 bg-muted/10">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              )}
+
+              {definitionQuery.error && !isCreatingNew && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                  Failed to load plugin YAML: {definitionQuery.error.message}
+                </div>
+              )}
+
+              {!definitionQuery.isLoading && (!selectedPluginId || editorValue) && (
+                <div className="overflow-hidden rounded-xl border border-border/70 bg-[#0b1220] shadow-inner">
+                  <Editor
+                    beforeMount={handleEditorWillMount}
+                    onMount={handleEditorMount}
+                    height={EDITOR_HEIGHT}
+                    path={PLUGIN_EDITOR_MODEL_URI}
+                    defaultLanguage="yaml"
+                    language="yaml"
+                    theme="vs-dark"
+                    value={editorValue}
+                    onChange={(value) => handleEditorChange(value ?? "")}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      fontFamily: "JetBrains Mono, monospace",
+                      scrollBeyondLastLine: false,
+                      wordWrap: "on",
+                      automaticLayout: true,
+                      tabSize: 2,
+                      formatOnPaste: true,
+                      formatOnType: true,
+                      quickSuggestions: true,
+                      suggestOnTriggerCharacters: true,
+                      padding: { top: 16, bottom: 16 },
+                      readOnly: isEditorBusy,
+                    }}
+                  />
+                </div>
+              )}
+
               <div className="flex flex-col gap-3 border-t border-border/60 pt-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="text-sm text-muted-foreground">
-                  {validationError
-                    ? `Validation error: ${validationError}`
+                  {activeError
+                    ? `Validation error: ${activeError}`
                     : canDelete
                       ? "Database-backed plugins can be deleted here. Disk plugins can only be overridden by saving edits."
                       : "Save applies YAML changes immediately. Disk plugins become database overrides after their first save."}
@@ -389,79 +500,12 @@ export default function ManagePluginsPage() {
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
-                  <Button onClick={handleSave} disabled={isEditorBusy || !editorValue.trim() || (!isCreatingNew && !isDirty)}>
+                  <Button onClick={handleSave} disabled={isEditorBusy || !editorValue.trim() || Boolean(liveValidationError) || (!isCreatingNew && !isDirty)}>
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     {isCreatingNew ? "Create Plugin" : "Save Changes"}
                   </Button>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                    <Braces className="h-3.5 w-3.5" />
-                    YAML Schema
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    The editor loads the raw definition exactly as returned by the backend.
-                  </p>
-                </div>
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                    <FileCode2 className="h-3.5 w-3.5" />
-                    Drafting
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Use the starter template to scaffold metadata, fields, steps, mapping, and dashboard metric blocks.
-                  </p>
-                </div>
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                    <Database className="h-3.5 w-3.5" />
-                    Sources
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Catalog entries show whether the active definition currently comes from disk or the database.
-                  </p>
-                </div>
-              </div>
-
-              {definitionQuery.isLoading && !isCreatingNew && (
-                <div className="flex h-[70vh] items-center justify-center rounded-xl border border-border/60 bg-muted/10">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              )}
-
-              {definitionQuery.error && !isCreatingNew && (
-                <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-                  Failed to load plugin YAML: {definitionQuery.error.message}
-                </div>
-              )}
-
-              {!definitionQuery.isLoading && (!selectedPluginId || editorValue) && (
-                <div className="overflow-hidden rounded-xl border border-border/70 bg-[#0b1220] shadow-inner">
-                  <Editor
-                    height={EDITOR_HEIGHT}
-                    defaultLanguage="yaml"
-                    language="yaml"
-                    theme="vs-dark"
-                    value={editorValue}
-                    onChange={(value) => handleEditorChange(value ?? "")}
-                    options={{
-                      minimap: { enabled: false },
-                      fontSize: 13,
-                      fontFamily: "JetBrains Mono, monospace",
-                      scrollBeyondLastLine: false,
-                      wordWrap: "on",
-                      automaticLayout: true,
-                      tabSize: 2,
-                      padding: { top: 16, bottom: 16 },
-                      readOnly: isEditorBusy,
-                    }}
-                  />
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
