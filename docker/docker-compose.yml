@@ -12,6 +12,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       Database__Directory: /data
       Hangfire__Directory: /data
+      Plugins__Directory: ${PLUGINS_DIRECTORY:-/data/plugins}
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
       TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
     volumes:
