@@ -6,7 +6,9 @@ using Scalar.AspNetCore;
 using TrackerStats.Domain.Plugins;
 using TrackerStats.Domain.Repositories;
 using TrackerStats.Infrastructure.Data;
+using TrackerStats.Domain.Plugins.Yaml;
 using TrackerStats.Infrastructure.Plugins;
+using TrackerStats.Infrastructure.Plugins.Yaml;
 using TrackerStats.Infrastructure.Repositories;
 using TrackerStats.Infrastructure.Services;
 using TrackerStats.Plugin.BjShare;
@@ -39,6 +41,8 @@ builder.Services.AddScoped<IntegrationSyncService>();
 builder.Services.AddScoped<IntegrationRecurringSyncJob>();
 builder.Services.AddSingleton<IntegrationRecurringJobScheduler>();
 builder.Services.AddHostedService<IntegrationRecurringJobsBootstrapper>();
+
+builder.Services.AddScoped<IYamlPluginEngine, YamlPluginEngine>();
 
 builder.Services.AddTransient<ITrackerPlugin, BjShareTrackerPlugin>();
 builder.Services.AddTransient<ITrackerPlugin, FearnopeerTrackerPlugin>();
