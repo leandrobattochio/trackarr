@@ -17,18 +17,18 @@ TrackArr is a self-hosted dashboard for private tracker monitoring. It lets you 
 - Manual sync for any configured integration
 - Automatic recurring sync with Hangfire-backed scheduling
 - Snapshot charts for uploaded/downloaded bytes and torrent activity
-- In-app YAML editor for plugin authoring and overrides
+- In-app YAML editor for plugin authoring and overrides with schema-aware validation, completions, snippets, and hover docs
 - Built-in plugin catalog seeded to disk on first run
 
 ## Architecture
 
 ### Frontend
 
-- React 18
+- React 19
 - Vite 7
 - TypeScript
 - TanStack Query
-- Tailwind CSS + Radix UI + Monaco editor
+- Tailwind CSS + Radix UI + Monaco editor + Monaco YAML services
 
 The frontend runs on `http://localhost:8080` in development and proxies `/api` requests to the backend on `http://localhost:5000`.
 
@@ -78,6 +78,8 @@ TrackArr uses YAML plugin definitions to describe how to connect to a tracker:
 - `steps`: HTTP requests and extraction rules
 - `mapping`: how extracted values map into TrackArr stats
 - `dashboard`: which stats should be shown on the UI card
+
+The frontend plugin editor validates more than generic YAML syntax. It understands the TrackArr plugin structure, shows completions for supported fields and enums, offers snippets for common blocks, and blocks saves when the document is malformed or semantically invalid.
 
 Built-in plugins currently included:
 
@@ -191,7 +193,7 @@ Plugin create/update requests use raw YAML in the request body.
 
 - `/` dashboard for integrations and sync status
 - `/snapshots` chart view for historical metrics
-- `/plugins` YAML plugin management
+- `/plugins` YAML plugin management with schema-backed IntelliSense and save-blocking validation
 - `/help` usage guidance
 
 ## Notes and constraints
@@ -200,3 +202,4 @@ Plugin create/update requests use raw YAML in the request body.
 - `required_ratio` is required by the current integration flow and is parsed from the payload JSON
 - Sensitive plugin fields are masked in the UI and preserved on update if the user leaves them blank
 - Disk plugins cannot be deleted from the UI, but they can be overridden by saving a database-backed version with the same `pluginId`
+- Help, snapshots, and plugin-management routes are lazy-loaded in the frontend, and the Monaco/YAML editor stack is split into dedicated chunks
