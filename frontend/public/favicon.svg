@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0f172a" />
+      <stop offset="1" stop-color="#111827" />
+    </linearGradient>
+    <linearGradient id="magnet" x1="18" y1="16" x2="46" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff5a3d" />
+      <stop offset="1" stop-color="#ff7a00" />
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#bg)" />
+
+  <path
+    d="M20 18h9v14c0 1.989.79 3.897 2.196 5.304A7.5 7.5 0 0 0 36.5 39.5c1.989 0 3.897-.79 5.304-2.196A7.5 7.5 0 0 0 44 32V18h9v14c0 4.376-1.738 8.573-4.833 11.667C45.073 46.762 40.876 48.5 36.5 48.5s-8.573-1.738-11.667-4.833C21.738 40.573 20 36.376 20 32Z"
+    fill="url(#magnet)"
+  />
+
+  <rect x="20" y="18" width="9" height="8" rx="2" fill="#e5e7eb" />
+  <rect x="44" y="18" width="9" height="8" rx="2" fill="#e5e7eb" />
+</svg>
