@@ -1,15 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
 import Editor from "@monaco-editor/react";
-import { Braces, Database, FileCode2, FolderOpen, Loader2, Plus } from "lucide-react";
+import { load } from "js-yaml";
+import { Braces, Database, FileCode2, FolderOpen, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { usePageTitle } from "@/shared/hooks/use-page-title";
-import { usePluginCatalog, usePluginDefinition } from "@/features/plugins/hooks";
+import {
+  useCreatePluginDefinition,
+  useDeletePluginDefinition,
+  usePluginCatalog,
+  usePluginDefinition,
+  useUpdatePluginDefinition,
+} from "@/features/plugins/hooks";
 import { NEW_PLUGIN_TEMPLATE } from "@/features/plugins/plugin-template";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import { cn } from "@/shared/lib/utils";
 import type { ApiPluginListItem } from "@/features/plugins/types";
 
@@ -37,7 +56,13 @@ export default function ManagePluginsPage() {
   const { data: plugins = [], isLoading, error } = usePluginCatalog();
   const [selectedPluginId, setSelectedPluginId] = useState<string | null>(null);
   const [editorValue, setEditorValue] = useState("");
+  const [baselineValue, setBaselineValue] = useState("");
   const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  const createMutation = useCreatePluginDefinition();
+  const updateMutation = useUpdatePluginDefinition();
+  const deleteMutation = useDeletePluginDefinition();
 
   useEffect(() => {
     if (plugins.length === 0 || isCreatingNew) {
@@ -60,22 +85,128 @@ export default function ManagePluginsPage() {
     }
 
     setEditorValue(definitionQuery.data);
+    setBaselineValue(definitionQuery.data);
+    setValidationError(null);
   }, [definitionQuery.data, isCreatingNew]);
 
   function handleSelectPlugin(pluginId: string) {
     setIsCreatingNew(false);
     setSelectedPluginId(pluginId);
     setEditorValue("");
+    setBaselineValue("");
+    setValidationError(null);
   }
 
   function handleCreatePlugin() {
     setIsCreatingNew(true);
     setSelectedPluginId(null);
     setEditorValue(NEW_PLUGIN_TEMPLATE);
+    setBaselineValue(NEW_PLUGIN_TEMPLATE);
+    setValidationError(null);
+  }
+
+  function validateYaml(yaml: string): boolean {
+    if (!yaml.trim()) {
+      setValidationError("Plugin YAML cannot be empty.");
+      return false;
+    }
+
+    try {
+      load(yaml);
+      setValidationError(null);
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid YAML syntax.";
+      setValidationError(message);
+      return false;
+    }
+  }
+
+  function handleEditorChange(value: string) {
+    setEditorValue(value);
+
+    if (validationError) {
+      setValidationError(null);
+    }
+  }
+
+  async function handleSave() {
+    if (!validateYaml(editorValue)) {
+      toast.error("Fix the YAML syntax before saving.");
+      return;
+    }
+
+    if (isCreatingNew) {
+      createMutation.mutate(editorValue, {
+        onSuccess: async () => {
+          const parsed = load(editorValue) as { pluginId?: string } | null;
+          const pluginId = parsed?.pluginId?.trim();
+
+          setBaselineValue(editorValue);
+          setIsCreatingNew(false);
+          if (pluginId) {
+            setSelectedPluginId(pluginId);
+          }
+
+          toast.success("Plugin created.");
+        },
+        onError: (mutationError) => {
+          setValidationError(mutationError.message);
+          toast.error(`Save failed: ${mutationError.message}`);
+        },
+      });
+
+      return;
+    }
+
+    if (!selectedPluginId) {
+      return;
+    }
+
+    updateMutation.mutate(
+      { pluginId: selectedPluginId, yaml: editorValue },
+      {
+        onSuccess: () => {
+          setBaselineValue(editorValue);
+          setValidationError(null);
+          toast.success(`${selectedPlugin?.displayName ?? selectedPluginId} saved.`);
+        },
+        onError: (mutationError) => {
+          setValidationError(mutationError.message);
+          toast.error(`Save failed: ${mutationError.message}`);
+        },
+      },
+    );
+  }
+
+  function handleDelete() {
+    if (!selectedPluginId) {
+      return;
+    }
+
+    deleteMutation.mutate(selectedPluginId, {
+      onSuccess: () => {
+        toast.success(`${selectedPlugin?.displayName ?? selectedPluginId} deleted.`);
+        setValidationError(null);
+        setEditorValue("");
+        setBaselineValue("");
+        setSelectedPluginId(null);
+        setIsCreatingNew(false);
+      },
+      onError: (mutationError) => {
+        setValidationError(mutationError.message);
+        toast.error(`Delete failed: ${mutationError.message}`);
+      },
+    });
   }
 
   const activeSourceMeta = selectedPlugin ? getSourceMeta(selectedPlugin.source) : null;
   const selectedFieldCount = selectedPlugin?.fields.length ?? 0;
+  const isDirty = editorValue !== baselineValue;
+  const isSaving = createMutation.isPending || updateMutation.isPending;
+  const isDeleting = deleteMutation.isPending;
+  const canDelete = Boolean(selectedPlugin && selectedPlugin.source === "database" && !isCreatingNew);
+  const isEditorBusy = definitionQuery.isLoading || isSaving || isDeleting;
 
   return (
     <DashboardLayout>
@@ -218,8 +349,51 @@ export default function ManagePluginsPage() {
                   </div>
                   <div className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Mode</p>
-                    <p className="mt-1 font-display text-lg font-semibold">{isCreatingNew ? "Draft" : "Inspect"}</p>
+                    <p className="mt-1 font-display text-lg font-semibold">{isCreatingNew ? "Draft" : "Edit"}</p>
                   </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 border-t border-border/60 pt-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {validationError
+                    ? `Validation error: ${validationError}`
+                    : canDelete
+                      ? "Database-backed plugins can be deleted here. Disk plugins can only be overridden by saving edits."
+                      : "Save applies YAML changes immediately. Disk plugins become database overrides after their first save."}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {canDelete && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" className="text-destructive hover:text-destructive" disabled={isEditorBusy}>
+                          {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete plugin definition?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This removes the database definition for {selectedPlugin?.displayName ?? selectedPluginId}. If a disk version exists, it will become active again.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                          >
+                            {isDeleting ? "Deleting..." : "Delete"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                  <Button onClick={handleSave} disabled={isEditorBusy || !editorValue.trim() || (!isCreatingNew && !isDirty)}>
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {isCreatingNew ? "Create Plugin" : "Save Changes"}
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -274,7 +448,7 @@ export default function ManagePluginsPage() {
                     language="yaml"
                     theme="vs-dark"
                     value={editorValue}
-                    onChange={(value) => setEditorValue(value ?? "")}
+                    onChange={(value) => handleEditorChange(value ?? "")}
                     options={{
                       minimap: { enabled: false },
                       fontSize: 13,
@@ -284,6 +458,7 @@ export default function ManagePluginsPage() {
                       automaticLayout: true,
                       tabSize: 2,
                       padding: { top: 16, bottom: 16 },
+                      readOnly: isEditorBusy,
                     }}
                   />
                 </div>

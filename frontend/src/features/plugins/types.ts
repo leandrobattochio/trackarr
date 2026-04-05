@@ -15,3 +15,8 @@ export interface ApiPluginListItem {
   source: PluginSource;
   fields: ApiPluginFieldDefinition[];
 }
+
+export interface SavePluginResponse {
+  pluginId: string;
+  source: PluginSource;
+}

@@ -1,7 +1,23 @@
 import { request, requestText } from "@/shared/api/http";
-import type { ApiPluginListItem } from "@/features/plugins/types";
+import type { ApiPluginListItem, SavePluginResponse } from "@/features/plugins/types";
 
 export const pluginApi = {
   list: () => request<ApiPluginListItem[]>("/plugins"),
   getDefinition: (pluginId: string) => requestText(`/plugins/${pluginId}`),
+  createDefinition: (yaml: string) =>
+    request<void>("/plugins", {
+      method: "POST",
+      headers: { "Content-Type": "application/yaml" },
+      body: yaml,
+    }),
+  updateDefinition: (pluginId: string, yaml: string) =>
+    request<SavePluginResponse>(`/plugins/${pluginId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/yaml" },
+      body: yaml,
+    }),
+  deleteDefinition: (pluginId: string) =>
+    request<void>(`/plugins/${pluginId}`, {
+      method: "DELETE",
+    }),
 };

@@ -8,6 +8,7 @@ Started: Sat Apr  4 21:15:00 -03 2026
 - Disk YAML definitions load first and DB-stored JSON definitions override them by `pluginId`; `/api/plugins` surfaces the merged source as `disk` or `database`
 - `TrackerPluginRegistry` reloads definitions through `IYamlPluginDefinitionLoader` on each query so plugin CRUD changes are visible immediately without restarting the API
 - Frontend plugin detail fetches should use a text response helper: `GET /api/plugins/{pluginId}` returns raw YAML, not JSON
+- Plugin editor mutations should invalidate both the catalog query and the per-plugin definition query so save/delete actions show up immediately in the sidebar and editor
 - Domain project has no external dependencies — plain C# classes with `required` keyword for mandatory fields
 - Existing plugin domain types are in `TrackerStats.Domain/Plugins/` (ITrackerPlugin, TrackerStats, TrackerFetchResult, etc.)
 - Use `dotnet build src/TrackerStats.Domain/TrackerStats.Domain.csproj --no-restore` for quick typecheck of Domain layer
@@ -39,7 +40,6 @@ Started: Sat Apr  4 21:15:00 -03 2026
   - Used mutable classes with `required` keyword (not records) for YAML deserialization compatibility
   - MappingConfig uses string values to support both direct references and computed expressions (e.g., "seedingTorrents + leechingTorrents")
 ---
-
 ## 2026-04-04 - US-002
 - Translated BJ-Share C# plugin into declarative YAML at `backend/plugins/bj-share.yaml`
 - Files created: `backend/plugins/bj-share.yaml`
@@ -199,5 +199,18 @@ Started: Sat Apr  4 21:15:00 -03 2026
 - **Learnings for future iterations:**
   - The plugin catalog response includes `source`, but the YAML definition endpoint returns plain text, so list/detail fetches need different client helpers
   - Monaco adds substantial bundle weight; current `vite build` passes but reports the existing large-chunk warning for the main bundle
+  - Browser verification still needs a manual pass because no browser automation tool was available in this iteration
+---
+## 2026-04-04 22:11 - US-012
+- Added plugin definition create/update/delete mutations and connected the Manage Plugins editor to save new drafts, update existing definitions, and delete database-backed definitions with confirmation
+- Added client-side YAML syntax validation with `js-yaml`, inline validation/backend error messaging, dirty-state tracking, and success/error toast notifications
+- Files changed
+  - `frontend/src/features/plugins/ManagePluginsPage.tsx`
+  - `frontend/src/features/plugins/api.ts`
+  - `frontend/src/features/plugins/hooks.ts`
+  - `frontend/src/features/plugins/types.ts`
+- **Learnings for future iterations:**
+  - Client-side YAML syntax checks are useful before save, but schema problems should still be displayed from the backend error response in the editor panel
+  - Delete should stay scoped to `database` plugin sources; disk definitions need save-to-override instead of exposing a guaranteed 404 path
   - Browser verification still needs a manual pass because no browser automation tool was available in this iteration
 ---
