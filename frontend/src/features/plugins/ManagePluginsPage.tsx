@@ -285,8 +285,7 @@ export default function ManagePluginsPage() {
                               {sourceMeta.label}
                             </Badge>
                           </div>
-                          <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{plugin.pluginGroup}</span>
+                          <div className="mt-4 flex items-center justify-end text-xs text-muted-foreground">
                             <span>{plugin.fields.length} fields</span>
                           </div>
                         </button>
@@ -338,7 +337,7 @@ export default function ManagePluginsPage() {
                     {isCreatingNew
                       ? "Start from the baseline YAML schema and adjust metadata, fields, steps, and mappings."
                       : selectedPlugin
-                        ? `${selectedPlugin.pluginId} from ${selectedPlugin.pluginGroup}`
+                        ? selectedPlugin.pluginId
                         : "Select a plugin definition from the catalog to inspect it."}
                   </CardDescription>
                 </div>
@@ -414,7 +413,7 @@ export default function ManagePluginsPage() {
                     Drafting
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Use the starter template to scaffold new metadata, fields, steps, and mapping blocks.
+                    Use the starter template to scaffold metadata, fields, steps, mapping, and dashboard metric blocks.
                   </p>
                 </div>
                 <div className="rounded-xl border border-border/70 bg-muted/20 p-4">

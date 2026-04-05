@@ -1,19 +1,10 @@
 import type { TrackerIntegration } from "@/features/integrations/types";
-import { BjShareTrackerCard } from "@/features/integrations/plugins/bj-share/BjShareTrackerCard";
-import { DefaultTrackerCard } from "@/features/integrations/plugins/default/DefaultTrackerCard";
-import { Unit3DTrackerCard } from "@/features/integrations/plugins/unit3d/Unit3DTrackerCard";
+import { ConfiguredTrackerCard } from "@/features/integrations/plugins/ConfiguredTrackerCard";
 
 interface PluginTrackerCardProps {
   tracker: TrackerIntegration;
 }
 
 export function PluginTrackerCard({ tracker }: PluginTrackerCardProps) {
-  switch (tracker.pluginGroup) {
-    case "bj-share":
-      return <BjShareTrackerCard tracker={tracker} />;
-    case "unit3d":
-      return <Unit3DTrackerCard tracker={tracker} />;
-    default:
-      return <DefaultTrackerCard tracker={tracker} />;
-  }
+  return <ConfiguredTrackerCard tracker={tracker} />;
 }

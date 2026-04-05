@@ -1,5 +1,4 @@
 export const NEW_PLUGIN_TEMPLATE = `pluginId: custom-plugin
-pluginGroup: custom
 displayName: Custom Plugin
 fields:
   - name: cron
@@ -29,6 +28,17 @@ steps:
       ratio:
         path: data.ratio
         transform: decimal
+      uploaded:
+        path: data.uploaded
+        transform: byteSize
 mapping:
   ratio: steps.fetchStats.ratio
+  uploadedBytes: steps.fetchStats.uploaded
+dashboard:
+  metrics:
+    - stat: uploadedBytes
+      label: Uploaded
+      format: bytes
+      icon: arrow-up
+      tone: success
 `;

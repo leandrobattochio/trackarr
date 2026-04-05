@@ -1,3 +1,5 @@
+import type { ApiDashboardConfig } from "@/features/integrations/types";
+
 export type PluginSource = "disk" | "database";
 
 export interface ApiPluginFieldDefinition {
@@ -10,9 +12,9 @@ export interface ApiPluginFieldDefinition {
 
 export interface ApiPluginListItem {
   pluginId: string;
-  pluginGroup: string;
   displayName: string;
   source: PluginSource;
+  dashboard: ApiDashboardConfig;
   fields: ApiPluginFieldDefinition[];
 }
 
