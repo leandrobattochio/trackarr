@@ -5,22 +5,12 @@ using TrackerStats.Infrastructure.Plugins.Yaml;
 
 namespace TrackerStats.Infrastructure.Plugins;
 
-public class TrackerPluginRegistry : ITrackerPluginRegistry
+public class TrackerPluginRegistry(
+    IServiceProvider serviceProvider,
+    IYamlPluginEngine engine,
+    IYamlPluginDefinitionLoader loader)
+    : ITrackerPluginRegistry
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly IYamlPluginEngine _engine;
-    private readonly IYamlPluginDefinitionLoader _loader;
-
-    public TrackerPluginRegistry(
-        IServiceProvider serviceProvider,
-        IYamlPluginEngine engine,
-        IYamlPluginDefinitionLoader loader)
-    {
-        _serviceProvider = serviceProvider;
-        _engine = engine;
-        _loader = loader;
-    }
-
     public ITrackerPlugin? GetById(string pluginId) =>
         LoadRegistrations().TryGetValue(pluginId, out var registration)
             ? CreatePluginInstance(registration.Prototype)
@@ -51,7 +41,7 @@ public class TrackerPluginRegistry : ITrackerPluginRegistry
             .ToList();
 
     private IReadOnlyDictionary<string, PluginRegistration> LoadRegistrations() =>
-        _loader.LoadDefinitions()
+        loader.LoadDefinitions()
             .GroupBy(definition => definition.Definition.PluginId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 group => group.Key,
@@ -59,7 +49,7 @@ public class TrackerPluginRegistry : ITrackerPluginRegistry
                 {
                     var definition = group.First();
                     return new PluginRegistration(
-                        new Yaml.YamlTrackerPlugin(definition.Definition, _engine),
+                        new Yaml.YamlTrackerPlugin(definition.Definition, engine),
                         definition.Source);
                 },
                 StringComparer.OrdinalIgnoreCase);
@@ -68,8 +58,8 @@ public class TrackerPluginRegistry : ITrackerPluginRegistry
         prototype switch
         {
             Yaml.YamlTrackerPlugin yamlPlugin => yamlPlugin.WithConfiguration(configuration),
-            _ when configuration is null => (ITrackerPlugin)ActivatorUtilities.CreateInstance(_serviceProvider, prototype.GetType()),
-            _ => (ITrackerPlugin)ActivatorUtilities.CreateInstance(_serviceProvider, prototype.GetType(), configuration)
+            _ when configuration is null => (ITrackerPlugin)ActivatorUtilities.CreateInstance(serviceProvider, prototype.GetType()),
+            _ => (ITrackerPlugin)ActivatorUtilities.CreateInstance(serviceProvider, prototype.GetType(), configuration)
         };
 
     private sealed record PluginRegistration(ITrackerPlugin Prototype, string Source);

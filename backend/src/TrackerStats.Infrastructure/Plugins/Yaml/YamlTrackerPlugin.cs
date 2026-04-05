@@ -3,22 +3,16 @@ using TrackerStats.Domain.Plugins.Yaml;
 
 namespace TrackerStats.Infrastructure.Plugins.Yaml;
 
-public sealed class YamlTrackerPlugin : ITrackerPlugin
+public sealed class YamlTrackerPlugin(
+    PluginDefinition definition,
+    IYamlPluginEngine engine,
+    PluginConfiguration? configuration = null)
+    : ITrackerPlugin
 {
-    private readonly PluginConfiguration _configuration;
+    private readonly PluginConfiguration _configuration = configuration ?? new PluginConfiguration(new Dictionary<string, string?>());
 
-    public YamlTrackerPlugin(
-        PluginDefinition definition,
-        IYamlPluginEngine engine,
-        PluginConfiguration? configuration = null)
-    {
-        Definition = definition;
-        Engine = engine;
-        _configuration = configuration ?? new PluginConfiguration(new Dictionary<string, string?>());
-    }
-
-    internal PluginDefinition Definition { get; }
-    private IYamlPluginEngine Engine { get; }
+    internal PluginDefinition Definition { get; } = definition;
+    private IYamlPluginEngine Engine { get; } = engine;
 
     public string PluginId => Definition.PluginId;
     public string DisplayName => Definition.DisplayName;
