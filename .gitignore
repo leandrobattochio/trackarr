@@ -17,6 +17,7 @@ Thumbs.db
 
 backend/artifacts/*
 .dotnet/
+backend/.dotnet/
 tasks/
 
 # Logs
