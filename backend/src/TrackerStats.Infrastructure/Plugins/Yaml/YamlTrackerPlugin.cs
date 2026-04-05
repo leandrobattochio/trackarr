@@ -6,6 +6,7 @@ namespace TrackerStats.Infrastructure.Plugins.Yaml;
 public sealed class YamlTrackerPlugin(
     PluginDefinition definition,
     IYamlPluginEngine engine,
+    ITemplateInterpolator interpolator,
     PluginConfiguration? configuration = null)
     : ITrackerPlugin
 {
@@ -13,6 +14,7 @@ public sealed class YamlTrackerPlugin(
 
     internal PluginDefinition Definition { get; } = definition;
     private IYamlPluginEngine Engine { get; } = engine;
+    private ITemplateInterpolator Interpolator { get; } = interpolator;
 
     public string PluginId => Definition.PluginId;
     public string DisplayName => Definition.DisplayName;
@@ -29,13 +31,13 @@ public sealed class YamlTrackerPlugin(
         .ToList();
 
     public void ConfigureHttpClient(HttpClient httpClient) =>
-        YamlPluginEngine.ConfigureHttpClient(httpClient, Definition, _configuration);
+        PluginHttpClientConfigurator.Configure(httpClient, Definition, _configuration, Interpolator);
 
     public Task<TrackerFetchResult> FetchStatsAsync(HttpClient httpClient, CancellationToken ct) =>
         Engine.ExecuteAsync(Definition, _configuration, httpClient, ct);
 
     internal YamlTrackerPlugin WithConfiguration(PluginConfiguration? configuration) =>
-        new(Definition, Engine, configuration);
+        new(Definition, Engine, Interpolator, configuration);
 
     private static AuthMode ResolveAuthMode(PluginDefinition definition)
     {

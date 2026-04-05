@@ -8,6 +8,7 @@ namespace TrackerStats.Infrastructure.Plugins;
 public class TrackerPluginRegistry(
     IServiceProvider serviceProvider,
     IYamlPluginEngine engine,
+    ITemplateInterpolator interpolator,
     IYamlPluginDefinitionLoader loader)
     : ITrackerPluginRegistry
 {
@@ -49,7 +50,7 @@ public class TrackerPluginRegistry(
                 {
                     var definition = group.First();
                     return new PluginRegistration(
-                        new Yaml.YamlTrackerPlugin(definition.Definition, engine),
+                        new Yaml.YamlTrackerPlugin(definition.Definition, engine, interpolator),
                         definition.Source);
                 },
                 StringComparer.OrdinalIgnoreCase);
