@@ -11,6 +11,9 @@ using TrackerStats.Infrastructure.Plugins;
 using TrackerStats.Infrastructure.Plugins.Yaml;
 using TrackerStats.Infrastructure.Repositories;
 using TrackerStats.Infrastructure.Services;
+using TrackerStats.PluginEngine;
+using TrackerStats.PluginEngine.Extraction;
+using TrackerStats.PluginEngine.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
 var postgresConnectionString = builder.Configuration.GetConnectionString("PostgresConnection");
@@ -51,6 +54,16 @@ builder.Services.AddScoped<IntegrationRecurringSyncJob>();
 builder.Services.AddSingleton<IntegrationRecurringJobScheduler>();
 builder.Services.AddHostedService<IntegrationRecurringJobsBootstrapper>();
 
+builder.Services.AddSingleton<IExtractionStrategy, CountMatchesExtractionStrategy>();
+builder.Services.AddSingleton<IExtractionStrategy, RegexExtractionStrategy>();
+builder.Services.AddSingleton<IExtractionStrategy, JsonPathExtractionStrategy>();
+builder.Services.AddSingleton<ITransformStrategy, ByteSizeTransformStrategy>();
+builder.Services.AddSingleton<ITransformStrategy, DecimalTransformStrategy>();
+builder.Services.AddSingleton<ITransformStrategy, IntegerTransformStrategy>();
+builder.Services.AddSingleton<ITransformStrategy, ToStringTransformStrategy>();
+builder.Services.AddSingleton<ITemplateInterpolator, TemplateInterpolator>();
+builder.Services.AddSingleton<IAuthFailureDetector, AuthFailureDetector>();
+builder.Services.AddSingleton<IResultMapper, ResultMapper>();
 builder.Services.AddSingleton<IYamlPluginEngine, YamlPluginEngine>();
 builder.Services.AddSingleton<IYamlPluginDefinitionLoader, YamlPluginDefinitionLoader>();
 builder.Services.AddSingleton<ITrackerPluginRegistry, TrackerPluginRegistry>();

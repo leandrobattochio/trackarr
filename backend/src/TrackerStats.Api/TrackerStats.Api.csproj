@@ -11,17 +11,18 @@
     <ProjectReference Include="..\TrackerStats.Domain\TrackerStats.Domain.csproj" />
     <ProjectReference Include="..\TrackerStats.Application\TrackerStats.Application.csproj" />
     <ProjectReference Include="..\TrackerStats.Infrastructure\TrackerStats.Infrastructure.csproj" />
+    <ProjectReference Include="..\TrackerStats.PluginEngine\TrackerStats.PluginEngine.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
-    <PackageReference Include="Hangfire.Storage.SQLite" Version="0.4.3" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.5">
+    <PackageReference Include="Hangfire.AspNetCore" />
+    <PackageReference Include="Hangfire.Storage.SQLite" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Scalar.AspNetCore" Version="2.13.19" />
+    <PackageReference Include="Scalar.AspNetCore" />
   </ItemGroup>
 
   <ItemGroup>
