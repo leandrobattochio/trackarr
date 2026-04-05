@@ -15,6 +15,9 @@ obj/
 .DS_Store
 Thumbs.db
 
+backend/artifacts/*
+.dotnet/
+tasks/
 
 # Logs
 logs
