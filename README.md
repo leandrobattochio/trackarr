@@ -53,7 +53,7 @@ The frontend runs on `http://localhost:8080` in development and proxies `/api` r
 ### Backend
 
 - ASP.NET Core Web API on `.NET 10`
-- Entity Framework Core with SQLite
+- Entity Framework Core with SQLite or PostgreSQL
 - Hangfire + `Hangfire.Storage.SQLite`
 - Scalar/OpenAPI in development
 - YAML plugin engine powered by `YamlDotNet`
@@ -137,8 +137,8 @@ Development defaults:
 
 On startup the backend:
 
-- applies EF Core migrations automatically
-- creates SQLite databases if needed
+- applies EF Core migrations automatically when using SQLite
+- creates the PostgreSQL schema automatically when `ConnectionStrings__PostgresConnection` is provided
 - seeds built-in plugin YAML files into the active plugins directory if missing
 - schedules recurring jobs for saved integrations
 
@@ -164,6 +164,13 @@ cd docker
 docker compose up --build
 ```
 
+To run with the bundled PostgreSQL sidecar instead of SQLite for the main application database:
+
+```powershell
+cd docker
+docker compose --profile postgres up --build
+```
+
 Default runtime values:
 
 - App URL: `http://localhost:3000`
@@ -173,10 +180,21 @@ Default runtime values:
 
 Relevant environment variables from `docker/docker-compose.yml`:
 
+- `ConnectionStrings__PostgresConnection`
 - `APP_TIMEZONE`
 - `Database__Directory`
 - `Hangfire__Directory`
 - `Plugins__Directory`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_PORT`
+
+Database precedence:
+
+- If `ConnectionStrings__PostgresConnection` is set to a non-empty PostgreSQL connection string, TrackArr uses PostgreSQL for the EF Core application database
+- Otherwise TrackArr falls back to the existing SQLite database in `/data`
+- Hangfire storage remains SQLite and continues to use `Hangfire__Directory`
 
 ## Data storage
 
@@ -186,7 +204,9 @@ By default TrackArr stores:
 - Hangfire job state in a separate SQLite database
 - plugin YAML files on disk
 
-In production, the container redirects those files into `/data` and `/data/plugins` so they survive container restarts when the volume is mounted.
+If PostgreSQL is configured, only the application data moves to PostgreSQL. Hangfire job state and plugin YAML files remain on disk.
+
+In production, the container redirects the SQLite-backed files into `/data` and `/data/plugins` so they survive container restarts when the volume is mounted.
 
 ## API overview
 

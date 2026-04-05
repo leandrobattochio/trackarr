@@ -13,15 +13,27 @@ using TrackerStats.Infrastructure.Repositories;
 using TrackerStats.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-var connectionString = ResolveConnectionString(builder.Configuration, builder.Environment, "DefaultConnection", "Database:Directory");
-var hangfireConnectionString = ResolveConnectionString(builder.Configuration, builder.Environment, "HangfireConnection", "Hangfire:Directory");
+var postgresConnectionString = builder.Configuration.GetConnectionString("PostgresConnection");
+var usePostgres = !string.IsNullOrWhiteSpace(postgresConnectionString);
+var connectionString = usePostgres
+    ? postgresConnectionString
+    : ResolveSqliteConnectionString(builder.Configuration, builder.Environment, "DefaultConnection", "Database:Directory");
+var hangfireConnectionString = ResolveSqliteConnectionString(builder.Configuration, builder.Environment, "HangfireConnection", "Hangfire:Directory");
 var hangfireDatabasePath = ResolveSqliteDatabasePath(hangfireConnectionString, "hangfire.db");
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<AppDbContext>(opts =>
-    opts.UseSqlite(connectionString));
+{
+    if (usePostgres)
+    {
+        opts.UseNpgsql(connectionString);
+        return;
+    }
+
+    opts.UseSqlite(connectionString);
+});
 
 builder.Services.AddHangfire(config => config
     .UseSimpleAssemblyNameTypeSerializer()
@@ -48,7 +60,14 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
+    if (usePostgres)
+    {
+        await db.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        await db.Database.MigrateAsync();
+    }
 }
 
 if (app.Environment.IsDevelopment())
@@ -83,7 +102,7 @@ if (app.Environment.IsProduction())
 
 app.Run();
 
-static string ResolveConnectionString(
+static string ResolveSqliteConnectionString(
     IConfiguration configuration,
     IHostEnvironment environment,
     string connectionStringName,
