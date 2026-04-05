@@ -1,12 +1,13 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using TrackerStats.Domain.Entities;
 using TrackerStats.Domain.Plugins;
+using TrackerStats.Domain.Plugins.Yaml;
 using TrackerStats.Domain.Repositories;
-using TrackerStats.Infrastructure.Plugins.Yaml;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using PluginDefinitionEntity = TrackerStats.Domain.Entities.PluginDefinition;
+using YamlPluginDefinition = TrackerStats.Domain.Plugins.Yaml.PluginDefinition;
 
 namespace TrackerStats.Api.Controllers;
 
@@ -74,7 +75,8 @@ public class PluginsController(
         if (loadedDefinition is null)
             return NotFound();
 
-        var yaml = Serializer.Serialize(loadedDefinition.Definition);
+        var editableDefinition = PluginDefinitionDefaults.CreateEditableDefinition(loadedDefinition.Definition);
+        var yaml = Serializer.Serialize(editableDefinition);
         return Content(yaml, "application/yaml");
     }
 
@@ -92,7 +94,7 @@ public class PluginsController(
             return Conflict(new { error = $"Plugin '{definition.PluginId}' already exists." });
 
         var now = DateTime.UtcNow;
-        await repository.AddAsync(new PluginDefinition
+        await repository.AddAsync(new PluginDefinitionEntity
         {
             Id = Guid.NewGuid(),
             PluginId = definition.PluginId,
@@ -127,7 +129,7 @@ public class PluginsController(
 
         if (storedDefinition is null)
         {
-            await repository.AddAsync(new PluginDefinition
+            await repository.AddAsync(new PluginDefinitionEntity
             {
                 Id = Guid.NewGuid(),
                 PluginId = definition.PluginId,
@@ -174,7 +176,7 @@ public class PluginsController(
 
         try
         {
-            var definition = Deserializer.Deserialize<TrackerStats.Domain.Plugins.Yaml.PluginDefinition>(yaml);
+            var definition = Deserializer.Deserialize<YamlPluginDefinition>(yaml);
             if (definition is null)
                 return new ParseDefinitionResult(null, "YAML could not be deserialized into a plugin definition.");
 
@@ -189,7 +191,7 @@ public class PluginsController(
         }
     }
 
-    private static string? ValidateDefinition(TrackerStats.Domain.Plugins.Yaml.PluginDefinition definition)
+    private static string? ValidateDefinition(YamlPluginDefinition definition)
     {
         if (string.IsNullOrWhiteSpace(definition.PluginId))
             return "Plugin definition is missing required field 'pluginId'.";
@@ -211,6 +213,10 @@ public class PluginsController(
 
         if (definition.Fields.Any(field => string.IsNullOrWhiteSpace(field.Type)))
             return "Each field must define 'type'.";
+
+        var reservedPropertyViolation = PluginDefinitionDefaults.GetReservedPropertyViolation(definition);
+        if (reservedPropertyViolation is not null)
+            return reservedPropertyViolation;
 
         if (definition.Steps.Any(step => string.IsNullOrWhiteSpace(step.Name)))
             return "Each step must define 'name'.";
@@ -266,5 +272,5 @@ public class PluginsController(
         return null;
     }
 
-    private sealed record ParseDefinitionResult(TrackerStats.Domain.Plugins.Yaml.PluginDefinition? Definition, string? Error);
+    private sealed record ParseDefinitionResult(YamlPluginDefinition? Definition, string? Error);
 }

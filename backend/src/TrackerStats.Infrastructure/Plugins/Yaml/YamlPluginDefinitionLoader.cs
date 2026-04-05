@@ -1,7 +1,8 @@
-using System.Text.Json;
 using System.Data.Common;
+using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TrackerStats.Domain.Plugins.Yaml;
 using TrackerStats.Domain.Repositories;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -13,13 +14,6 @@ public sealed class YamlPluginDefinitionLoader(
     IServiceScopeFactory scopeFactory,
     IConfiguration configuration) : IYamlPluginDefinitionLoader
 {
-    private static readonly string[] BuiltInPluginFileNames =
-    [
-        "bj-share.yaml",
-        "fearnopeer.yaml",
-        "seedpool.yaml"
-    ];
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -48,7 +42,6 @@ public sealed class YamlPluginDefinitionLoader(
     private IEnumerable<LoadedYamlPluginDefinition> LoadDiskDefinitions()
     {
         var pluginsDirectory = ResolvePluginsDirectory();
-        SeedBuiltInDefinitions(pluginsDirectory);
 
         if (!Directory.Exists(pluginsDirectory))
             yield break;
@@ -58,6 +51,8 @@ public sealed class YamlPluginDefinitionLoader(
         {
             var content = File.ReadAllText(path);
             var definition = DeserializeYamlDefinition(content, path);
+            RejectReservedFields(definition, path);
+            PluginDefinitionDefaults.ApplyDefaults(definition);
             yield return new LoadedYamlPluginDefinition(definition, "disk");
         }
     }
@@ -73,6 +68,8 @@ public sealed class YamlPluginDefinitionLoader(
             var definition = JsonSerializer.Deserialize<YamlPluginDefinition>(storedDefinition.DefinitionJson, JsonOptions)
                 ?? throw new InvalidOperationException($"Database plugin definition '{storedDefinition.PluginId}' could not be deserialized.");
 
+            definition = PluginDefinitionDefaults.NormalizeEngineOwnedProperties(definition);
+            PluginDefinitionDefaults.ApplyDefaults(definition);
             yield return new LoadedYamlPluginDefinition(definition, "database");
         }
     }
@@ -81,6 +78,13 @@ public sealed class YamlPluginDefinitionLoader(
         _deserializer.Deserialize<YamlPluginDefinition>(content)
         ?? throw new InvalidOperationException($"Plugin definition file '{path}' could not be deserialized.");
 
+    private static void RejectReservedFields(YamlPluginDefinition definition, string source)
+    {
+        var violation = PluginDefinitionDefaults.GetReservedPropertyViolation(definition);
+        if (violation is not null)
+            throw new InvalidOperationException($"Plugin definition '{source}' is invalid. {violation}");
+    }
+
     private string ResolvePluginsDirectory()
     {
         var configuredDirectory = configuration["Plugins:Directory"];
@@ -88,25 +92,6 @@ public sealed class YamlPluginDefinitionLoader(
             return ResolvePath(configuredDirectory);
 
         return ResolveSqliteDirectory();
-    }
-
-    private void SeedBuiltInDefinitions(string pluginsDirectory)
-    {
-        Directory.CreateDirectory(pluginsDirectory);
-
-        foreach (var fileName in BuiltInPluginFileNames)
-        {
-            var sourcePath = Path.Combine(AppContext.BaseDirectory, fileName);
-            if (!File.Exists(sourcePath))
-                continue;
-
-            var destinationPath = Path.Combine(pluginsDirectory, fileName);
-            if (Path.GetFullPath(sourcePath).Equals(Path.GetFullPath(destinationPath), StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            if (!File.Exists(destinationPath))
-                File.Copy(sourcePath, destinationPath);
-        }
     }
 
     private string ResolveSqliteDirectory()
