@@ -14,6 +14,7 @@ Started: Sat Apr  4 21:15:00 -03 2026
 - DI registration pattern: interface in Domain, implementation in Infrastructure, `AddScoped` in Program.cs
 - Entity pattern: simple POCO in `Domain/Entities/`, Fluent API config in `AppDbContext.OnModelCreating()`
 - YAML engine: interface `IYamlPluginEngine` in Domain, implementation `YamlPluginEngine` in `Infrastructure/Plugins/Yaml/`
+- YAML plugin registry must clone plugin prototypes, because multiple plugin IDs can now share the same `YamlTrackerPlugin` implementation type
 - Template interpolation: `InterpolateFieldValues` (no URL encoding, for headers/baseUrl) vs `InterpolateTemplate` (URL-encodes, for step URLs)
 - Auth failure detection checks HTTP status codes first, then HTML patterns — returns early on first match
 - `YamlPluginEngine.ExtractValues` and `BuildResult` are `protected virtual` — US-007 overrides or extends them
@@ -118,5 +119,22 @@ Started: Sat Apr  4 21:15:00 -03 2026
   - Mapping expressions currently support direct `steps.*` / `fields.*` references plus `+` arithmetic only
   - Validation runs after extraction/transforms; `onFail` is converted into a `PluginProcessResult` via a dedicated validation exception
   - JSON extraction is case-insensitive and supports dot-notation over nested objects
-  - Solution build verification succeeded with `dotnet build TrackerStats.sln`
+- Solution build verification succeeded with `dotnet build TrackerStats.sln`
+---
+## 2026-04-04 21:46 - US-008
+- Implemented `YamlTrackerPlugin` so YAML definitions now participate in the existing `ITrackerPlugin` contract for metadata, auth mode, HTTP client configuration, and fetch execution
+- Reworked `TrackerPluginRegistry` to create plugins from stored prototypes instead of implementation types, enabling multiple YAML-backed plugins to share one runtime class safely
+- Registered built-in YAML definitions through DI and removed the API runtime registrations that pointed directly at hardcoded plugin assemblies
+- Files changed
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/YamlTrackerPlugin.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/BuiltInYamlPluginDefinitions.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/TrackerPluginRegistry.cs`
+  - `backend/src/TrackerStats.Infrastructure/Plugins/Yaml/YamlPluginEngine.cs`
+  - `backend/src/TrackerStats.Api/Program.cs`
+  - `backend/src/TrackerStats.Api/TrackerStats.Api.csproj`
+- **Learnings for future iterations:**
+  - `YamlTrackerPlugin` should own HTTP client setup so `TrackerPluginHttpClientFactory` can keep treating YAML plugins like any other `ITrackerPlugin`
+  - `IYamlPluginEngine` is registered as a singleton because the singleton registry keeps YAML plugin prototypes alive for later cloning
+  - Until US-009 adds disk and database loading, `BuiltInYamlPluginDefinitions` is the temporary runtime source of truth for registered YAML plugins
+  - Shared implementation types break type-only registries; preserve per-plugin constructor state by cloning from prototypes instead
 ---

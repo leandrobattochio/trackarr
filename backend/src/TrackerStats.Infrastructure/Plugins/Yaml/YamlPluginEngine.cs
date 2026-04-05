@@ -18,7 +18,6 @@ public partial class YamlPluginEngine(ILogger<YamlPluginEngine> logger) : IYamlP
         try
         {
             ValidateDefinition(definition);
-            ConfigureHttpClient(httpClient, definition, configuration);
 
             var stepResults = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
 
@@ -79,7 +78,7 @@ public partial class YamlPluginEngine(ILogger<YamlPluginEngine> logger) : IYamlP
             throw new InvalidOperationException("Plugin definition must have at least one step.");
     }
 
-    private static void ConfigureHttpClient(
+    internal static void ConfigureHttpClient(
         HttpClient httpClient,
         PluginDefinition definition,
         PluginConfiguration configuration)

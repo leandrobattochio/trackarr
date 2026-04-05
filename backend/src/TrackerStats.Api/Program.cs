@@ -11,9 +11,6 @@ using TrackerStats.Infrastructure.Plugins;
 using TrackerStats.Infrastructure.Plugins.Yaml;
 using TrackerStats.Infrastructure.Repositories;
 using TrackerStats.Infrastructure.Services;
-using TrackerStats.Plugin.BjShare;
-using TrackerStats.Plugin.Fearnopeer;
-using TrackerStats.Plugin.Seedpool;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = ResolveConnectionString(builder.Configuration, builder.Environment, "DefaultConnection", "Database:Directory");
@@ -42,11 +39,12 @@ builder.Services.AddScoped<IntegrationRecurringSyncJob>();
 builder.Services.AddSingleton<IntegrationRecurringJobScheduler>();
 builder.Services.AddHostedService<IntegrationRecurringJobsBootstrapper>();
 
-builder.Services.AddScoped<IYamlPluginEngine, YamlPluginEngine>();
-
-builder.Services.AddTransient<ITrackerPlugin, BjShareTrackerPlugin>();
-builder.Services.AddTransient<ITrackerPlugin, FearnopeerTrackerPlugin>();
-builder.Services.AddTransient<ITrackerPlugin, SeedpoolTrackerPlugin>();
+builder.Services.AddSingleton<IYamlPluginEngine, YamlPluginEngine>();
+foreach (var definition in BuiltInYamlPluginDefinitions.CreateAll())
+{
+    builder.Services.AddTransient<ITrackerPlugin>(sp =>
+        new YamlTrackerPlugin(definition, sp.GetRequiredService<IYamlPluginEngine>()));
+}
 builder.Services.AddSingleton<ITrackerPluginRegistry, TrackerPluginRegistry>();
 
 var app = builder.Build();
