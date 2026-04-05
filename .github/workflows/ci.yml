@@ -1,4 +1,4 @@
-name: Frontend CI
+name: CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  build:
+  frontend-build:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -25,7 +25,7 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn build
 
-  lint:
+  frontend-lint:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -43,7 +43,7 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn lint
 
-  test:
+  frontend-test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -61,7 +61,7 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn test
 
-  audit:
+  frontend-audit:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -78,3 +78,27 @@ jobs:
       - run: corepack enable
       - run: yarn install --frozen-lockfile
       - run: yarn audit --level moderate
+
+  backend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - run: dotnet restore backend/src/TrackerStats.Api/TrackerStats.Api.csproj
+      - run: dotnet build backend/src/TrackerStats.Api/TrackerStats.Api.csproj --configuration Release --no-restore
+
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - run: dotnet restore backend/src/TrackerStats.Api/TrackerStats.Api.csproj
+      - run: dotnet test backend/src/TrackerStats.Api/TrackerStats.Api.csproj --configuration Release --no-restore
