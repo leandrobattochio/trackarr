@@ -1,0 +1,90 @@
+pluginId: bj-share
+pluginGroup: bj-share
+displayName: BJ-Share
+
+fields:
+  - name: cron
+    label: Cron Expression
+    type: cron
+    required: true
+  - name: required_ratio
+    label: Required Ratio
+    type: number
+    required: true
+  - name: baseUrl
+    label: Base URL
+    type: text
+    required: true
+  - name: cookie
+    label: Cookie
+    type: text
+    required: true
+    sensitive: true
+  - name: username
+    label: User Name
+    type: text
+    required: true
+
+http:
+  baseUrl: "{{baseUrl}}"
+  headers:
+    Accept: application/json
+    User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+    Cookie: "{{cookie}}"
+
+authFailure:
+  httpStatusCodes:
+    - 401
+    - 403
+  htmlPatterns:
+    - "Login"
+    - "login.php"
+    - "name=\"password\""
+    - "type=\"password\""
+
+steps:
+  - name: profile
+    method: POST
+    url: "user.php?username={{username}}"
+    responseType: html
+    extract:
+      uploadedBytes:
+        regex: "<li\\s+class=\"tooltip\"\\s+title=\"(?<value>[^\"]+)\">\\s*Enviado:"
+        transform: byteSize
+      downloadedBytes:
+        regex: "<li\\s+class=\"tooltip\"\\s+title=\"(?<value>[^\"]+)\">\\s*Baixado:"
+        transform: byteSize
+      ratio:
+        regex: "Ratio:\\s*<span[^>]*title=\"(?<value>[^\"]+)\""
+        transform: decimal
+      seedBonus:
+        regex: "BJ-Pontos\\s*:\\s*(?<value>[\\d\\.,]+)"
+        transform: integer
+
+  - name: seeding
+    method: GET
+    url: "torrents.php?type=seeding&username={{username}}"
+    responseType: html
+    extract:
+      seedingTorrents:
+        regex: "<tr[^>]*class=\"[^\"]*torrent[^\"]*torrent_row[^\"]*\"[^>]*>"
+        countMatches: true
+
+  - name: leeching
+    method: GET
+    url: "torrents.php?type=leeching&username={{username}}"
+    responseType: html
+    extract:
+      leechingTorrents:
+        regex: "<tr[^>]*class=\"[^\"]*torrent[^\"]*torrent_row[^\"]*\"[^>]*>"
+        countMatches: true
+
+mapping:
+  ratio: "steps.profile.ratio"
+  uploadedBytes: "steps.profile.uploadedBytes"
+  downloadedBytes: "steps.profile.downloadedBytes"
+  seedBonus: "steps.profile.seedBonus"
+  requiredRatio: "fields.required_ratio"
+  seedingTorrents: "steps.seeding.seedingTorrents"
+  leechingTorrents: "steps.leeching.leechingTorrents"
+  activeTorrents: "steps.seeding.seedingTorrents + steps.leeching.leechingTorrents"
