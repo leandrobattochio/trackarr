@@ -187,7 +187,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "notes": "Install @monaco-editor/react or similar package for the code editor."
     },
     {

@@ -7,6 +7,7 @@ Started: Sat Apr  4 21:15:00 -03 2026
 - Runtime plugin loading resolves `Plugins:Directory` relative to the API content root unless the config value is already absolute
 - Disk YAML definitions load first and DB-stored JSON definitions override them by `pluginId`; `/api/plugins` surfaces the merged source as `disk` or `database`
 - `TrackerPluginRegistry` reloads definitions through `IYamlPluginDefinitionLoader` on each query so plugin CRUD changes are visible immediately without restarting the API
+- Frontend plugin detail fetches should use a text response helper: `GET /api/plugins/{pluginId}` returns raw YAML, not JSON
 - Domain project has no external dependencies — plain C# classes with `required` keyword for mandatory fields
 - Existing plugin domain types are in `TrackerStats.Domain/Plugins/` (ITrackerPlugin, TrackerStats, TrackerFetchResult, etc.)
 - Use `dotnet build src/TrackerStats.Domain/TrackerStats.Domain.csproj --no-restore` for quick typecheck of Domain layer
@@ -174,4 +175,29 @@ Started: Sat Apr  4 21:15:00 -03 2026
   - API CRUD stores plugin definitions as camelCase JSON in the DB and serializes active definitions back to YAML with the same `CamelCaseNamingConvention`
   - `PUT /api/plugins/{pluginId}` should treat disk-backed plugins as overrideable defaults by creating a DB row when one does not already exist
   - Reloading definitions at registry query time keeps `/api/plugins`, integration validation, and sync execution aligned after plugin edits
+---
+## 2026-04-04 22:05 - US-011
+- Implemented a new Manage Plugins page with sidebar navigation, plugin catalog cards, source badges, default selection, and a Monaco-based YAML editor panel
+- Added frontend plugin-management API/hooks/types plus a reusable text-fetch helper for loading raw YAML definitions from `GET /api/plugins/{pluginId}`
+- Installed Monaco dependencies and fixed existing frontend lint blockers in shared UI/tailwind config while leaving warning-only lint output unchanged
+- Files changed
+  - `frontend/package.json`
+  - `frontend/yarn.lock`
+  - `frontend/src/app/router.tsx`
+  - `frontend/src/components/ui/command.tsx`
+  - `frontend/src/components/ui/textarea.tsx`
+  - `frontend/src/features/integrations/types.ts`
+  - `frontend/src/features/plugins/ManagePluginsPage.tsx`
+  - `frontend/src/features/plugins/api.ts`
+  - `frontend/src/features/plugins/hooks.ts`
+  - `frontend/src/features/plugins/index.ts`
+  - `frontend/src/features/plugins/plugin-template.ts`
+  - `frontend/src/features/plugins/types.ts`
+  - `frontend/src/layouts/AppSidebar.tsx`
+  - `frontend/src/shared/api/http.ts`
+  - `frontend/tailwind.config.ts`
+- **Learnings for future iterations:**
+  - The plugin catalog response includes `source`, but the YAML definition endpoint returns plain text, so list/detail fetches need different client helpers
+  - Monaco adds substantial bundle weight; current `vite build` passes but reports the existing large-chunk warning for the main bundle
+  - Browser verification still needs a manual pass because no browser automation tool was available in this iteration
 ---

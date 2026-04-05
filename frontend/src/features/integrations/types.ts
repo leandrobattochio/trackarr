@@ -42,6 +42,7 @@ export interface ApiPlugin {
   pluginId: string;
   pluginGroup: string;
   displayName: string;
+  source?: string;
   fields: ApiPluginField[];
 }
 
