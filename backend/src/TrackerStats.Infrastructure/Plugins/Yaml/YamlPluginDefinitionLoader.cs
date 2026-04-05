@@ -1,7 +1,7 @@
 using System.Text.Json;
+using System.Data.Common;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using TrackerStats.Domain.Repositories;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -11,9 +11,15 @@ namespace TrackerStats.Infrastructure.Plugins.Yaml;
 
 public sealed class YamlPluginDefinitionLoader(
     IServiceScopeFactory scopeFactory,
-    IConfiguration configuration,
-    IHostEnvironment environment) : IYamlPluginDefinitionLoader
+    IConfiguration configuration) : IYamlPluginDefinitionLoader
 {
+    private static readonly string[] BuiltInPluginFileNames =
+    [
+        "bj-share.yaml",
+        "fearnopeer.yaml",
+        "seedpool.yaml"
+    ];
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -42,6 +48,8 @@ public sealed class YamlPluginDefinitionLoader(
     private IEnumerable<LoadedYamlPluginDefinition> LoadDiskDefinitions()
     {
         var pluginsDirectory = ResolvePluginsDirectory();
+        SeedBuiltInDefinitions(pluginsDirectory);
+
         if (!Directory.Exists(pluginsDirectory))
             yield break;
 
@@ -76,11 +84,71 @@ public sealed class YamlPluginDefinitionLoader(
     private string ResolvePluginsDirectory()
     {
         var configuredDirectory = configuration["Plugins:Directory"];
-        if (string.IsNullOrWhiteSpace(configuredDirectory))
-            return Path.Combine(environment.ContentRootPath, "plugins");
+        if (!string.IsNullOrWhiteSpace(configuredDirectory))
+            return ResolvePath(configuredDirectory);
 
-        return Path.IsPathRooted(configuredDirectory)
-            ? configuredDirectory
-            : Path.GetFullPath(Path.Combine(environment.ContentRootPath, configuredDirectory));
+        return ResolveSqliteDirectory();
     }
+
+    private void SeedBuiltInDefinitions(string pluginsDirectory)
+    {
+        Directory.CreateDirectory(pluginsDirectory);
+
+        foreach (var fileName in BuiltInPluginFileNames)
+        {
+            var sourcePath = Path.Combine(AppContext.BaseDirectory, fileName);
+            if (!File.Exists(sourcePath))
+                continue;
+
+            var destinationPath = Path.Combine(pluginsDirectory, fileName);
+            if (Path.GetFullPath(sourcePath).Equals(Path.GetFullPath(destinationPath), StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (!File.Exists(destinationPath))
+                File.Copy(sourcePath, destinationPath);
+        }
+    }
+
+    private string ResolveSqliteDirectory()
+    {
+        var configuredDatabaseDirectory = configuration["Database:Directory"];
+        if (!string.IsNullOrWhiteSpace(configuredDatabaseDirectory))
+            return ResolvePath(configuredDatabaseDirectory);
+
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return Path.GetFullPath(AppContext.BaseDirectory);
+
+        var builder = new DbConnectionStringBuilder
+        {
+            ConnectionString = connectionString
+        };
+
+        var dataSourceKey = builder.ContainsKey("Data Source")
+            ? "Data Source"
+            : builder.ContainsKey("DataSource")
+                ? "DataSource"
+                : "Data Source";
+
+        var dataSource = builder.TryGetValue(dataSourceKey, out var value)
+            ? value?.ToString()
+            : null;
+
+        if (string.IsNullOrWhiteSpace(dataSource))
+            return Path.GetFullPath(AppContext.BaseDirectory);
+
+        var resolvedPath = Path.IsPathRooted(dataSource)
+            ? dataSource
+            : Path.Combine(AppContext.BaseDirectory, dataSource);
+
+        var directory = Path.GetDirectoryName(resolvedPath);
+        return string.IsNullOrWhiteSpace(directory)
+            ? Path.GetFullPath(AppContext.BaseDirectory)
+            : Path.GetFullPath(directory);
+    }
+
+    private static string ResolvePath(string path) =>
+        Path.IsPathRooted(path)
+            ? path
+            : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, path));
 }
