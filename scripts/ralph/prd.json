@@ -1,20 +1,22 @@
 {
   "project": "TrackerStats",
-  "branchName": "ralph/tracker-stats-backend",
-  "description": "Tracker Stats Backend - .NET 10 hexagonal API to manage torrent tracker integrations, exposing REST endpoints and auto-syncing stats hourly via a background job",
+  "branchName": "ralph/yaml-plugin-definitions",
+  "description": "YAML-Defined Plugin System - Replace hardcoded C# plugin classes with declarative YAML-based plugin definitions interpreted by a generic backend engine",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Set up solution with hexagonal architecture project structure",
-      "description": "As a developer, I want the codebase organized in hexagonal architecture so that domain logic is decoupled from infrastructure and delivery.",
+      "title": "Design the YAML plugin schema as C# model classes",
+      "description": "As a developer, I need C# model classes that represent the YAML plugin schema (metadata, fields, HTTP config, steps, extraction, transformations, mapping) so the engine can deserialize and work with plugin definitions.",
       "acceptanceCriteria": [
-        "Solution file TrackerStats.sln exists at the root",
-        "Project TrackerStats.Domain exists with no external dependencies (no EF Core, no ASP.NET)",
-        "Project TrackerStats.Application exists and references only TrackerStats.Domain",
-        "Project TrackerStats.Infrastructure exists and references Domain and Application",
-        "Project TrackerStats.Api exists and references all three projects",
-        "docker-compose.yml exists at root with the API service and a volume for the SQLite .db file",
-        "Typecheck/build passes"
+        "Create model classes for the YAML plugin schema: PluginDefinition, FieldDefinition, HttpConfig, AuthFailureConfig, StepDefinition, ExtractionRule, MappingConfig",
+        "PluginDefinition has: pluginId, pluginGroup, displayName",
+        "FieldDefinition has: name, label, type (cron/number/text/password), required, sensitive",
+        "HttpConfig has: baseUrl (supports {{fieldName}}), headers dict, cookies dict",
+        "AuthFailureConfig has: httpStatusCodes list, htmlPatterns list",
+        "StepDefinition has: name, method, url (supports {{fieldName}}), responseType (html/json), extract dict, validate list",
+        "ExtractionRule supports: regex with named capture groups (for HTML), dot-notation path (for JSON), transform (byteSize/decimal/integer/toString), countMatches mode",
+        "MappingConfig maps parsed values to TrackerStats fields, supports computed expressions (addition)",
+        "Typecheck passes"
       ],
       "priority": 1,
       "passes": true,
@@ -22,61 +24,68 @@
     },
     {
       "id": "US-002",
-      "title": "Define domain plugin contract types",
-      "description": "As a developer, I want a well-defined plugin interface so that any tracker can be integrated without changing the core system.",
+      "title": "Write BJ-Share YAML plugin file",
+      "description": "As a developer, I need to translate the existing BJ-Share C# plugin into a YAML file at plugins/bj-share.yaml.",
       "acceptanceCriteria": [
-        "Interface ITrackerPlugin exists in TrackerStats.Domain with: string PluginId, string DisplayName, AuthMode AuthMode, Task<TrackerStats> FetchStatsAsync(TrackerCredentials credentials, CancellationToken ct)",
-        "Record TrackerStats exists in TrackerStats.Domain with: decimal Ratio, long UploadedBytes, long DownloadedBytes",
-        "Record TrackerCredentials exists in TrackerStats.Domain with: string BaseUrl, string? Username, string? Password, string? Cookie",
-        "Enum AuthMode exists in TrackerStats.Domain with values UsernamePassword and Cookie",
-        "None of these types reference any infrastructure or framework libraries",
-        "Typecheck/build passes"
+        "YAML file saved at plugins/bj-share.yaml",
+        "Defines fields: cron, required_ratio, baseUrl, cookie (sensitive), username",
+        "Configures HTTP client with: baseUrl from field, Accept: application/json header, Chrome User-Agent header, Cookie header from field",
+        "Step 1: POST to user.php?username={{username}} — regex extracts uploaded bytes, downloaded bytes, ratio, BJ-Pontos from HTML",
+        "Step 2: GET to torrents.php?type=seeding&username={{username}} — countMatches regex for torrent rows",
+        "Step 3: GET to torrents.php?type=leeching&username={{username}} — countMatches regex for torrent rows",
+        "Auth failure detection: HTTP 401/403 OR HTML containing login-related patterns",
+        "Value transformations: byteSize (comma-as-decimal), decimal (comma normalization), integer (strip separators)",
+        "Stat mapping covers: ratio, uploadedBytes, downloadedBytes, seedBonus, requiredRatio, seedingTorrents, leechingTorrents, activeTorrents (computed)",
+        "YAML is valid and parseable"
       ],
       "priority": 2,
       "passes": true,
-      "notes": ""
+      "notes": "Study the existing BjShare C# plugin code closely to replicate exact regex patterns and transformation logic."
     },
     {
       "id": "US-003",
-      "title": "Define domain integration entity and repository interface",
-      "description": "As a developer, I want a domain entity and repository interface for integrations so that use cases can persist and retrieve tracker integrations.",
+      "title": "Write Fearnopeer YAML plugin file",
+      "description": "As a developer, I need to translate the existing Fearnopeer C# plugin into a YAML file at plugins/fearnopeer.yaml.",
       "acceptanceCriteria": [
-        "Class/record Integration exists in TrackerStats.Domain/Entities with: Guid Id, string PluginId, string Name, string BaseUrl, string? Username, string? Password, string? Cookie, DateTime? LastSyncAt, decimal? Ratio, long? UploadedBytes, long? DownloadedBytes",
-        "Interface IIntegrationRepository exists in TrackerStats.Domain/Repositories with methods: Task<Integration> AddAsync(Integration integration, CancellationToken ct), Task<IReadOnlyList<Integration>> ListAsync(CancellationToken ct), Task<Integration?> GetByIdAsync(Guid id, CancellationToken ct), Task UpdateAsync(Integration integration, CancellationToken ct), Task DeleteAsync(Guid id, CancellationToken ct)",
-        "Typecheck/build passes"
+        "YAML file saved at plugins/fearnopeer.yaml",
+        "Metadata: pluginId=fearnopeer, pluginGroup=unit3d, displayName=Fearnopeer",
+        "Defines fields: cron, required_ratio, baseUrl, apiKey (sensitive, type=password)",
+        "Configures HTTP client with: baseUrl from field, Accept: application/json header, Chrome User-Agent",
+        "Single step: GET to api/user?api_token={{apiKey}}, responseType=json",
+        "Auth failure detection: HTTP 401/403",
+        "JSON extraction: username, uploaded, downloaded, ratio, buffer, seeding, leeching, seedbonus, hit_and_runs",
+        "Validation: username notEmpty → unknownError",
+        "Value transformations: uploaded/downloaded via byteSize, ratio via decimal",
+        "Stat mapping covers all TrackerStats fields including activeTorrents computed",
+        "YAML is valid and parseable"
       ],
       "priority": 3,
       "passes": true,
-      "notes": ""
+      "notes": "Study the existing Fearnopeer/Unit3D C# plugin code closely."
     },
     {
       "id": "US-004",
-      "title": "Implement SQLite persistence with EF Core",
-      "description": "As a developer, I want data stored in SQLite so that the system is easy to run locally without external dependencies.",
+      "title": "Write Seedpool YAML plugin file",
+      "description": "As a developer, I need to translate the existing Seedpool C# plugin into a YAML file at plugins/seedpool.yaml.",
       "acceptanceCriteria": [
-        "TrackerStats.Infrastructure references EF Core with SQLite provider",
-        "AppDbContext exists with DbSet<Integration> Integrations",
-        "IntegrationRepository implements IIntegrationRepository using AppDbContext",
-        "EF Core migrations are generated and applied automatically on startup via Database.MigrateAsync()",
-        "SQLite .db file path is configurable via appsettings.json (key: ConnectionStrings:DefaultConnection or similar)",
-        "Typecheck/build passes"
+        "YAML file saved at plugins/seedpool.yaml",
+        "Identical structure to fearnopeer.yaml except: pluginId=seedpool, displayName=Seedpool",
+        "YAML is valid and parseable"
       ],
       "priority": 4,
       "passes": true,
-      "notes": ""
+      "notes": "Copy fearnopeer.yaml and change metadata fields."
     },
     {
       "id": "US-005",
-      "title": "Implement plugin registry with FakeTrackerPlugin",
-      "description": "As a developer, I want plugins to be registered via dependency injection so that the system discovers them automatically at startup.",
+      "title": "Add PluginDefinitions database table and EF Core migration",
+      "description": "As a developer, I need a database table to store user-created and user-edited plugin definitions as JSON.",
       "acceptanceCriteria": [
-        "Interface ITrackerPluginRegistry exists in TrackerStats.Domain with method ITrackerPlugin? GetById(string pluginId)",
-        "TrackerPluginRegistry in TrackerStats.Infrastructure implements ITrackerPluginRegistry by resolving all ITrackerPlugin instances from DI",
-        "GetById returns null when pluginId is not found",
-        "FakeTrackerPlugin exists in TrackerStats.Infrastructure implementing ITrackerPlugin, returning static or random stats",
-        "FakeTrackerPlugin implements one AuthMode.UsernamePassword variant and one AuthMode.Cookie variant (two fake plugins registered)",
-        "All plugins and registry are registered in the DI container in Program.cs",
-        "Typecheck/build passes"
+        "New PluginDefinitions table with columns: Id (GUID PK), PluginId (string, unique), DefinitionJson (text), CreatedAt (DateTime UTC), UpdatedAt (DateTime UTC)",
+        "EF Core entity class created",
+        "EF Core migration generated and applies cleanly",
+        "Repository interface and implementation for CRUD operations",
+        "Typecheck passes"
       ],
       "priority": 5,
       "passes": true,
@@ -84,94 +93,137 @@
     },
     {
       "id": "US-006",
-      "title": "Implement GET /api/plugins endpoint",
-      "description": "As a frontend developer, I want to list available tracker plugins so that the user can choose which tracker to add.",
+      "title": "Build YAML plugin engine — HTTP client and request execution",
+      "description": "As a developer, I need the core engine that loads a YAML plugin definition, configures an HttpClient, and executes ordered request steps sequentially.",
       "acceptanceCriteria": [
-        "GET /api/plugins returns 200 OK with array of { pluginId, displayName, authMode }",
-        "authMode is returned as string: 'UsernamePassword' or 'Cookie'",
-        "The list reflects exactly the plugins registered in DI",
-        "Typecheck/build passes"
+        "Engine loads a deserialized plugin definition object and validates required fields",
+        "Engine configures HttpClient based on the definition (baseUrl, headers, cookies — all supporting {{fieldName}} interpolation)",
+        "Engine executes ordered request steps sequentially",
+        "Each step produces named variables accessible by later steps via {{steps.stepName.varName}}",
+        "Engine detects auth failures based on defined rules (HTTP status codes, HTML content patterns)",
+        "Engine returns TrackerFetchResult with appropriate PluginProcessResult (Success, AuthFailed, UnknownError)",
+        "Typecheck passes"
       ],
       "priority": 6,
       "passes": true,
-      "notes": ""
+      "notes": "This is the core execution loop. Focus on HTTP execution and auth detection only — parsing and transformations are in the next story."
     },
     {
       "id": "US-007",
-      "title": "Implement POST /api/integrations endpoint",
-      "description": "As a user, I want to add a new tracker integration so that the system can start collecting my stats.",
+      "title": "Build YAML plugin engine — response parsing and transformations",
+      "description": "As a developer, I need the engine to parse HTML and JSON responses, apply value transformations, and map results to TrackerStats.",
       "acceptanceCriteria": [
-        "POST /api/integrations accepts body: { pluginId, name, baseUrl, username?, password?, cookie? }",
-        "Returns 201 Created with the created integration object including generated id",
-        "Returns 400 Bad Request if pluginId does not exist in the registry",
-        "Returns 400 Bad Request if required credential fields for the plugin's authMode are missing (UsernamePassword requires username+password; Cookie requires cookie)",
-        "Integration is persisted in SQLite",
-        "Typecheck/build passes"
+        "Engine parses HTML responses using regex patterns with named capture groups",
+        "Engine supports countMatches mode (counting regex matches in HTML)",
+        "Engine parses JSON responses using dot-notation paths",
+        "Engine applies value transformations: byteSize (handles comma-as-decimal, various units), decimal (comma normalization), integer (strip separators), toString",
+        "Engine evaluates computed fields (e.g., activeTorrents = seedingTorrents + leechingTorrents)",
+        "Engine maps parsed and transformed values to the fixed TrackerStats record fields",
+        "Engine handles validation rules (notEmpty check → unknownError)",
+        "Typecheck passes"
       ],
       "priority": 7,
       "passes": true,
-      "notes": ""
+      "notes": "Replicate exact byte size parsing and decimal normalization logic from existing BjShare and Unit3D C# code."
     },
     {
       "id": "US-008",
-      "title": "Implement GET /api/integrations endpoint",
-      "description": "As a frontend developer, I want to list all integrations so that the dashboard can display each tracker's info.",
+      "title": "Integrate YAML engine with ITrackerPlugin and plugin registry",
+      "description": "As a developer, I need the YAML engine to implement ITrackerPlugin so it integrates with the existing IntegrationSyncService and TrackerPluginRegistry.",
       "acceptanceCriteria": [
-        "GET /api/integrations returns 200 OK with array of objects: { id, pluginId, name, baseUrl, lastSyncAt, stats: { ratio, uploadedBytes, downloadedBytes } | null }",
-        "Credentials (username, password, cookie) are NOT included in the response",
-        "Integrations without synced stats return with stats: null",
-        "Typecheck/build passes"
+        "YamlTrackerPlugin class implements ITrackerPlugin interface",
+        "YamlTrackerPlugin wraps the YAML engine and delegates to it for execution",
+        "YamlTrackerPlugin exposes plugin metadata (pluginId, pluginGroup, displayName, fields) from the YAML definition",
+        "Engine integrates with TrackerPluginHttpClientFactory for HttpClient creation",
+        "Typecheck passes"
       ],
       "priority": 8,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-009",
-      "title": "Implement DELETE /api/integrations/{id} endpoint",
-      "description": "As a user, I want to remove a tracker integration so that it no longer appears in my dashboard.",
+      "title": "Build plugin loader — disk files and database merge",
+      "description": "As a developer, I need a plugin loader that reads YAML files from disk at startup and loads definitions from the database, merging both sources.",
       "acceptanceCriteria": [
-        "DELETE /api/integrations/{id} returns 204 No Content on success",
-        "Returns 404 Not Found if the integration does not exist",
-        "The integration is removed from SQLite",
-        "Typecheck/build passes"
+        "At startup, reads all .yaml files from a configurable plugins/ directory",
+        "Parses each YAML file and registers it as an available plugin",
+        "Loads plugin definitions stored in the database (as JSON)",
+        "If a plugin exists in both disk and DB (same pluginId), DB version takes precedence",
+        "Exposes all loaded plugins through ITrackerPluginRegistry",
+        "GET /api/plugins endpoint returns all available plugins (disk + DB) with their fields",
+        "Typecheck passes"
       ],
       "priority": 9,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Add YamlDotNet NuGet package for YAML parsing. Plugin directory path should be configurable via appsettings.json."
     },
     {
       "id": "US-010",
-      "title": "Implement POST /api/integrations/{id}/sync endpoint",
-      "description": "As a user, I want to trigger a sync for a specific tracker so that I can refresh its data on demand.",
+      "title": "Build plugin CRUD API endpoints",
+      "description": "As a developer, I need API endpoints to create, read, update, and delete plugin definitions so the frontend can manage them.",
       "acceptanceCriteria": [
-        "POST /api/integrations/{id}/sync triggers FetchStatsAsync for that integration",
-        "Returns 200 OK with updated stats after sync",
-        "Returns 404 Not Found if the integration does not exist",
-        "Returns 502 Bad Gateway if the plugin throws an exception when fetching data (with error message)",
-        "lastSyncAt is updated in the database after a successful sync",
-        "Typecheck/build passes"
+        "GET /api/plugins/{pluginId} returns a single plugin definition as YAML text",
+        "POST /api/plugins creates a new plugin from YAML text body; validates syntax; stores as JSON in DB",
+        "PUT /api/plugins/{pluginId} updates an existing plugin; if disk-based default, creates DB override",
+        "DELETE /api/plugins/{pluginId} removes DB entry; if it was a disk override, disk version becomes active again; if user-created, deletes entirely",
+        "Validation: reject duplicate pluginId, missing required schema fields, invalid YAML syntax",
+        "Typecheck passes"
       ],
       "priority": 10,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-011",
-      "title": "Implement background sync job (every 1 hour)",
-      "description": "As a user, I want my tracker stats to be refreshed automatically every hour so that the dashboard always shows up-to-date data.",
+      "title": "Add YAML editor page to frontend — plugin list and editor layout",
+      "description": "As a user, I want a Manage Plugins page that lists all plugins and provides a YAML code editor.",
       "acceptanceCriteria": [
-        "A BackgroundService (TrackerSyncJob) exists in TrackerStats.Infrastructure that runs on a configurable interval",
-        "Default interval is 60 minutes, configurable via appsettings.json (e.g. SyncJob:IntervalMinutes)",
-        "Each execution iterates all registered integrations and calls FetchStatsAsync for each",
-        "Errors on individual trackers are caught and logged; they do not interrupt sync of remaining trackers",
-        "Stats and lastSyncAt are updated in the database after each successful sync",
-        "BackgroundService is registered in Program.cs",
-        "Typecheck/build passes"
+        "New 'Manage Plugins' page accessible from the navigation",
+        "Lists all available plugins with displayName, pluginId, and source (disk/database)",
+        "Clicking a plugin loads its YAML into a code editor component (Monaco or CodeMirror)",
+        "'New Plugin' button opens an empty editor with a YAML template skeleton",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 11,
-      "passes": true,
+      "passes": false,
+      "notes": "Install @monaco-editor/react or similar package for the code editor."
+    },
+    {
+      "id": "US-012",
+      "title": "Add save and delete functionality to YAML editor",
+      "description": "As a user, I want to save and delete plugin definitions from the YAML editor.",
+      "acceptanceCriteria": [
+        "Save button validates YAML syntax client-side and sends to backend API (POST for new, PUT for existing)",
+        "Delete button with confirmation dialog sends DELETE to backend API",
+        "Displays validation errors from the backend if YAML schema is invalid",
+        "Success/error toast notifications after save/delete operations",
+        "Plugin list refreshes after save/delete",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 12,
+      "passes": false,
       "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Remove hardcoded C# plugin classes",
+      "description": "As a developer, I need to remove all hardcoded C# plugin projects and registrations now that the YAML engine handles everything.",
+      "acceptanceCriteria": [
+        "Delete TrackerStats.Plugin.BjShare project and all its files",
+        "Delete TrackerStats.Plugin.Core.Unit3D project and all its files",
+        "Delete TrackerStats.Plugin.Fearnopeer project and all its files",
+        "Delete TrackerStats.Plugin.Seedpool project and all its files",
+        "Remove plugin project references from the solution file and TrackerStats.Api.csproj",
+        "Remove hardcoded DI registrations from Program.cs",
+        "Update TrackerPluginRegistry to work exclusively with the YAML-based plugin loader",
+        "Solution builds and typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "Only do this after all YAML plugins are verified to produce identical output. This is the final cleanup step."
     }
   ]
 }
