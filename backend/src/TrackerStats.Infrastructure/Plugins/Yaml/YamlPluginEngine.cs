@@ -70,10 +70,10 @@ public partial class YamlPluginEngine(ILogger<YamlPluginEngine> logger) : IYamlP
     {
         if (string.IsNullOrWhiteSpace(definition.PluginId))
             throw new InvalidOperationException("Plugin definition is missing required field 'pluginId'.");
-        if (string.IsNullOrWhiteSpace(definition.PluginGroup))
-            throw new InvalidOperationException("Plugin definition is missing required field 'pluginGroup'.");
         if (string.IsNullOrWhiteSpace(definition.DisplayName))
             throw new InvalidOperationException("Plugin definition is missing required field 'displayName'.");
+        if (definition.Dashboard is null || definition.Dashboard.Metrics.Count == 0)
+            throw new InvalidOperationException("Plugin definition must have at least one dashboard metric.");
         if (definition.Steps.Count == 0)
             throw new InvalidOperationException("Plugin definition must have at least one step.");
     }

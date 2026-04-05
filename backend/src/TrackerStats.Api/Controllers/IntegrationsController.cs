@@ -142,13 +142,24 @@ public class IntegrationsController(
         var plugin = registry.GetById(i.PluginId);
         var payload = RemoveSensitiveFields(plugin, ParsePayload(i.Payload));
         var hasStats = i.Ratio.HasValue || i.UploadedBytes.HasValue || i.DownloadedBytes.HasValue;
-        var pluginGroup = plugin?.PluginGroup ?? i.PluginId;
 
         return new
         {
             id = i.Id,
             pluginId = i.PluginId,
-            pluginGroup,
+            dashboard = plugin is null
+                ? null
+                : new
+                {
+                    metrics = plugin.Dashboard.Metrics.Select(metric => new
+                    {
+                        stat = metric.Stat,
+                        label = metric.Label,
+                        format = metric.Format,
+                        icon = metric.Icon,
+                        tone = metric.Tone
+                    })
+                },
             payload,
             url = payload.GetValueOrDefault("baseUrl"),
             requiredRatio = i.RequiredRatio,

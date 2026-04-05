@@ -1,5 +1,4 @@
 pluginId: bj-share
-pluginGroup: bj-share
 displayName: BJ-Share
 
 fields:
@@ -58,7 +57,7 @@ steps:
         regex: "Ratio:\\s*<span[^>]*title=\"(?<value>[^\"]+)\""
         transform: decimal
       seedBonus:
-        regex: "BJ-Pontos\\s*:\\s*(?<value>[\\d\\.,]+)"
+        regex: "<li\\s+id=\"stats_bjpontos\"[^>]*>.*?<span[^>]*>(?<value>[\\d\\.,]+)</span>"
         transform: integer
 
   - name: seeding
@@ -88,3 +87,21 @@ mapping:
   seedingTorrents: "steps.seeding.seedingTorrents"
   leechingTorrents: "steps.leeching.leechingTorrents"
   activeTorrents: "steps.seeding.seedingTorrents + steps.leeching.leechingTorrents"
+
+dashboard:
+  metrics:
+    - stat: uploadedBytes
+      label: Uploaded
+      format: bytes
+      icon: arrow-up
+      tone: success
+    - stat: downloadedBytes
+      label: Downloaded
+      format: bytes
+      icon: arrow-down
+      tone: primary
+    - stat: seedBonus
+      label: Seed Bonus
+      format: text
+      icon: coins
+      tone: warning

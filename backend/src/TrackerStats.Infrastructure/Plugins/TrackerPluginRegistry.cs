@@ -43,8 +43,8 @@ public class TrackerPluginRegistry : ITrackerPluginRegistry
                 var plugin = CreatePluginInstance(registration.Prototype);
                 return new PluginCatalogEntry(
                     plugin.PluginId,
-                    plugin.PluginGroup,
                     plugin.DisplayName,
+                    plugin.Dashboard,
                     plugin.Fields,
                     registration.Source);
             })

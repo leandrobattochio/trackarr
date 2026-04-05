@@ -15,7 +15,8 @@ namespace TrackerStats.Api.Controllers;
 public class PluginsController(
     ITrackerPluginRegistry registry,
     IYamlPluginDefinitionLoader loader,
-    IPluginDefinitionRepository repository) : ControllerBase
+    IPluginDefinitionRepository repository,
+    IIntegrationRepository integrationRepository) : ControllerBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -38,9 +39,19 @@ public class PluginsController(
         var plugins = registry.GetCatalog().Select(p => new
         {
             pluginId = p.PluginId,
-            pluginGroup = p.PluginGroup,
             displayName = p.DisplayName,
             source = p.Source,
+            dashboard = new
+            {
+                metrics = p.Dashboard.Metrics.Select(metric => new
+                {
+                    stat = metric.Stat,
+                    label = metric.Label,
+                    format = metric.Format,
+                    icon = metric.Icon,
+                    tone = metric.Tone
+                })
+            },
             fields = p.Fields.Select(f => new
             {
                 name = f.Name,
@@ -142,6 +153,10 @@ public class PluginsController(
         if (storedDefinition is null)
             return NotFound();
 
+        var pluginIsInUse = await integrationRepository.ExistsByPluginIdAsync(pluginId, ct);
+        if (pluginIsInUse)
+            return Conflict(new { error = $"Plugin '{pluginId}' cannot be deleted because it is currently used by one or more integrations." });
+
         await repository.DeleteAsync(storedDefinition.Id, ct);
         return NoContent();
     }
@@ -179,9 +194,6 @@ public class PluginsController(
         if (string.IsNullOrWhiteSpace(definition.PluginId))
             return "Plugin definition is missing required field 'pluginId'.";
 
-        if (string.IsNullOrWhiteSpace(definition.PluginGroup))
-            return "Plugin definition is missing required field 'pluginGroup'.";
-
         if (string.IsNullOrWhiteSpace(definition.DisplayName))
             return "Plugin definition is missing required field 'displayName'.";
 
@@ -211,6 +223,45 @@ public class PluginsController(
 
         if (definition.Steps.Any(step => string.IsNullOrWhiteSpace(step.ResponseType)))
             return "Each step must define 'responseType'.";
+
+        if (definition.Dashboard is null || definition.Dashboard.Metrics.Count == 0)
+            return "Plugin definition must define at least one dashboard metric.";
+
+        var allowedStats = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "ratio",
+            "uploadedBytes",
+            "downloadedBytes",
+            "seedBonus",
+            "buffer",
+            "hitAndRuns",
+            "requiredRatio",
+            "seedingTorrents",
+            "leechingTorrents",
+            "activeTorrents"
+        };
+
+        var allowedFormats = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "bytes",
+            "count",
+            "text"
+        };
+
+        if (definition.Dashboard.Metrics.Any(metric => string.IsNullOrWhiteSpace(metric.Stat)))
+            return "Each dashboard metric must define 'stat'.";
+
+        if (definition.Dashboard.Metrics.Any(metric => string.IsNullOrWhiteSpace(metric.Label)))
+            return "Each dashboard metric must define 'label'.";
+
+        if (definition.Dashboard.Metrics.Any(metric => string.IsNullOrWhiteSpace(metric.Format)))
+            return "Each dashboard metric must define 'format'.";
+
+        if (definition.Dashboard.Metrics.Any(metric => !allowedStats.Contains(metric.Stat)))
+            return "Dashboard metrics contain an unsupported 'stat' value.";
+
+        if (definition.Dashboard.Metrics.Any(metric => !allowedFormats.Contains(metric.Format)))
+            return "Dashboard metrics contain an unsupported 'format' value.";
 
         return null;
     }

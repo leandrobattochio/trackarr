@@ -2,7 +2,7 @@ namespace TrackerStats.Domain.Plugins;
 
 public sealed record PluginCatalogEntry(
     string PluginId,
-    string PluginGroup,
     string DisplayName,
+    DashboardConfig Dashboard,
     IReadOnlyList<PluginField> Fields,
     string Source);

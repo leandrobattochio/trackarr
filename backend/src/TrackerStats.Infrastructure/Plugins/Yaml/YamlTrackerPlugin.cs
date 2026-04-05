@@ -21,8 +21,8 @@ public sealed class YamlTrackerPlugin : ITrackerPlugin
     private IYamlPluginEngine Engine { get; }
 
     public string PluginId => Definition.PluginId;
-    public string PluginGroup => Definition.PluginGroup;
     public string DisplayName => Definition.DisplayName;
+    public DashboardConfig Dashboard => Definition.Dashboard;
     public AuthMode AuthMode => ResolveAuthMode(Definition);
 
     public IReadOnlyList<PluginField> Fields => Definition.Fields

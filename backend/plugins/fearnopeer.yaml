@@ -1,5 +1,4 @@
 pluginId: fearnopeer
-pluginGroup: unit3d
 displayName: Fearnopeer
 
 fields:
@@ -81,3 +80,31 @@ mapping:
   seedingTorrents: "steps.user.seeding"
   leechingTorrents: "steps.user.leeching"
   activeTorrents: "steps.user.seeding + steps.user.leeching"
+
+dashboard:
+  metrics:
+    - stat: uploadedBytes
+      label: Uploaded
+      format: bytes
+      icon: arrow-up
+      tone: success
+    - stat: downloadedBytes
+      label: Downloaded
+      format: bytes
+      icon: arrow-down
+      tone: primary
+    - stat: seedBonus
+      label: Seed Bonus
+      format: text
+      icon: coins
+      tone: warning
+    - stat: buffer
+      label: Buffer
+      format: text
+      icon: hard-drive
+      tone: primary
+    - stat: hitAndRuns
+      label: Hit & Runs
+      format: count
+      icon: shield-alert
+      tone: destructive
