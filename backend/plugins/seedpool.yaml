@@ -1,0 +1,83 @@
+pluginId: seedpool
+pluginGroup: unit3d
+displayName: Seedpool
+
+fields:
+  - name: cron
+    label: Cron Expression
+    type: cron
+    required: true
+  - name: required_ratio
+    label: Required Ratio
+    type: number
+    required: true
+  - name: baseUrl
+    label: Base URL
+    type: text
+    required: true
+  - name: apiKey
+    label: API Key
+    type: password
+    required: true
+    sensitive: true
+
+http:
+  baseUrl: "{{baseUrl}}"
+  headers:
+    Accept: application/json
+    User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+
+authFailure:
+  httpStatusCodes:
+    - 401
+    - 403
+
+steps:
+  - name: user
+    method: GET
+    url: "api/user?api_token={{apiKey}}"
+    responseType: json
+    extract:
+      username:
+        path: "username"
+        transform: toString
+      uploaded:
+        path: "uploaded"
+        transform: byteSize
+      downloaded:
+        path: "downloaded"
+        transform: byteSize
+      ratio:
+        path: "ratio"
+        transform: decimal
+      buffer:
+        path: "buffer"
+        transform: toString
+      seeding:
+        path: "seeding"
+        transform: integer
+      leeching:
+        path: "leeching"
+        transform: integer
+      seedbonus:
+        path: "seedbonus"
+        transform: toString
+      hit_and_runs:
+        path: "hit_and_runs"
+        transform: integer
+    validate:
+      - field: username
+        rule: notEmpty
+        onFail: unknownError
+
+mapping:
+  ratio: "steps.user.ratio"
+  uploadedBytes: "steps.user.uploaded"
+  downloadedBytes: "steps.user.downloaded"
+  seedBonus: "steps.user.seedbonus"
+  buffer: "steps.user.buffer"
+  hitAndRuns: "steps.user.hit_and_runs"
+  requiredRatio: "fields.required_ratio"
+  seedingTorrents: "steps.user.seeding"
+  leechingTorrents: "steps.user.leeching"
+  activeTorrents: "steps.user.seeding + steps.user.leeching"
