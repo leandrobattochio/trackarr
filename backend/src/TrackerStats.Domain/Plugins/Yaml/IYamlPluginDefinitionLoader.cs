@@ -1,4 +1,4 @@
-namespace TrackerStats.Infrastructure.Plugins.Yaml;
+namespace TrackerStats.Domain.Plugins.Yaml;
 
 public interface IYamlPluginDefinitionLoader
 {
