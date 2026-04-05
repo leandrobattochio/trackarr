@@ -8,45 +8,36 @@ namespace TrackerStats.Infrastructure.Plugins;
 public class TrackerPluginRegistry : ITrackerPluginRegistry
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly IReadOnlyDictionary<string, PluginRegistration> _plugins;
+    private readonly IYamlPluginEngine _engine;
+    private readonly IYamlPluginDefinitionLoader _loader;
 
     public TrackerPluginRegistry(
         IServiceProvider serviceProvider,
         IYamlPluginEngine engine,
-        IEnumerable<LoadedYamlPluginDefinition> definitions)
+        IYamlPluginDefinitionLoader loader)
     {
         _serviceProvider = serviceProvider;
-        _plugins = definitions
-            .GroupBy(definition => definition.Definition.PluginId, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                group => group.Key,
-                group =>
-                {
-                    var definition = group.First();
-                    return new PluginRegistration(
-                        new Yaml.YamlTrackerPlugin(definition.Definition, engine),
-                        definition.Source);
-                },
-                StringComparer.OrdinalIgnoreCase);
+        _engine = engine;
+        _loader = loader;
     }
 
     public ITrackerPlugin? GetById(string pluginId) =>
-        _plugins.TryGetValue(pluginId, out var registration)
+        LoadRegistrations().TryGetValue(pluginId, out var registration)
             ? CreatePluginInstance(registration.Prototype)
             : null;
 
     public ITrackerPlugin? CreateById(string pluginId, PluginConfiguration configuration) =>
-        _plugins.TryGetValue(pluginId, out var registration)
+        LoadRegistrations().TryGetValue(pluginId, out var registration)
             ? CreatePluginInstance(registration.Prototype, configuration)
             : null;
 
     public IReadOnlyList<ITrackerPlugin> GetAll() =>
-        _plugins.Values
+        LoadRegistrations().Values
             .Select(registration => CreatePluginInstance(registration.Prototype))
             .ToList();
 
     public IReadOnlyList<PluginCatalogEntry> GetCatalog() =>
-        _plugins.Values
+        LoadRegistrations().Values
             .Select(registration =>
             {
                 var plugin = CreatePluginInstance(registration.Prototype);
@@ -58,6 +49,20 @@ public class TrackerPluginRegistry : ITrackerPluginRegistry
                     registration.Source);
             })
             .ToList();
+
+    private IReadOnlyDictionary<string, PluginRegistration> LoadRegistrations() =>
+        _loader.LoadDefinitions()
+            .GroupBy(definition => definition.Definition.PluginId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                {
+                    var definition = group.First();
+                    return new PluginRegistration(
+                        new Yaml.YamlTrackerPlugin(definition.Definition, _engine),
+                        definition.Source);
+                },
+                StringComparer.OrdinalIgnoreCase);
 
     private ITrackerPlugin CreatePluginInstance(ITrackerPlugin prototype, PluginConfiguration? configuration = null) =>
         prototype switch

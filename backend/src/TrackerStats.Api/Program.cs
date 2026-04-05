@@ -4,9 +4,9 @@ using Hangfire.Storage.SQLite;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using TrackerStats.Domain.Plugins;
+using TrackerStats.Domain.Plugins.Yaml;
 using TrackerStats.Domain.Repositories;
 using TrackerStats.Infrastructure.Data;
-using TrackerStats.Domain.Plugins.Yaml;
 using TrackerStats.Infrastructure.Plugins;
 using TrackerStats.Infrastructure.Plugins.Yaml;
 using TrackerStats.Infrastructure.Repositories;
@@ -41,13 +41,7 @@ builder.Services.AddHostedService<IntegrationRecurringJobsBootstrapper>();
 
 builder.Services.AddSingleton<IYamlPluginEngine, YamlPluginEngine>();
 builder.Services.AddSingleton<IYamlPluginDefinitionLoader, YamlPluginDefinitionLoader>();
-builder.Services.AddSingleton<ITrackerPluginRegistry>(sp =>
-{
-    var loader = sp.GetRequiredService<IYamlPluginDefinitionLoader>();
-    var engine = sp.GetRequiredService<IYamlPluginEngine>();
-    var definitions = loader.LoadDefinitions();
-    return new TrackerPluginRegistry(sp, engine, definitions);
-});
+builder.Services.AddSingleton<ITrackerPluginRegistry, TrackerPluginRegistry>();
 
 var app = builder.Build();
 
