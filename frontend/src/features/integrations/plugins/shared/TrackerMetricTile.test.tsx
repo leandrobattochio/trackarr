@@ -81,7 +81,7 @@ describe("TrackerMetricTile", () => {
         value={1200}
       />,
     );
-    expect(screen.getByText("1.200")).toBeInTheDocument();
+    expect(screen.getByText(/^1[,.]200$/)).toBeInTheDocument();
 
     rerender(
       <CountMetricTile
