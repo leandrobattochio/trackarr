@@ -34,7 +34,21 @@ public sealed class YamlPluginDefinitionLoader(IConfiguration configuration) : I
         foreach (var path in Directory.EnumerateFiles(pluginsDirectory, "*.yaml", SearchOption.TopDirectoryOnly)
                      .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
-            var content = File.ReadAllText(path);
+            string content;
+
+            try
+            {
+                content = File.ReadAllText(path);
+            }
+            catch (FileNotFoundException)
+            {
+                continue;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                continue;
+            }
+
             var fallbackPluginId = Path.GetFileNameWithoutExtension(path);
             var fallbackDisplayName = fallbackPluginId;
             LoadedYamlPluginDefinition loadedDefinition;
