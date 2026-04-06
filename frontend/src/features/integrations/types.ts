@@ -58,7 +58,6 @@ export interface ApiPluginField {
 export interface ApiPlugin {
   pluginId: string;
   displayName: string;
-  source?: string;
   definitionValid: boolean;
   definitionError: string | null;
   dashboard: ApiDashboardConfig | null;
