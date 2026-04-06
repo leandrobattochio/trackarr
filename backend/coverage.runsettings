@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Exclude>[*.Tests]*,[xunit.*]*,[Shouldly]*</Exclude>
+          <ExcludeByFile>**/obj/**/*.cs,**/Migrations/*.cs,**/*ModelSnapshot.cs,**/*.Designer.cs,**/*AssemblyInfo.cs,**/Program.cs,**/Data/AppDbContext.cs</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
