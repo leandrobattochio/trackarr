@@ -208,6 +208,13 @@ internal sealed class FakeHttpClientFactory : IHttpClientFactory
     public HttpClient CreateClient(string name) => new();
 }
 
+internal sealed class FakeTimeProvider(DateTimeOffset utcNow) : TimeProvider
+{
+    private readonly DateTimeOffset _utcNow = utcNow;
+
+    public override DateTimeOffset GetUtcNow() => _utcNow;
+}
+
 internal sealed class FakeRecurringJobManager : IRecurringJobManager
 {
     public List<(string JobId, string Cron)> AddOrUpdates { get; } = [];

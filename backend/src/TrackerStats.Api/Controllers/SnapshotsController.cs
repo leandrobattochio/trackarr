@@ -7,12 +7,16 @@ namespace TrackerStats.Api.Controllers;
 [Route("api/snapshots")]
 public class SnapshotsController(
     IIntegrationRepository integrationRepository,
-    IIntegrationSnapshotRepository snapshotRepository)
+    IIntegrationSnapshotRepository snapshotRepository,
+    TimeProvider? timeProvider = null)
     : ControllerBase
 {
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
     [HttpGet]
     public async Task<IActionResult> List(
         [FromQuery] Guid? integrationId,
+        [FromQuery] string? range,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         CancellationToken ct)
@@ -24,13 +28,18 @@ public class SnapshotsController(
         if (integration is null)
             return NotFound(new { error = "Integration not found." });
 
-        var snapshots = await snapshotRepository.ListByIntegrationAsync(integrationId.Value, from, to, ct);
+        if (!SnapshotRangeOptions.TryResolve(range, from, to, _timeProvider.GetUtcNow(), out var resolution, out var error))
+            return BadRequest(new { error });
+
+        var resolvedRange = resolution!;
+        var snapshots = await snapshotRepository.ListByIntegrationAsync(integrationId.Value, resolvedRange.From, resolvedRange.To, ct);
 
         return Ok(new
         {
             integrationId = integration.Id,
-            from = NormalizeUtc(from),
-            to = NormalizeUtc(to),
+            range = resolvedRange.Range,
+            from = resolvedRange.From,
+            to = resolvedRange.To,
             items = snapshots.Select(snapshot => new
             {
                 id = snapshot.Id,
