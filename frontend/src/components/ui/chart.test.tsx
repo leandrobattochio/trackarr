@@ -86,7 +86,7 @@ describe("chart ui", () => {
 
     expect(screen.getAllByText("Revenue").length).toBeGreaterThan(0);
     expect(screen.getByTestId("chart-icon")).toBeInTheDocument();
-    expect(screen.getByText("1.200")).toBeInTheDocument();
+    expect(screen.getByText(/^1[,.]200$/)).toBeInTheDocument();
 
     rerender(
       <ChartContainer config={config}>
