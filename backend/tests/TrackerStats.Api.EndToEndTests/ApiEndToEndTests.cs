@@ -89,6 +89,9 @@ public sealed class ApiEndToEndTests : IClassFixture<ApiEndToEndFactory>
 
 public sealed class ApiEndToEndFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    private const string PostgresConnectionEnvVar = "ConnectionStrings__PostgresConnection";
+    private const string HangfireConnectionEnvVar = "ConnectionStrings__HangfireConnection";
+    private const string PluginsDirectoryEnvVar = "Plugins__Directory";
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine")
         .WithDatabase("trackerstats")
         .WithUsername("postgres")
@@ -97,11 +100,26 @@ public sealed class ApiEndToEndFactory : WebApplicationFactory<Program>, IAsyncL
 
     private readonly string _dataDirectory = Path.Combine(Path.GetTempPath(), $"trackerstats-e2e-{Guid.NewGuid():N}");
 
-    public Task InitializeAsync() => _postgres.StartAsync();
+    public async Task InitializeAsync()
+    {
+        Directory.CreateDirectory(_dataDirectory);
+
+        var pluginsDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "plugins"));
+        var hangfireConnection = $"Data Source={Path.Combine(_dataDirectory, "hangfire-e2e.db")}";
+
+        await _postgres.StartAsync();
+
+        Environment.SetEnvironmentVariable(PostgresConnectionEnvVar, _postgres.GetConnectionString());
+        Environment.SetEnvironmentVariable(HangfireConnectionEnvVar, hangfireConnection);
+        Environment.SetEnvironmentVariable(PluginsDirectoryEnvVar, pluginsDirectory);
+    }
 
     async Task IAsyncLifetime.DisposeAsync()
     {
         base.Dispose();
+        Environment.SetEnvironmentVariable(PostgresConnectionEnvVar, null);
+        Environment.SetEnvironmentVariable(HangfireConnectionEnvVar, null);
+        Environment.SetEnvironmentVariable(PluginsDirectoryEnvVar, null);
         await _postgres.DisposeAsync();
 
         if (Directory.Exists(_dataDirectory))
@@ -111,19 +129,6 @@ public sealed class ApiEndToEndFactory : WebApplicationFactory<Program>, IAsyncL
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
-        builder.ConfigureAppConfiguration((_, configBuilder) =>
-        {
-            Directory.CreateDirectory(_dataDirectory);
-
-            var pluginsDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "plugins"));
-            var hangfireConnection = $"Data Source={Path.Combine(_dataDirectory, "hangfire-e2e.db")}";
-
-            configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:PostgresConnection"] = _postgres.GetConnectionString(),
-                ["ConnectionStrings:HangfireConnection"] = hangfireConnection,
-                ["Plugins:Directory"] = pluginsDirectory
-            });
-        });
+        builder.ConfigureAppConfiguration((_, _) => { });
     }
 }
