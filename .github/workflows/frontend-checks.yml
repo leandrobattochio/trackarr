@@ -61,6 +61,15 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn test:coverage
 
+      - name: Upload frontend coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./frontend/coverage/cobertura-coverage.xml
+          flags: frontend
+          name: frontend-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+
       - name: Upload frontend coverage artifact
         if: always()
         uses: actions/upload-artifact@v6

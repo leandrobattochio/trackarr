@@ -57,6 +57,15 @@ jobs:
           -filefilters:"-**/obj/**/*.cs;-**/Data/AppDbContext.cs"
           -reporttypes:"Html;Cobertura"
 
+      - name: Upload backend coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./backend/TestResults/**/coverage.cobertura.xml
+          flags: backend
+          name: backend-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+
       - name: Upload coverage report artifact
         if: always()
         uses: actions/upload-artifact@v6

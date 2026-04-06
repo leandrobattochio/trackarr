@@ -1,0 +1,22 @@
+flag_management:
+  default_rules:
+    carryforward: true
+
+coverage:
+  status:
+    project:
+      default: off
+      frontend:
+        flags:
+          - frontend
+      backend:
+        flags:
+          - backend
+
+flags:
+  frontend:
+    paths:
+      - frontend/
+  backend:
+    paths:
+      - backend/
