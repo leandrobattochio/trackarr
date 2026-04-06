@@ -12,7 +12,7 @@ export default defineConfig({
     exclude: ["cypress/**", "dist/**"],
     coverage: {
       include: ["src/**"],
-      exclude: ["cypress/**", "dist/**", "src/features/plugins/types.ts"],
+      exclude: ["cypress/**", "dist/**", "src/features/plugins/types.ts", "src/features/settings/types.ts"],
     },
   },
   resolve: {
