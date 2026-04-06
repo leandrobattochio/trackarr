@@ -1,4 +1,5 @@
 ARG APP_TIMEZONE=America/Sao_Paulo
+ARG APP_VERSION=1.0.0
 
 FROM node:22-bookworm-slim AS frontend-build
 ARG APP_TIMEZONE
@@ -11,6 +12,7 @@ COPY frontend/ ./
 RUN yarn build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
+ARG APP_VERSION
 WORKDIR /src
 COPY backend/Directory.Packages.props ./backend/
 COPY backend/src/TrackerStats.Api/TrackerStats.Api.csproj ./backend/src/TrackerStats.Api/
@@ -21,7 +23,7 @@ COPY backend/src/TrackerStats.PluginEngine/TrackerStats.PluginEngine.csproj ./ba
 RUN dotnet restore ./backend/src/TrackerStats.Api/TrackerStats.Api.csproj
 COPY backend/ ./backend/
 WORKDIR /src/backend/src/TrackerStats.Api
-RUN dotnet publish TrackerStats.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish TrackerStats.Api.csproj -c Release -o /app/publish /p:UseAppHost=false /p:Version=${APP_VERSION} /p:InformationalVersion=${APP_VERSION}
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 ARG APP_TIMEZONE

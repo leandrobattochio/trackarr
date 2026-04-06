@@ -13,6 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Normalize release version
+        id: version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "value=${version}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -36,6 +43,8 @@ jobs:
         with:
           context: .
           file: docker/Dockerfile
+          build-args: |
+            APP_VERSION=${{ steps.version.outputs.value }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
