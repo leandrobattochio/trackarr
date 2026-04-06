@@ -100,8 +100,8 @@ Then("the snapshots request should use the 15 minute preset", () => {
     .its("request.query")
     .should((query) => {
       expect(query.range).to.equal("15m");
-      expect(query.from).to.be.undefined;
-      expect(query.to).to.be.undefined;
+      assert.isUndefined(query.from);
+      assert.isUndefined(query.to);
     });
 });
 
