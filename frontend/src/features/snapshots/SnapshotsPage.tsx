@@ -202,49 +202,53 @@ export default function SnapshotsPage() {
     if (!integrationId)
       return;
 
+    applyFilters(integrationId, range, from, to);
+  }
+
+  function applyFilters(nextIntegrationId: string, nextRange: SnapshotRangeKey, nextFrom: string, nextTo: string) {
     startFilterTransition(() => {
       setActiveFilterAction("apply");
 
       const nextFilters: SnapshotFilters = {
-        integrationId,
-        range,
-        from: range === "custom" ? from : undefined,
-        to: range === "custom" ? to : undefined,
+        integrationId: nextIntegrationId,
+        range: nextRange,
+        from: nextRange === "custom" ? nextFrom : undefined,
+        to: nextRange === "custom" ? nextTo : undefined,
       };
 
       setSubmittedFilters(nextFilters);
       setSearchParams({
-        integrationId,
-        range,
-        ...(range === "custom" ? { from, to } : {}),
+        integrationId: nextIntegrationId,
+        range: nextRange,
+        ...(nextRange === "custom" ? { from: nextFrom, to: nextTo } : {}),
       });
     });
+  }
+
+  function handleIntegrationChange(nextIntegrationId: string) {
+    setIntegrationId(nextIntegrationId);
+
+    if (!nextIntegrationId || (range === "custom" && (!from || !to)))
+      return;
+
+    applyFilters(nextIntegrationId, range, from, to);
+  }
+
+  function handleRangeChange(nextRange: SnapshotRangeKey) {
+    setRange(nextRange);
+
+    if (!integrationId || nextRange === "custom")
+      return;
+
+    applyFilters(integrationId, nextRange, from, to);
   }
 
   function handleResetFilters() {
     const defaultCustomRange = getDefaultCustomRange();
 
-    if (!integrationId) {
-      setRange(defaultSnapshotRange);
-      setFrom(defaultCustomRange.from);
-      setTo(defaultCustomRange.to);
-      return;
-    }
-
-    startFilterTransition(() => {
-      setActiveFilterAction("reset");
-      setRange(defaultSnapshotRange);
-      setFrom(defaultCustomRange.from);
-      setTo(defaultCustomRange.to);
-      setSubmittedFilters({
-        integrationId,
-        range: defaultSnapshotRange,
-      });
-      setSearchParams({
-        integrationId,
-        range: defaultSnapshotRange,
-      });
-    });
+    setActiveFilterAction(null);
+    setFrom(defaultCustomRange.from);
+    setTo(defaultCustomRange.to);
   }
 
   return (
@@ -275,8 +279,8 @@ export default function SnapshotsPage() {
           pluginsLoading={pluginsLoading}
           isBusy={snapshotsQuery.isFetching || isFilterTransitionPending}
           activeFilterAction={activeFilterAction}
-          onIntegrationChange={setIntegrationId}
-          onRangeChange={setRange}
+          onIntegrationChange={handleIntegrationChange}
+          onRangeChange={handleRangeChange}
           onFromChange={setFrom}
           onToChange={setTo}
           onApply={handleApplyFilters}
@@ -299,7 +303,7 @@ export default function SnapshotsPage() {
           <CardContent className="space-y-4">
             {!submittedFilters.integrationId && (
               <div className="flex min-h-[320px] items-center justify-center rounded-lg border border-dashed border-border/60 bg-muted/20 text-sm text-muted-foreground">
-                Choose an integration and apply a time range to view snapshots.
+                Choose an integration and select a time range to view snapshots.
               </div>
             )}
 

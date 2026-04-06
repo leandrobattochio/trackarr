@@ -119,16 +119,18 @@ export function SnapshotFiltersCard({
           )}
         </div>
 
-        <div className="flex items-end">
-          <Button
-            className="w-full xl:w-auto"
-            onClick={onApply}
-            disabled={!integrationId || (range === "custom" && (!from || !to)) || isBusy}
-          >
-            {activeFilterAction === "apply" && isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Apply
-          </Button>
-        </div>
+        {range === "custom" && (
+          <div className="flex items-end">
+            <Button
+              className="w-full xl:w-auto"
+              onClick={onApply}
+              disabled={!integrationId || !from || !to || isBusy}
+            >
+              {activeFilterAction === "apply" && isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Apply
+            </Button>
+          </div>
+        )}
 
         <div className="flex items-end">
           <Button

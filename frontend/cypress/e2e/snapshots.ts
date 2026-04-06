@@ -32,7 +32,7 @@ Then("I should see the snapshots page for that integration", () => {
   cy.url().should("include", "/snapshots?integrationId=");
   cy.contains("Snapshots").should("be.visible");
   cy.contains("Seedpool snapshots").should("be.visible");
-  cy.contains("button", "Apply").should("be.visible");
+  cy.contains("button", "Apply").should("not.exist");
   cy.contains("button", "Reset").should("be.visible");
 });
 
@@ -92,7 +92,6 @@ When("I filter snapshots using the 15 minute preset", () => {
   });
 
   cy.contains("button", "15 min").click();
-  cy.contains("button", "Apply").click();
 });
 
 Then("the snapshots request should use the 15 minute preset", () => {
@@ -112,6 +111,7 @@ Then("I should see snapshot results for that preset", () => {
 When("I switch to a custom snapshot range", () => {
   cy.clock(new Date("2026-04-06T01:00:00.000Z").getTime(), ["Date"]);
   cy.contains("button", "Custom").click();
+  cy.contains("button", "Apply").should("be.visible");
   cy.get("#snapshot-from").clear().type("2026-04-06T00:00");
   cy.get("#snapshot-to").clear().type("2026-04-06T00:30");
 });
