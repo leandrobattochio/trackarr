@@ -32,7 +32,10 @@ ENV ASPNETCORE_URLS=http://0.0.0.0:3000
 ENV APP_TIMEZONE=${APP_TIMEZONE}
 ENV TZ=${APP_TIMEZONE}
 USER root
-RUN mkdir -p /data /data/templates
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /data /data/templates
 EXPOSE 3000
 COPY --from=backend-build /app/publish ./
 COPY --from=frontend-build /src/frontend/dist ./wwwroot

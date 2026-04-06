@@ -9,6 +9,20 @@ permissions:
 jobs:
   full-stack-e2e:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: trackarr
+          POSTGRES_USER: trackarr
+          POSTGRES_PASSWORD: trackarr
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U trackarr -d trackarr"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       DOTNET_CLI_HOME: ${{ github.workspace }}/backend/.dotnet
     steps:
@@ -39,7 +53,7 @@ jobs:
       - name: Start backend API
         shell: bash
         env:
-          ConnectionStrings__DefaultConnection: Data Source=${{ github.workspace }}/backend/.e2e/trackerstats.db
+          ConnectionStrings__PostgresConnection: Host=127.0.0.1;Port=5432;Database=trackarr;Username=trackarr;Password=trackarr
           ConnectionStrings__HangfireConnection: Data Source=${{ github.workspace }}/backend/.e2e/hangfire.db
           Plugins__Directory: ${{ github.workspace }}/backend/plugins
         run: |
