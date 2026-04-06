@@ -34,10 +34,17 @@ function writeStoredCardOrder(order: string[]) {
 export function normalizeDashboardCardOrder(integrations: TrackerIntegration[], order: string[]) {
   const integrationIds = integrations.map((integration) => integration.id);
   const integrationIdSet = new Set(integrationIds);
-  const keptOrder = order.filter((id) => integrationIdSet.has(id));
-  const missingIds = integrationIds.filter((id) => !keptOrder.includes(id));
+  const seen = new Set<string>();
+  const dedupedOrder = order.filter((id) => {
+    if (!integrationIdSet.has(id) || seen.has(id))
+      return false;
 
-  return [...keptOrder, ...missingIds];
+    seen.add(id);
+    return true;
+  });
+  const missingIds = integrationIds.filter((id) => !seen.has(id));
+
+  return [...dedupedOrder, ...missingIds];
 }
 
 export function reorderDashboardCardOrder(order: string[], draggedId: string, targetId: string) {

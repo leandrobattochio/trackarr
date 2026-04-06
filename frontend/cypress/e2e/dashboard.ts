@@ -81,51 +81,55 @@ Then("the dashboard cards should be ordered as {string}", (expectedOrder: string
 });
 
 When("I drag the {string} card onto the {string} card", (sourceTitle: string, targetTitle: string) => {
-  cy.window().then((window) => {
-    const findCard = (title: string) =>
-      [...window.document.querySelectorAll<HTMLElement>('[data-testid="tracker-card"]')]
-        .find((element) => element.textContent?.includes(title));
+  cy.contains('[data-testid="tracker-card"]', sourceTitle)
+    .should("exist")
+    .then(($sourceCard) => {
+      const sourceCard = $sourceCard[0];
 
-    const sourceCard = findCard(sourceTitle);
-    const targetCard = findCard(targetTitle);
+      if (!sourceCard)
+        throw new Error(`Expected to find source card for ${sourceTitle}.`);
 
-    expect(sourceCard, `source card for ${sourceTitle}`).to.not.equal(undefined);
-    expect(targetCard, `target card for ${targetTitle}`).to.not.equal(undefined);
-    expect(sourceCard, `source card element for ${sourceTitle}`).to.not.equal(null);
+      const sourceCardId = sourceCard.getAttribute("data-tracker-id");
+      expect(sourceCardId, `data-tracker-id for ${sourceTitle}`).to.be.a("string").and.not.equal("");
 
-    if (!sourceCard)
-      throw new Error(`Expected to find source card for ${sourceTitle}.`);
+      if (!sourceCardId)
+        throw new Error(`Expected source card ${sourceTitle} to have a data-tracker-id attribute.`);
 
-    const sourceCardId = sourceCard.getAttribute("data-tracker-id");
-    expect(Boolean(sourceCardId), `data-tracker-id for ${sourceTitle}`).to.equal(true);
+      cy.contains('[data-testid="tracker-card"]', targetTitle)
+        .should("exist")
+        .then(($targetCard) => {
+          const targetCard = $targetCard[0];
 
-    if (!sourceCardId)
-      throw new Error(`Expected source card ${sourceTitle} to have a data-tracker-id attribute.`);
+          if (!targetCard)
+            throw new Error(`Expected to find target card for ${targetTitle}.`);
 
-    const dataTransfer = new window.DataTransfer();
-    dataTransfer.setData("text/plain", sourceCardId);
+          cy.window().then((window) => {
+            const dataTransfer = new window.DataTransfer();
+            dataTransfer.setData("text/plain", sourceCardId);
 
-    sourceCard.dispatchEvent(new window.DragEvent("dragstart", {
-      bubbles: true,
-      cancelable: true,
-      dataTransfer,
-    }));
-    targetCard?.dispatchEvent(new window.DragEvent("dragover", {
-      bubbles: true,
-      cancelable: true,
-      dataTransfer,
-    }));
-    targetCard?.dispatchEvent(new window.DragEvent("drop", {
-      bubbles: true,
-      cancelable: true,
-      dataTransfer,
-    }));
-    sourceCard?.dispatchEvent(new window.DragEvent("dragend", {
-      bubbles: true,
-      cancelable: true,
-      dataTransfer,
-    }));
-  });
+            sourceCard.dispatchEvent(new window.DragEvent("dragstart", {
+              bubbles: true,
+              cancelable: true,
+              dataTransfer,
+            }));
+            targetCard.dispatchEvent(new window.DragEvent("dragover", {
+              bubbles: true,
+              cancelable: true,
+              dataTransfer,
+            }));
+            targetCard.dispatchEvent(new window.DragEvent("drop", {
+              bubbles: true,
+              cancelable: true,
+              dataTransfer,
+            }));
+            sourceCard.dispatchEvent(new window.DragEvent("dragend", {
+              bubbles: true,
+              cancelable: true,
+              dataTransfer,
+            }));
+          });
+        });
+    });
 });
 
 When("I reload the dashboard", () => {

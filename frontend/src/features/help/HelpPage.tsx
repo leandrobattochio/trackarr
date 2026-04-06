@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { usePageTitle } from "@/shared/hooks/use-page-title";
@@ -89,49 +90,59 @@ export default function HelpPage() {
               Read the file in this order: name the plugin, define what the user must fill in, describe how requests work, fetch data, map the extracted values, then choose what appears on the tracker card.
             </p>
 
-            <div className="space-y-4">
+            <ol className="space-y-4">
               {yamlFlow.map((section, index) => (
-                <div key={section.id} className="space-y-4">
-                  <div className="rounded-2xl border border-border/60 bg-muted/10 p-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-background text-xs font-semibold text-muted-foreground">
-                            {section.id}
+                <Fragment key={section.id}>
+                  <li key={section.id} className="list-none">
+                    <div className="rounded-2xl border border-border/60 bg-muted/10 p-5">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-background text-xs font-semibold text-muted-foreground">
+                              {section.id}
+                            </div>
+                            <h2 className="font-display text-lg font-semibold text-foreground">{section.title}</h2>
                           </div>
-                          <h2 className="font-display text-lg font-semibold text-foreground">{section.title}</h2>
+                          <div className="flex flex-wrap gap-2">
+                            {section.fields.map((field) => (
+                              <span
+                                key={field}
+                                className="rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-medium text-foreground"
+                              >
+                                {field}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {section.fields.map((field) => (
-                            <span
-                              key={field}
-                              className="rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-medium text-foreground"
-                            >
-                              {field}
-                            </span>
+                        <div className="min-w-0 max-w-2xl space-y-2 text-sm text-muted-foreground">
+                          {section.details.map((detail, detailIndex) => (
+                            <p key={`${section.id}-${detailIndex}`}>{detail}</p>
                           ))}
                         </div>
                       </div>
-                      <div className="min-w-0 max-w-2xl space-y-2 text-sm text-muted-foreground">
-                        {section.details.map((detail) => (
-                          <p key={detail}>{detail}</p>
-                        ))}
-                      </div>
                     </div>
-                  </div>
+                  </li>
 
                   {index < yamlFlow.length - 1 && (
-                    <div className="flex justify-center">
-                      <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                    <li
+                      aria-hidden="true"
+                      role="presentation"
+                      className="flex justify-center list-none"
+                    >
+                      <div
+                        aria-hidden="true"
+                        role="presentation"
+                        className="flex flex-col items-center gap-1 text-muted-foreground"
+                      >
                         <div className="h-4 w-px bg-border" />
                         <div className="text-xs tracking-[0.2em]">DOWN</div>
                         <div className="text-lg leading-none">v</div>
                       </div>
-                    </div>
+                    </li>
                   )}
-                </div>
+                </Fragment>
               ))}
-            </div>
+            </ol>
 
             <div className="rounded-2xl border border-dashed border-border/60 bg-muted/5 p-4 text-sm text-muted-foreground">
               Result: the YAML starts as plugin metadata, turns into request/extraction logic, and ends as mapped dashboard output.
