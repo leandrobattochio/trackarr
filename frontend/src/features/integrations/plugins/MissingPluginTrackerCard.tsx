@@ -1,16 +1,19 @@
 import { AlertTriangle, Unplug } from "lucide-react";
+import type { ReactNode } from "react";
 import type { TrackerIntegration } from "@/features/integrations/types";
 import { TrackerCardShell } from "@/features/integrations/plugins/shared/TrackerCardShell";
 import { RatioThresholdCard } from "@/features/integrations/plugins/shared/RatioThresholdCard";
 
 interface MissingPluginTrackerCardProps {
   tracker: TrackerIntegration;
+  reorderControls?: ReactNode;
 }
 
-export function MissingPluginTrackerCard({ tracker }: MissingPluginTrackerCardProps) {
+export function MissingPluginTrackerCard({ tracker, reorderControls }: MissingPluginTrackerCardProps) {
   return (
     <TrackerCardShell
       tracker={tracker}
+      reorderControls={reorderControls}
       ratio={<RatioThresholdCard ratio={tracker.ratio} requiredRatio={tracker.requiredRatio} />}
       metrics={(
         <div className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm">

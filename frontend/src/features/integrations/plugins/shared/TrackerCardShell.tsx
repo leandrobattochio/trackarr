@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   ExternalLink,
+  GripVertical,
   RefreshCw,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -15,6 +16,7 @@ interface TrackerCardShellProps {
   tracker: TrackerIntegration;
   metrics: ReactNode;
   ratio: ReactNode;
+  reorderControls?: ReactNode;
 }
 
 function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" {
@@ -23,7 +25,7 @@ function getStatusBadgeVariant(status: string): "default" | "secondary" | "destr
   return "destructive";
 }
 
-export function TrackerCardShell({ tracker, metrics, ratio }: TrackerCardShellProps) {
+export function TrackerCardShell({ tracker, metrics, ratio, reorderControls }: TrackerCardShellProps) {
   const { actionsDisabled, handleDelete, handleSync, isDeleting, isSyncing } = useTrackerCardActions(tracker);
   const needsConfigurationFix = !tracker.configurationValid;
   const isBelowRequiredRatio =
@@ -42,12 +44,20 @@ export function TrackerCardShell({ tracker, metrics, ratio }: TrackerCardShellPr
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border/60 bg-muted/20 text-muted-foreground"
+              aria-label={`Drag to reorder ${tracker.name}`}
+              title="Drag to reorder"
+            >
+              <GripVertical className="h-4 w-4" />
+            </div>
+            {reorderControls}
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 font-display text-sm font-bold text-primary">
               {tracker.name.substring(0, 2).toUpperCase()}
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <CardTitle className="text-base">{tracker.name}</CardTitle>
+                <CardTitle className="text-base" data-testid="tracker-card-title">{tracker.name}</CardTitle>
                 {isBelowRequiredRatio && (
                   <MetricTooltip
                     label="Ratio Warning"

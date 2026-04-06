@@ -1,5 +1,6 @@
 import { ArrowDownToLine, ArrowUpFromLine, BarChart3, Coins, HardDrive, ShieldAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import type { TrackerIntegration, ApiDashboardMetric } from "@/features/integrations/types";
 import { TrackerCardShell } from "@/features/integrations/plugins/shared/TrackerCardShell";
 import { BytesMetricTile, CountMetricTile, TextMetricTile } from "@/features/integrations/plugins/shared/TrackerMetricTile";
@@ -7,6 +8,7 @@ import { RatioThresholdCard } from "@/features/integrations/plugins/shared/Ratio
 
 interface ConfiguredTrackerCardProps {
   tracker: TrackerIntegration;
+  reorderControls?: ReactNode;
 }
 
 const ICONS: Record<string, LucideIcon> = {
@@ -25,12 +27,13 @@ const TONES: Record<string, string> = {
   muted: "text-muted-foreground",
 };
 
-export function ConfiguredTrackerCard({ tracker }: ConfiguredTrackerCardProps) {
+export function ConfiguredTrackerCard({ tracker, reorderControls }: ConfiguredTrackerCardProps) {
   const metrics = tracker.dashboard.metrics;
 
   return (
     <TrackerCardShell
       tracker={tracker}
+      reorderControls={reorderControls}
       ratio={<RatioThresholdCard ratio={tracker.ratio} requiredRatio={tracker.requiredRatio} />}
       metrics={(
         <div className={resolveGridClassName(metrics.length)}>

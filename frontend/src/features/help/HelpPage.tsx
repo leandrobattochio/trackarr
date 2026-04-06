@@ -1,168 +1,152 @@
+import { Fragment } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { INTEGRATION_STAT_DEFINITIONS, SNAPSHOT_CHART_STAT_KEYS } from "@/features/integrations/stats";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { usePageTitle } from "@/shared/hooks/use-page-title";
 
-const integrationFlow = [
+const yamlFlow = [
   {
-    title: "1. Add a tracker",
-    detail: "Use Add Tracker on the dashboard and choose a plugin from the catalog.",
+    id: "01",
+    title: "Identity",
+    fields: ["pluginId", "displayName"],
+    details: [
+      "`pluginId` is the stable identifier used by integrations, API routes, and the YAML file itself.",
+      "`displayName` is the human-readable label shown in the UI.",
+      "These two values establish what the plugin is called and how it is referenced.",
+    ],
   },
   {
-    title: "2. Fill the generated form",
-    detail: "Fields come from the selected plugin definition. Required fields are enforced by the form and backend validation.",
+    id: "02",
+    title: "Inputs",
+    fields: ["fields", "customFields"],
+    details: [
+      "Each item defines `name`, `label`, `type`, `required`, and `sensitive`.",
+      "These fields are rendered in the integration form and validated by the backend.",
+      "Engine-owned values like `required_ratio`, `cron`, and `baseUrl` should not be declared here.",
+      "`customFields` uses the same shape as `fields` and can be omitted if not needed.",
+    ],
   },
   {
-    title: "3. Sync and monitor",
-    detail: "Each card shows a ratio panel, plugin metric tiles, status badge, activity chips, last sync, next auto sync, and actions.",
+    id: "03",
+    title: "Request Setup",
+    fields: ["http", "authFailure"],
+    details: [
+      "Supports `headers` and `cookies`.",
+      "`baseUrl` exists in the model, but the engine owns it and resolves it from the integration payload.",
+      "Supports `httpStatusCodes` and `htmlPatterns`.",
+      "Use this when a tracker returns a login page or auth-related status instead of valid stats.",
+    ],
   },
   {
-    title: "4. Review history",
-    detail: "Open Snapshots from the card footer or sidebar to inspect transfer and torrent activity over time.",
+    id: "04",
+    title: "Fetch",
+    fields: ["steps"],
+    details: [
+      "Each step defines `name`, `method`, `url`, `responseType`, `extract`, and optional `validate` rules.",
+      "Use `path` for JSON responses and `regex` for HTML responses.",
+      "Use `transform` to normalize extracted values such as decimals, byte sizes, or strings.",
+      "Use `countMatches` when you want to count repeated HTML matches instead of extracting a named value.",
+    ],
   },
-];
-
-const pluginFacts = [
-  "Plugin definitions are YAML files loaded from disk.",
-  "New Plugin starts from a commented template and creates a new physical YAML file.",
-  "Save writes changes back to the selected plugin file on disk.",
-  "Invalid plugin YAML is surfaced in the plugin editor with the backend validation error.",
+  {
+    id: "05",
+    title: "Map",
+    fields: ["mapping"],
+    details: [
+      "Expressions can reference step outputs like `steps.fetchStats.ratio`.",
+      "This is where raw extracted values become app stats such as `ratio`, `uploadedBytes`, `downloadedBytes`, `seedBonus`, or torrent counts.",
+    ],
+  },
+  {
+    id: "06",
+    title: "Display",
+    fields: ["dashboard"],
+    details: [
+      "Supports `byteUnitSystem` and a `metrics` list.",
+      "Each metric defines `stat`, `label`, `format`, `icon`, and `tone`.",
+      "The `stat` should point to a value produced by the mapping section.",
+    ],
+  },
 ];
 
 export default function HelpPage() {
   usePageTitle("TrackArr | Help");
 
-  const snapshotStoredOnly = INTEGRATION_STAT_DEFINITIONS.filter(
-    (stat) => stat.snapshotStored && !stat.snapshotCharted,
-  );
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
+        <div className="space-y-2">
           <h1 className="font-display text-2xl font-bold">Help</h1>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            This page documents the UI that exists today. It is intentionally tied to the current integration stats,
-            snapshot charts, and disk-backed plugin workflow.
+            This page shows the YAML structure as a visual build flow from top to bottom.
           </p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle>Working With Integrations</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm text-muted-foreground">
-              {integrationFlow.map((step) => (
-                <div key={step.title} className="space-y-1">
-                  <p className="font-medium text-foreground">{step.title}</p>
-                  <p>{step.detail}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle>Dashboard Behavior</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm text-muted-foreground">
-              <p>
-                The overview tiles summarize total uploaded, total downloaded, average ratio, and active torrent count
-                across all configured integrations.
-              </p>
-              <p>
-                Each tracker card has a shared shell, but the metric grid is plugin-defined. That means different
-                trackers can show different metric combinations while keeping the same status and action layout.
-              </p>
-              <p>
-                Ratio warnings are driven by current ratio versus required ratio. Integrations can also be marked as
-                needing fixing when their saved payload no longer matches the current plugin definition.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="border-border/50">
+        <Card className="border-border/50 bg-card/95">
           <CardHeader>
-            <CardTitle>Current System Stats</CardTitle>
+            <CardTitle>Plugin YAML Flow</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              These are the stat keys currently supported by the frontend and backend dashboard/snapshot model.
+          <CardContent className="space-y-6">
+            <p className="max-w-4xl text-sm text-muted-foreground">
+              Read the file in this order: name the plugin, define what the user must fill in, describe how requests work, fetch data, map the extracted values, then choose what appears on the tracker card.
             </p>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {INTEGRATION_STAT_DEFINITIONS.map((stat) => (
-                <div key={stat.key} className="rounded-lg border border-border/50 bg-muted/20 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{stat.label}</p>
-                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{stat.key}</p>
+
+            <ol className="space-y-4">
+              {yamlFlow.map((section, index) => (
+                <Fragment key={section.id}>
+                  <li key={section.id} className="list-none">
+                    <div className="rounded-2xl border border-border/60 bg-muted/10 p-5">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-background text-xs font-semibold text-muted-foreground">
+                              {section.id}
+                            </div>
+                            <h2 className="font-display text-lg font-semibold text-foreground">{section.title}</h2>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {section.fields.map((field) => (
+                              <span
+                                key={field}
+                                className="rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-medium text-foreground"
+                              >
+                                {field}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="min-w-0 max-w-2xl space-y-2 text-sm text-muted-foreground">
+                          {section.details.map((detail, detailIndex) => (
+                            <p key={`${section.id}-${detailIndex}`}>{detail}</p>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <span className="rounded-full border border-border/60 px-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                      {stat.format}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-sm text-muted-foreground">{stat.description}</p>
-                </div>
+                  </li>
+
+                  {index < yamlFlow.length - 1 && (
+                    <li
+                      aria-hidden="true"
+                      role="presentation"
+                      className="flex justify-center list-none"
+                    >
+                      <div
+                        aria-hidden="true"
+                        role="presentation"
+                        className="flex flex-col items-center gap-1 text-muted-foreground"
+                      >
+                        <div className="h-4 w-px bg-border" />
+                        <div className="text-xs tracking-[0.2em]">DOWN</div>
+                        <div className="text-lg leading-none">v</div>
+                      </div>
+                    </li>
+                  )}
+                </Fragment>
               ))}
+            </ol>
+
+            <div className="rounded-2xl border border-dashed border-border/60 bg-muted/5 p-4 text-sm text-muted-foreground">
+              Result: the YAML starts as plugin metadata, turns into request/extraction logic, and ends as mapped dashboard output.
             </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle>Snapshots</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm text-muted-foreground">
-              <p>
-                The snapshots page currently charts these series:
-                {" "}
-                <span className="font-medium text-foreground">{SNAPSHOT_CHART_STAT_KEYS.join(", ")}</span>.
-              </p>
-              <p>
-                These fields are still stored in snapshots but are not charted in the current UI:
-                {" "}
-                <span className="font-medium text-foreground">
-                  {snapshotStoredOnly.map((stat) => stat.key).join(", ")}
-                </span>.
-              </p>
-              <p>
-                That mismatch is real. The data model is broader than the current chart surface.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle>Plugin Workflow</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {pluginFacts.map((fact) => (
-                <p key={fact} className="text-sm text-muted-foreground">{fact}</p>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle>Refactor Assessment</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>
-              The previous page had stale plugin-management text because it duplicated behavior descriptions instead of
-              staying anchored to the current implementation.
-            </p>
-            <p>
-              The page itself does not need a major architectural refactor. It needs stricter scope: only document
-              behavior that is visible in the current frontend and supported by the current API contracts.
-            </p>
-            <p>
-              The shared stat catalog is worth keeping because it removes one source of drift. The plugin-management
-              copy should stay simple and literal unless more plugin metadata is exposed by the UI or API.
-            </p>
           </CardContent>
         </Card>
       </div>
