@@ -4,18 +4,18 @@ import { describe, expect, it, vi } from "vitest";
 const pageTitleSpy = vi.fn();
 
 vi.mock("@/layouts/DashboardLayout", () => ({
-  DashboardLayout: ({ children }: any) => <div data-testid="dashboard-layout">{children}</div>,
+  DashboardLayout: ({ children }: unknown) => <div data-testid="dashboard-layout">{children}</div>,
 }));
 
 vi.mock("@/components/ui/card", () => ({
-  Card: ({ children }: any) => <div>{children}</div>,
-  CardHeader: ({ children }: any) => <div>{children}</div>,
-  CardTitle: ({ children }: any) => <h2>{children}</h2>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
+  Card: ({ children }: unknown) => <div>{children}</div>,
+  CardHeader: ({ children }: unknown) => <div>{children}</div>,
+  CardTitle: ({ children }: unknown) => <h2>{children}</h2>,
+  CardContent: ({ children }: unknown) => <div>{children}</div>,
 }));
 
 vi.mock("@/shared/hooks/use-page-title", () => ({
-  usePageTitle: (...args: any[]) => pageTitleSpy(...args),
+  usePageTitle: (...args: unknown[]) => pageTitleSpy(...args),
 }));
 
 import HelpPage from "@/features/help/HelpPage";
@@ -47,3 +47,4 @@ describe("HelpPage", () => {
     expect(screen.getByText(/Result: the YAML starts as plugin metadata/i)).toBeInTheDocument();
   });
 });
+

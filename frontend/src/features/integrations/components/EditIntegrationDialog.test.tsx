@@ -5,7 +5,7 @@ const toastSuccess = vi.fn();
 const toastError = vi.fn();
 
 const pluginsState = {
-  data: [] as any[],
+  data: [] as unknown[],
 };
 
 const updateMutation = {
@@ -15,8 +15,8 @@ const updateMutation = {
 
 vi.mock("sonner", () => ({
   toast: {
-    success: (...args: any[]) => toastSuccess(...args),
-    error: (...args: any[]) => toastError(...args),
+    success: (...args: unknown[]) => toastSuccess(...args),
+    error: (...args: unknown[]) => toastError(...args),
   },
 }));
 
@@ -31,36 +31,36 @@ vi.mock("@/features/integrations/hooks", () => ({
 }));
 
 vi.mock("@/features/integrations/components/shared/MetricTooltip", () => ({
-  MetricTooltip: ({ children }: any) => <div>{children}</div>,
+  MetricTooltip: ({ children }: unknown) => <div>{children}</div>,
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, disabled, type = "button", ...props }: any) => (
+  Button: ({ children, onClick, disabled, type = "button", ...props }: unknown) => (
     <button type={type} onClick={onClick} disabled={disabled} {...props}>{children}</button>
   ),
 }));
 
 vi.mock("@/components/ui/input", () => ({
-  Input: (props: any) => <input {...props} />,
+  Input: (props: unknown) => <input {...props} />,
 }));
 
 vi.mock("@/components/ui/label", () => ({
-  Label: ({ children, htmlFor }: any) => <label htmlFor={htmlFor}>{children}</label>,
+  Label: ({ children, htmlFor }: unknown) => <label htmlFor={htmlFor}>{children}</label>,
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({ children, onOpenChange }: any) => (
+  Dialog: ({ children, onOpenChange }: unknown) => (
     <div>
       <button type="button" onClick={() => onOpenChange(true)}>open-dialog</button>
       <button type="button" onClick={() => onOpenChange(false)}>close-dialog</button>
       {children}
     </div>
   ),
-  DialogTrigger: ({ children }: any) => <div>{children}</div>,
-  DialogContent: ({ children }: any) => <div>{children}</div>,
-  DialogHeader: ({ children }: any) => <div>{children}</div>,
-  DialogTitle: ({ children }: any) => <h2>{children}</h2>,
-  DialogDescription: ({ children }: any) => <p>{children}</p>,
+  DialogTrigger: ({ children }: unknown) => <div>{children}</div>,
+  DialogContent: ({ children }: unknown) => <div>{children}</div>,
+  DialogHeader: ({ children }: unknown) => <div>{children}</div>,
+  DialogTitle: ({ children }: unknown) => <h2>{children}</h2>,
+  DialogDescription: ({ children }: unknown) => <p>{children}</p>,
 }));
 
 import { EditIntegrationDialog } from "@/features/integrations/components/EditIntegrationDialog";
@@ -125,8 +125,8 @@ describe("EditIntegrationDialog", () => {
   it("renders and submits editable fields with success and error flows", () => {
     pluginsState.data = [plugin];
     updateMutation.isPending = false;
-    updateMutation.mutate.mockImplementationOnce((_input: any, options: any) => options.onSuccess());
-    updateMutation.mutate.mockImplementationOnce((_input: any, options: any) => options.onError(new Error("bad payload")));
+    updateMutation.mutate.mockImplementationOnce((_input: unknown, options: unknown) => options.onSuccess());
+    updateMutation.mutate.mockImplementationOnce((_input: unknown, options: unknown) => options.onError(new Error("bad payload")));
 
     render(<EditIntegrationDialog tracker={tracker} />);
     fireEvent.click(screen.getByText("open-dialog"));
@@ -166,8 +166,8 @@ describe("EditIntegrationDialog", () => {
         },
       },
       expect.objectContaining({
-        onSuccess: expect.any(Function),
-        onError: expect.any(Function),
+        onSuccess: expect.unknown(Function),
+        onError: expect.unknown(Function),
       }),
     );
     expect(toastSuccess).toHaveBeenCalledWith("Seedpool updated");
@@ -203,3 +203,4 @@ describe("EditIntegrationDialog", () => {
     expect(screen.queryByText("Custom Fields")).not.toBeInTheDocument();
   });
 });
+

@@ -2,9 +2,9 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/components/ui/tooltip", () => ({
-  Tooltip: ({ children }: any) => <div data-testid="tooltip-root">{children}</div>,
-  TooltipTrigger: ({ children }: any) => <div data-testid="tooltip-trigger">{children}</div>,
-  TooltipContent: ({ children, side, className }: any) => (
+  Tooltip: ({ children }: unknown) => <div data-testid="tooltip-root">{children}</div>,
+  TooltipTrigger: ({ children }: unknown) => <div data-testid="tooltip-trigger">{children}</div>,
+  TooltipContent: ({ children, side, className }: unknown) => (
     <div data-testid="tooltip-content" data-side={side} className={className}>
       {children}
     </div>
@@ -33,3 +33,4 @@ describe("MetricTooltip", () => {
     expect(screen.getByText("Description text")).toBeInTheDocument();
   });
 });
+

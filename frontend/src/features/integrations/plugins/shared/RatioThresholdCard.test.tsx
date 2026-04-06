@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/features/integrations/components/shared/MetricTooltip", () => ({
-  MetricTooltip: ({ children, label, eyebrow, description }: any) => (
+  MetricTooltip: ({ children, label, eyebrow, description }: unknown) => (
     <div data-testid="metric-tooltip">
       <span>{label}</span>
       <span>{eyebrow}</span>
@@ -66,3 +66,4 @@ describe("RatioThresholdCard", () => {
     expect(container.firstElementChild).toHaveClass("opacity-100");
   });
 });
+

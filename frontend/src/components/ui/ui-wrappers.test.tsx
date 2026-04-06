@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("lucide-react", () => ({
@@ -14,13 +15,12 @@ vi.mock("@radix-ui/react-slot", () => ({
 }));
 
 vi.mock("@radix-ui/react-alert-dialog", () => {
-  const React = require("react");
   const withRef = (tag: keyof JSX.IntrinsicElements, testId: string) =>
     React.forwardRef(({ children, ...props }, ref) => React.createElement(tag, { ref, "data-testid": testId, ...props }, children));
   return {
-    Root: ({ children }: any) => <div data-testid="alert-root">{children}</div>,
+    Root: ({ children }: unknown) => <div data-testid="alert-root">{children}</div>,
     Trigger: withRef("button", "alert-trigger"),
-    Portal: ({ children }: any) => <div data-testid="alert-portal">{children}</div>,
+    Portal: ({ children }: unknown) => <div data-testid="alert-portal">{children}</div>,
     Overlay: withRef("div", "alert-overlay"),
     Content: withRef("div", "alert-content"),
     Title: withRef("h2", "alert-title"),
@@ -31,13 +31,12 @@ vi.mock("@radix-ui/react-alert-dialog", () => {
 });
 
 vi.mock("@radix-ui/react-dialog", () => {
-  const React = require("react");
   const withRef = (tag: keyof JSX.IntrinsicElements, testId: string) =>
     React.forwardRef(({ children, ...props }, ref) => React.createElement(tag, { ref, "data-testid": testId, ...props }, children));
   return {
-    Root: ({ children, open }: any) => <div data-testid="dialog-root" data-open={String(open ?? "")}>{children}</div>,
+    Root: ({ children, open }: unknown) => <div data-testid="dialog-root" data-open={String(open ?? "")}>{children}</div>,
     Trigger: withRef("button", "dialog-trigger"),
-    Portal: ({ children }: any) => <div data-testid="dialog-portal">{children}</div>,
+    Portal: ({ children }: unknown) => <div data-testid="dialog-portal">{children}</div>,
     Close: withRef("button", "dialog-close"),
     Overlay: withRef("div", "dialog-overlay"),
     Content: withRef("div", "dialog-content"),
@@ -47,7 +46,6 @@ vi.mock("@radix-ui/react-dialog", () => {
 });
 
 vi.mock("@radix-ui/react-checkbox", () => {
-  const React = require("react");
   return {
     Root: React.forwardRef(({ children, ...props }, ref) => <button ref={ref} data-testid="checkbox-root" {...props}>{children}</button>),
     Indicator: React.forwardRef(({ children, ...props }, ref) => <span ref={ref} data-testid="checkbox-indicator" {...props}>{children}</span>),
@@ -55,14 +53,12 @@ vi.mock("@radix-ui/react-checkbox", () => {
 });
 
 vi.mock("@radix-ui/react-label", () => {
-  const React = require("react");
   return {
     Root: React.forwardRef(({ children, ...props }, ref) => <label ref={ref} data-testid="label-root" {...props}>{children}</label>),
   };
 });
 
 vi.mock("@radix-ui/react-scroll-area", () => {
-  const React = require("react");
   return {
     Root: React.forwardRef(({ children, ...props }, ref) => <div ref={ref} data-testid="scroll-root" {...props}>{children}</div>),
     Viewport: React.forwardRef(({ children, ...props }, ref) => <div ref={ref} data-testid="scroll-viewport" {...props}>{children}</div>),
@@ -75,7 +71,6 @@ vi.mock("@radix-ui/react-scroll-area", () => {
 });
 
 vi.mock("@radix-ui/react-separator", () => {
-  const React = require("react");
   return {
     Root: React.forwardRef(({ children, orientation, decorative, ...props }, ref) => (
       <div ref={ref} data-testid="separator-root" data-orientation={orientation} data-decorative={String(decorative)} {...props}>{children}</div>
@@ -84,8 +79,7 @@ vi.mock("@radix-ui/react-separator", () => {
 });
 
 vi.mock("@radix-ui/react-tabs", () => {
-  const React = require("react");
-  const Root = ({ children, value }: any) => <div data-testid="tabs-root" data-value={value}>{children}</div>;
+  const Root = ({ children, value }: unknown) => <div data-testid="tabs-root" data-value={value}>{children}</div>;
   const List = React.forwardRef(({ children, ...props }, ref) => <div ref={ref} data-testid="tabs-list" {...props}>{children}</div>);
   const Trigger = React.forwardRef(({ children, value, ...props }, ref) => <button ref={ref} data-testid={`tabs-trigger-${value}`} {...props}>{children}</button>);
   const Content = React.forwardRef(({ children, value, ...props }, ref) => <div ref={ref} data-testid={`tabs-content-${value}`} {...props}>{children}</div>);
@@ -93,17 +87,15 @@ vi.mock("@radix-ui/react-tabs", () => {
 });
 
 vi.mock("@radix-ui/react-tooltip", () => {
-  const React = require("react");
   return {
-    Provider: ({ children }: any) => <div data-testid="tooltip-provider">{children}</div>,
-    Root: ({ children }: any) => <div data-testid="tooltip-root">{children}</div>,
+    Provider: ({ children }: unknown) => <div data-testid="tooltip-provider">{children}</div>,
+    Root: ({ children }: unknown) => <div data-testid="tooltip-root">{children}</div>,
     Trigger: React.forwardRef(({ children, asChild, ...props }, ref) => <button ref={ref} data-testid="tooltip-trigger" data-as-child={String(!!asChild)} {...props}>{children}</button>),
     Content: React.forwardRef(({ children, sideOffset, ...props }, ref) => <div ref={ref} data-testid="tooltip-content" data-side-offset={sideOffset} {...props}>{children}</div>),
   };
 });
 
 vi.mock("@radix-ui/react-toggle-group", () => {
-  const React = require("react");
   return {
     Root: React.forwardRef(({ children, type, value, ...props }, ref) => <div ref={ref} data-testid="toggle-root" data-type={type} data-value={value} {...props}>{children}</div>),
     Item: React.forwardRef(({ children, value, ...props }, ref) => <button ref={ref} data-testid={`toggle-item-${value}`} {...props}>{children}</button>),
@@ -111,34 +103,32 @@ vi.mock("@radix-ui/react-toggle-group", () => {
 });
 
 vi.mock("@radix-ui/react-select", () => {
-  const React = require("react");
-  const withRef = (tag: keyof JSX.IntrinsicElements, testId: string, extra?: (props: any) => any) =>
+  const withRef = (tag: keyof JSX.IntrinsicElements, testId: string, extra?: (props: unknown) => unknown) =>
     React.forwardRef(({ children, ...props }, ref) => React.createElement(tag, { ref, "data-testid": testId, ...(extra ? extra(props) : {}), ...props }, children));
   return {
-    Root: ({ children }: any) => <div data-testid="select-root">{children}</div>,
-    Group: ({ children }: any) => <div data-testid="select-group">{children}</div>,
-    Value: ({ children }: any) => <span data-testid="select-value">{children}</span>,
+    Root: ({ children }: unknown) => <div data-testid="select-root">{children}</div>,
+    Group: ({ children }: unknown) => <div data-testid="select-group">{children}</div>,
+    Value: ({ children }: unknown) => <span data-testid="select-value">{children}</span>,
     Trigger: withRef("button", "select-trigger"),
-    Icon: ({ children }: any) => <span data-testid="select-icon">{children}</span>,
+    Icon: ({ children }: unknown) => <span data-testid="select-icon">{children}</span>,
     ScrollUpButton: withRef("button", "select-scroll-up"),
     ScrollDownButton: withRef("button", "select-scroll-down"),
-    Portal: ({ children }: any) => <div data-testid="select-portal">{children}</div>,
+    Portal: ({ children }: unknown) => <div data-testid="select-portal">{children}</div>,
     Content: withRef("div", "select-content", (props) => ({ "data-position": props.position })),
     Viewport: withRef("div", "select-viewport"),
     Label: withRef("div", "select-label"),
     Item: withRef("div", "select-item"),
-    ItemIndicator: ({ children }: any) => <span data-testid="select-item-indicator">{children}</span>,
-    ItemText: ({ children }: any) => <span data-testid="select-item-text">{children}</span>,
+    ItemIndicator: ({ children }: unknown) => <span data-testid="select-item-indicator">{children}</span>,
+    ItemText: ({ children }: unknown) => <span data-testid="select-item-text">{children}</span>,
     Separator: withRef("div", "select-separator"),
   };
 });
 
 vi.mock("@radix-ui/react-toast", () => {
-  const React = require("react");
   const withRef = (tag: keyof JSX.IntrinsicElements, testId: string) =>
     React.forwardRef(({ children, ...props }, ref) => React.createElement(tag, { ref, "data-testid": testId, ...props }, children));
   return {
-    Provider: ({ children }: any) => <div data-testid="toast-provider">{children}</div>,
+    Provider: ({ children }: unknown) => <div data-testid="toast-provider">{children}</div>,
     Viewport: withRef("div", "toast-viewport"),
     Root: withRef("div", "toast-root"),
     Action: withRef("button", "toast-action"),
@@ -149,7 +139,7 @@ vi.mock("@radix-ui/react-toast", () => {
 });
 
 vi.mock("sonner", () => ({
-  Toaster: ({ theme, className, toastOptions, ...props }: any) => (
+  Toaster: ({ theme, className, toastOptions, ...props }: unknown) => (
     <div
       data-testid="sonner-toaster"
       data-theme={theme}
@@ -461,3 +451,4 @@ describe("ui wrappers", () => {
     expect(sonnerToast).toBeDefined();
   });
 });
+

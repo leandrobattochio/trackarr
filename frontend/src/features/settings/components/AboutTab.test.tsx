@@ -6,10 +6,10 @@ vi.mock("lucide-react", () => ({
 }));
 
 vi.mock("@/components/ui/card", () => ({
-  Card: ({ children }: any) => <div>{children}</div>,
-  CardHeader: ({ children }: any) => <div>{children}</div>,
-  CardTitle: ({ children }: any) => <h2>{children}</h2>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
+  Card: ({ children }: unknown) => <div>{children}</div>,
+  CardHeader: ({ children }: unknown) => <div>{children}</div>,
+  CardTitle: ({ children }: unknown) => <h2>{children}</h2>,
+  CardContent: ({ children }: unknown) => <div>{children}</div>,
 }));
 
 import { AboutTab } from "@/features/settings/components/AboutTab";
@@ -66,3 +66,4 @@ describe("AboutTab", () => {
     expect(screen.getByText("No")).toBeInTheDocument();
   });
 });
+

@@ -7,7 +7,7 @@ vi.mock("lucide-react", () => ({
 }));
 
 vi.mock("@/features/integrations/plugins/shared/TrackerCardShell", () => ({
-  TrackerCardShell: ({ ratio, metrics, reorderControls }: any) => (
+  TrackerCardShell: ({ ratio, metrics, reorderControls }: unknown) => (
     <div data-testid="tracker-card-shell">
       <div data-testid="ratio-slot">{ratio}</div>
       <div data-testid="metrics-slot">{metrics}</div>
@@ -17,7 +17,7 @@ vi.mock("@/features/integrations/plugins/shared/TrackerCardShell", () => ({
 }));
 
 vi.mock("@/features/integrations/plugins/shared/RatioThresholdCard", () => ({
-  RatioThresholdCard: ({ ratio, requiredRatio }: any) => (
+  RatioThresholdCard: ({ ratio, requiredRatio }: unknown) => (
     <div data-testid="ratio-threshold-card">{`ratio:${ratio}-required:${requiredRatio}`}</div>
   ),
 }));
@@ -79,3 +79,4 @@ describe("MissingPluginTrackerCard", () => {
     expect(screen.getByText("Plugin dashboard metrics removed")).toBeInTheDocument();
   });
 });
+

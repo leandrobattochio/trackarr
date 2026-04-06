@@ -5,7 +5,7 @@ const toastSuccess = vi.fn();
 const toastError = vi.fn();
 
 const pluginsState = {
-  data: [] as any[],
+  data: [] as unknown[],
   isLoading: false,
 };
 
@@ -16,8 +16,8 @@ const createMutation = {
 
 vi.mock("sonner", () => ({
   toast: {
-    success: (...args: any[]) => toastSuccess(...args),
-    error: (...args: any[]) => toastError(...args),
+    success: (...args: unknown[]) => toastSuccess(...args),
+    error: (...args: unknown[]) => toastError(...args),
   },
 }));
 
@@ -39,7 +39,7 @@ vi.mock("@/shared/hooks/use-debounce", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, disabled, type = "button", ...props }: any) => (
+  Button: ({ children, onClick, disabled, type = "button", ...props }: unknown) => (
     <button type={type} onClick={onClick} disabled={disabled} {...props}>
       {children}
     </button>
@@ -47,15 +47,15 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/input", () => ({
-  Input: (props: any) => <input {...props} />,
+  Input: (props: unknown) => <input {...props} />,
 }));
 
 vi.mock("@/components/ui/label", () => ({
-  Label: ({ children, htmlFor }: any) => <label htmlFor={htmlFor}>{children}</label>,
+  Label: ({ children, htmlFor }: unknown) => <label htmlFor={htmlFor}>{children}</label>,
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({ children, onOpenChange }: any) => (
+  Dialog: ({ children, onOpenChange }: unknown) => (
     <div>
       <button type="button" onClick={() => onOpenChange(false)}>
         close-dialog
@@ -63,11 +63,11 @@ vi.mock("@/components/ui/dialog", () => ({
       {children}
     </div>
   ),
-  DialogTrigger: ({ children }: any) => <div>{children}</div>,
-  DialogContent: ({ children }: any) => <div>{children}</div>,
-  DialogHeader: ({ children }: any) => <div>{children}</div>,
-  DialogTitle: ({ children }: any) => <h2>{children}</h2>,
-  DialogDescription: ({ children }: any) => <p>{children}</p>,
+  DialogTrigger: ({ children }: unknown) => <div>{children}</div>,
+  DialogContent: ({ children }: unknown) => <div>{children}</div>,
+  DialogHeader: ({ children }: unknown) => <div>{children}</div>,
+  DialogTitle: ({ children }: unknown) => <h2>{children}</h2>,
+  DialogDescription: ({ children }: unknown) => <p>{children}</p>,
 }));
 
 import { AddIntegrationDialog } from "@/features/integrations/components/AddIntegrationDialog";
@@ -127,8 +127,8 @@ describe("AddIntegrationDialog", () => {
   it("submits integration create success and error flows, then resets on close", () => {
     pluginsState.data = [plugin];
     createMutation.isPending = false;
-    createMutation.mutate.mockImplementationOnce((_dto: any, options: any) => options.onSuccess());
-    createMutation.mutate.mockImplementationOnce((_dto: any, options: any) => options.onError(new Error("create failed")));
+    createMutation.mutate.mockImplementationOnce((_dto: unknown, options: unknown) => options.onSuccess());
+    createMutation.mutate.mockImplementationOnce((_dto: unknown, options: unknown) => options.onError(new Error("create failed")));
 
     render(<AddIntegrationDialog addedPluginIds={[]} />);
     fireEvent.click(screen.getByRole("button", { name: /Seedpool/i }));
@@ -142,7 +142,7 @@ describe("AddIntegrationDialog", () => {
 
     expect(cronInput).toHaveAttribute("placeholder", "0 * * * *");
     expect(ratioInput).toHaveAttribute("type", "number");
-    expect(ratioInput).toHaveAttribute("step", "any");
+    expect(ratioInput).toHaveAttribute("step", "unknown");
     expect(usernameInput).toHaveAttribute("type", "text");
     expect(passwordInput).toHaveAttribute("type", "password");
     expect(plainPasswordInput).toHaveAttribute("type", "password");
@@ -171,8 +171,8 @@ describe("AddIntegrationDialog", () => {
         }),
       },
       expect.objectContaining({
-        onSuccess: expect.any(Function),
-        onError: expect.any(Function),
+        onSuccess: expect.unknown(Function),
+        onError: expect.unknown(Function),
       }),
     );
     expect(toastSuccess).toHaveBeenCalledWith("Seedpool integration added");
@@ -200,3 +200,4 @@ describe("AddIntegrationDialog", () => {
     expect(screen.getByTestId("icon-loader")).toBeInTheDocument();
   });
 });
+

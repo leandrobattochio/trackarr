@@ -97,7 +97,7 @@ describe("useDashboardCardOrder", () => {
 
     act(() => {
       result.current.handleCardDragStart("alpha");
-      result.current.handleCardDragOver({ preventDefault, dataTransfer } as any, "beta");
+      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "beta");
       result.current.handleCardDrop("beta", "alpha");
     });
     expect(result.current.orderedIntegrations.map((integration) => integration.id)).toEqual(["beta", "alpha", "gamma"]);
@@ -134,7 +134,7 @@ describe("useDashboardCardOrder", () => {
     const dataTransfer = { dropEffect: "" } as unknown as DataTransfer;
 
     act(() => {
-      result.current.handleCardDragOver({ preventDefault, dataTransfer } as any, "alpha");
+      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "alpha");
     });
     expect(result.current.dropTargetCardId).toBeNull();
 
@@ -142,12 +142,12 @@ describe("useDashboardCardOrder", () => {
       result.current.handleCardDragStart("alpha");
     });
     act(() => {
-      result.current.handleCardDragOver({ preventDefault, dataTransfer } as any, "alpha");
+      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "alpha");
     });
     expect(result.current.dropTargetCardId).toBeNull();
 
     act(() => {
-      result.current.handleCardDragOver({ preventDefault, dataTransfer } as any, "beta");
+      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "beta");
     });
     expect(result.current.dropTargetCardId).toBe("beta");
   });
@@ -175,3 +175,4 @@ describe("useDashboardCardOrder", () => {
     });
   });
 });
+

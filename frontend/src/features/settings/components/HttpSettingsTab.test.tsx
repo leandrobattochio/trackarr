@@ -7,7 +7,7 @@ vi.mock("lucide-react", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, disabled }: any) => (
+  Button: ({ children, onClick, disabled }: unknown) => (
     <button type="button" onClick={onClick} disabled={disabled}>
       {children}
     </button>
@@ -15,18 +15,18 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/card", () => ({
-  Card: ({ children }: any) => <div>{children}</div>,
-  CardHeader: ({ children }: any) => <div>{children}</div>,
-  CardTitle: ({ children }: any) => <h2>{children}</h2>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
+  Card: ({ children }: unknown) => <div>{children}</div>,
+  CardHeader: ({ children }: unknown) => <div>{children}</div>,
+  CardTitle: ({ children }: unknown) => <h2>{children}</h2>,
+  CardContent: ({ children }: unknown) => <div>{children}</div>,
 }));
 
 vi.mock("@/components/ui/input", () => ({
-  Input: ({ onChange, ...props }: any) => <input onChange={onChange} {...props} />,
+  Input: ({ onChange, ...props }: unknown) => <input onChange={onChange} {...props} />,
 }));
 
 vi.mock("@/components/ui/label", () => ({
-  Label: ({ children, htmlFor }: any) => <label htmlFor={htmlFor}>{children}</label>,
+  Label: ({ children, htmlFor }: unknown) => <label htmlFor={htmlFor}>{children}</label>,
 }));
 
 import { HttpSettingsTab } from "@/features/settings/components/HttpSettingsTab";
@@ -105,3 +105,4 @@ describe("HttpSettingsTab", () => {
     expect(screen.getByTestId("icon-loader")).toBeInTheDocument();
   });
 });
+

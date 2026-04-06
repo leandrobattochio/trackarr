@@ -6,7 +6,7 @@ vi.mock("lucide-react", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, disabled, ...props }: any) => (
+  Button: ({ children, onClick, disabled, ...props }: unknown) => (
     <button type="button" onClick={onClick} disabled={disabled} {...props}>
       {children}
     </button>
@@ -14,22 +14,22 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/card", () => ({
-  Card: ({ children }: any) => <div>{children}</div>,
-  CardHeader: ({ children }: any) => <div>{children}</div>,
-  CardTitle: ({ children }: any) => <h2>{children}</h2>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
+  Card: ({ children }: unknown) => <div>{children}</div>,
+  CardHeader: ({ children }: unknown) => <div>{children}</div>,
+  CardTitle: ({ children }: unknown) => <h2>{children}</h2>,
+  CardContent: ({ children }: unknown) => <div>{children}</div>,
 }));
 
 vi.mock("@/components/ui/input", () => ({
-  Input: (props: any) => <input {...props} />,
+  Input: (props: unknown) => <input {...props} />,
 }));
 
 vi.mock("@/components/ui/label", () => ({
-  Label: ({ children, htmlFor }: any) => <label htmlFor={htmlFor}>{children}</label>,
+  Label: ({ children, htmlFor }: unknown) => <label htmlFor={htmlFor}>{children}</label>,
 }));
 
 vi.mock("@/components/ui/select", () => ({
-  Select: ({ value, onValueChange, disabled, children }: any) => (
+  Select: ({ value, onValueChange, disabled, children }: unknown) => (
     <div>
       <button type="button" disabled={disabled} onClick={() => onValueChange("integration-2")}>
         select-value:{value}
@@ -37,21 +37,21 @@ vi.mock("@/components/ui/select", () => ({
       {children}
     </div>
   ),
-  SelectTrigger: ({ children }: any) => <div>{children}</div>,
-  SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
-  SelectContent: ({ children }: any) => <div>{children}</div>,
-  SelectItem: ({ children, value }: any) => <div data-testid={`select-item-${value}`}>{children}</div>,
+  SelectTrigger: ({ children }: unknown) => <div>{children}</div>,
+  SelectValue: ({ placeholder }: unknown) => <span>{placeholder}</span>,
+  SelectContent: ({ children }: unknown) => <div>{children}</div>,
+  SelectItem: ({ children, value }: unknown) => <div data-testid={`select-item-${value}`}>{children}</div>,
 }));
 
 vi.mock("@/components/ui/toggle-group", () => ({
-  ToggleGroup: ({ children, onValueChange }: any) => (
+  ToggleGroup: ({ children, onValueChange }: unknown) => (
     <div>
       <button type="button" onClick={() => onValueChange("")}>toggle-empty</button>
       <button type="button" onClick={() => onValueChange("custom")}>toggle-custom</button>
       {children}
     </div>
   ),
-  ToggleGroupItem: ({ children, value }: any) => <button type="button" data-testid={`range-${value}`}>{children}</button>,
+  ToggleGroupItem: ({ children, value }: unknown) => <button type="button" data-testid={`range-${value}`}>{children}</button>,
 }));
 
 vi.mock("@/features/snapshots/range", () => ({
@@ -174,3 +174,4 @@ describe("SnapshotFiltersCard", () => {
     expect(screen.getByRole("button", { name: /Reset/i })).toBeDisabled();
   });
 });
+

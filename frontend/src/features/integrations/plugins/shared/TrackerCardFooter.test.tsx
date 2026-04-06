@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("react-router-dom", () => ({
-  Link: ({ children, to, ...props }: any) => <a href={to} {...props}>{children}</a>,
+  Link: ({ children, to, ...props }: unknown) => <a href={to} {...props}>{children}</a>,
 }));
 
 vi.mock("lucide-react", () => ({
@@ -16,7 +16,7 @@ vi.mock("lucide-react", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, disabled, asChild, className, ...props }: any) => {
+  Button: ({ children, onClick, disabled, asChild, className, ...props }: unknown) => {
     if (asChild) {
       return <span data-testid="button-as-child" className={className}>{children}</span>;
     }
@@ -30,25 +30,25 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/alert-dialog", () => ({
-  AlertDialog: ({ children }: any) => <div>{children}</div>,
-  AlertDialogTrigger: ({ children }: any) => <div>{children}</div>,
-  AlertDialogContent: ({ children }: any) => <div>{children}</div>,
-  AlertDialogHeader: ({ children }: any) => <div>{children}</div>,
-  AlertDialogTitle: ({ children }: any) => <h4>{children}</h4>,
-  AlertDialogDescription: ({ children }: any) => <p>{children}</p>,
-  AlertDialogFooter: ({ children }: any) => <div>{children}</div>,
-  AlertDialogCancel: ({ children, disabled }: any) => <button type="button" disabled={disabled}>{children}</button>,
-  AlertDialogAction: ({ children, onClick, disabled }: any) => (
+  AlertDialog: ({ children }: unknown) => <div>{children}</div>,
+  AlertDialogTrigger: ({ children }: unknown) => <div>{children}</div>,
+  AlertDialogContent: ({ children }: unknown) => <div>{children}</div>,
+  AlertDialogHeader: ({ children }: unknown) => <div>{children}</div>,
+  AlertDialogTitle: ({ children }: unknown) => <h4>{children}</h4>,
+  AlertDialogDescription: ({ children }: unknown) => <p>{children}</p>,
+  AlertDialogFooter: ({ children }: unknown) => <div>{children}</div>,
+  AlertDialogCancel: ({ children, disabled }: unknown) => <button type="button" disabled={disabled}>{children}</button>,
+  AlertDialogAction: ({ children, onClick, disabled }: unknown) => (
     <button type="button" onClick={onClick} disabled={disabled}>{children}</button>
   ),
 }));
 
 vi.mock("@/features/integrations/components/EditIntegrationDialog", () => ({
-  EditIntegrationDialog: ({ disabled }: any) => <div>{`edit-disabled:${String(disabled)}`}</div>,
+  EditIntegrationDialog: ({ disabled }: unknown) => <div>{`edit-disabled:${String(disabled)}`}</div>,
 }));
 
 vi.mock("@/features/integrations/components/shared/MetricTooltip", () => ({
-  MetricTooltip: ({ children, label, eyebrow, description }: any) => (
+  MetricTooltip: ({ children, label, eyebrow, description }: unknown) => (
     <div data-testid="metric-tooltip">
       <span>{label}</span>
       <span>{eyebrow}</span>
@@ -172,3 +172,4 @@ describe("TrackerCardFooter", () => {
     expect(screen.getByText("This integration no longer matches the current plugin definition.")).toBeInTheDocument();
   });
 });
+

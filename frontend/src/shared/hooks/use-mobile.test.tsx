@@ -53,7 +53,7 @@ describe("useIsMobile", () => {
     const { result } = renderHook(() => useIsMobile());
 
     expect(result.current).toBe(true);
-    expect(addEventListener).toHaveBeenCalledWith("change", expect.any(Function));
+    expect(addEventListener).toHaveBeenCalledWith("change", expect.unknown(Function));
   });
 
   it("updates when the media query listener fires and cleans up on unmount", () => {
@@ -70,6 +70,7 @@ describe("useIsMobile", () => {
     expect(result.current).toBe(true);
 
     unmount();
-    expect(removeEventListener).toHaveBeenCalledWith("change", expect.any(Function));
+    expect(removeEventListener).toHaveBeenCalledWith("change", expect.unknown(Function));
   });
 });
+

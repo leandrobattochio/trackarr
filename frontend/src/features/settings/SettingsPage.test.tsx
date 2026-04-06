@@ -13,36 +13,36 @@ const settingsQuery = {
 };
 
 const aboutQuery = {
-  data: undefined as any,
+  data: undefined as unknown,
   isLoading: false,
   error: null as Error | null,
 };
 
 const updateMutation = {
-  mutate: (...args: any[]) => mutateSpy(...args),
+  mutate: (...args: unknown[]) => mutateSpy(...args),
   isPending: false,
 };
 
 vi.mock("sonner", () => ({
   toast: {
-    success: (...args: any[]) => toastSuccess(...args),
-    error: (...args: any[]) => toastError(...args),
+    success: (...args: unknown[]) => toastSuccess(...args),
+    error: (...args: unknown[]) => toastError(...args),
   },
 }));
 
 vi.mock("@/layouts/DashboardLayout", () => ({
-  DashboardLayout: ({ children }: any) => <div data-testid="dashboard-layout">{children}</div>,
+  DashboardLayout: ({ children }: unknown) => <div data-testid="dashboard-layout">{children}</div>,
 }));
 
 vi.mock("@/components/ui/tabs", () => ({
-  Tabs: ({ children }: any) => <div>{children}</div>,
-  TabsList: ({ children }: any) => <div>{children}</div>,
-  TabsTrigger: ({ children }: any) => <button type="button">{children}</button>,
-  TabsContent: ({ children }: any) => <div>{children}</div>,
+  Tabs: ({ children }: unknown) => <div>{children}</div>,
+  TabsList: ({ children }: unknown) => <div>{children}</div>,
+  TabsTrigger: ({ children }: unknown) => <button type="button">{children}</button>,
+  TabsContent: ({ children }: unknown) => <div>{children}</div>,
 }));
 
 vi.mock("@/shared/hooks/use-page-title", () => ({
-  usePageTitle: (...args: any[]) => pageTitleSpy(...args),
+  usePageTitle: (...args: unknown[]) => pageTitleSpy(...args),
 }));
 
 vi.mock("@/features/settings/hooks", () => ({
@@ -52,7 +52,7 @@ vi.mock("@/features/settings/hooks", () => ({
 }));
 
 vi.mock("@/features/settings/components", () => ({
-  HttpSettingsTab: (props: any) => (
+  HttpSettingsTab: (props: unknown) => (
     <div data-testid="http-tab">
       <span>{`dirty:${String(props.isDirty)}`}</span>
       <span>{`busy:${String(props.isBusy)}`}</span>
@@ -65,7 +65,7 @@ vi.mock("@/features/settings/components", () => ({
       <button type="button" onClick={props.onSave}>save-settings</button>
     </div>
   ),
-  AboutTab: (props: any) => (
+  AboutTab: (props: unknown) => (
     <div data-testid="about-tab">
       <span>{`about-loading:${String(props.isLoading)}`}</span>
       <span>{`about-error:${props.error?.message ?? "none"}`}</span>
@@ -118,8 +118,8 @@ describe("SettingsPage", () => {
     mutateSpy.mockReset();
 
     mutateSpy
-      .mockImplementationOnce((_value: string, options: any) => options.onSuccess({ userAgent: "TrackArr/2.0" }))
-      .mockImplementationOnce((_value: string, options: any) => options.onError(new Error("write failed")));
+      .mockImplementationOnce((_value: string, options: unknown) => options.onSuccess({ userAgent: "TrackArr/2.0" }))
+      .mockImplementationOnce((_value: string, options: unknown) => options.onError(new Error("write failed")));
 
     render(<SettingsPage />);
 
@@ -134,8 +134,8 @@ describe("SettingsPage", () => {
     expect(mutateSpy).toHaveBeenCalledWith(
       "TrackArr/2.0",
       expect.objectContaining({
-        onSuccess: expect.any(Function),
-        onError: expect.any(Function),
+        onSuccess: expect.unknown(Function),
+        onError: expect.unknown(Function),
       }),
     );
     expect(toastSuccess).toHaveBeenCalledWith("Settings saved.");
@@ -147,3 +147,4 @@ describe("SettingsPage", () => {
     expect(toastError).toHaveBeenCalledWith("Save failed: write failed");
   });
 });
+

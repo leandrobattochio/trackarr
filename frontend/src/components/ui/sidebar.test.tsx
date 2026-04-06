@@ -17,35 +17,35 @@ vi.mock("@/hooks/use-mobile", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, ...props }: any) => <button data-testid="button" onClick={onClick} {...props}>{children}</button>,
+  Button: ({ children, onClick, ...props }: unknown) => <button data-testid="button" onClick={onClick} {...props}>{children}</button>,
 }));
 
 vi.mock("@/components/ui/input", () => ({
-  Input: ({ ...props }: any) => <input data-testid="sidebar-input-base" {...props} />,
+  Input: ({ ...props }: unknown) => <input data-testid="sidebar-input-base" {...props} />,
 }));
 
 vi.mock("@/components/ui/separator", () => ({
-  Separator: ({ ...props }: any) => <div data-testid="sidebar-separator-base" {...props} />,
+  Separator: ({ ...props }: unknown) => <div data-testid="sidebar-separator-base" {...props} />,
 }));
 
 vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({ children, open, onOpenChange }: any) => (
+  Sheet: ({ children, open, onOpenChange }: unknown) => (
     <div data-testid="sheet" data-open={String(open)} onClick={() => onOpenChange?.(false)}>
       {children}
     </div>
   ),
-  SheetContent: ({ children, side, ...props }: any) => <div data-testid="sheet-content" data-side={side} {...props}>{children}</div>,
+  SheetContent: ({ children, side, ...props }: unknown) => <div data-testid="sheet-content" data-side={side} {...props}>{children}</div>,
 }));
 
 vi.mock("@/components/ui/skeleton", () => ({
-  Skeleton: ({ ...props }: any) => <div data-testid="sidebar-skeleton-base" {...props} />,
+  Skeleton: ({ ...props }: unknown) => <div data-testid="sidebar-skeleton-base" {...props} />,
 }));
 
 vi.mock("@/components/ui/tooltip", () => ({
-  TooltipProvider: ({ children }: any) => <div data-testid="tooltip-provider">{children}</div>,
-  Tooltip: ({ children }: any) => <div data-testid="tooltip">{children}</div>,
-  TooltipTrigger: ({ children }: any) => <div data-testid="tooltip-trigger">{children}</div>,
-  TooltipContent: ({ children, hidden, ...props }: any) => <div data-testid="tooltip-content" data-hidden={String(hidden)} {...props}>{children}</div>,
+  TooltipProvider: ({ children }: unknown) => <div data-testid="tooltip-provider">{children}</div>,
+  Tooltip: ({ children }: unknown) => <div data-testid="tooltip">{children}</div>,
+  TooltipTrigger: ({ children }: unknown) => <div data-testid="tooltip-trigger">{children}</div>,
+  TooltipContent: ({ children, hidden, ...props }: unknown) => <div data-testid="tooltip-content" data-hidden={String(hidden)} {...props}>{children}</div>,
 }));
 
 import {
@@ -335,3 +335,4 @@ describe("sidebar ui", () => {
     expect(screen.getByText("Sub Link").closest("[data-testid='slot']")).toBeInTheDocument();
   });
 });
+

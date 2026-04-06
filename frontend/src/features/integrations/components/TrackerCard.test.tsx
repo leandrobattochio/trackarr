@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/features/integrations/plugins", () => ({
-  PluginTrackerCard: ({ tracker, reorderControls }: any) => (
+  PluginTrackerCard: ({ tracker, reorderControls }: unknown) => (
     <div data-testid="plugin-tracker-card">
       <span>{tracker.name}</span>
       {reorderControls}
@@ -57,3 +57,4 @@ describe("TrackerCard", () => {
     expect(screen.getByText("reorder")).toBeInTheDocument();
   });
 });
+

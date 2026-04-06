@@ -11,7 +11,7 @@ vi.mock("lucide-react", () => ({
 }));
 
 vi.mock("@/features/integrations/plugins/shared/TrackerCardShell", () => ({
-  TrackerCardShell: ({ ratio, metrics }: any) => (
+  TrackerCardShell: ({ ratio, metrics }: unknown) => (
     <div data-testid="tracker-card-shell">
       <div data-testid="ratio-slot">{ratio}</div>
       <div data-testid="metrics-slot">{metrics}</div>
@@ -20,19 +20,19 @@ vi.mock("@/features/integrations/plugins/shared/TrackerCardShell", () => ({
 }));
 
 vi.mock("@/features/integrations/plugins/shared/TrackerMetricTile", () => ({
-  BytesMetricTile: ({ label, iconClassName, value, unitSystem }: any) => (
+  BytesMetricTile: ({ label, iconClassName, value, unitSystem }: unknown) => (
     <div data-testid="bytes-metric">{`${label}|${iconClassName}|${value}|${unitSystem}`}</div>
   ),
-  CountMetricTile: ({ label, iconClassName, value }: any) => (
+  CountMetricTile: ({ label, iconClassName, value }: unknown) => (
     <div data-testid="count-metric">{`${label}|${iconClassName}|${value}`}</div>
   ),
-  TextMetricTile: ({ label, iconClassName, value }: any) => (
+  TextMetricTile: ({ label, iconClassName, value }: unknown) => (
     <div data-testid="text-metric">{`${label}|${iconClassName}|${value}`}</div>
   ),
 }));
 
 vi.mock("@/features/integrations/plugins/shared/RatioThresholdCard", () => ({
-  RatioThresholdCard: ({ ratio, requiredRatio }: any) => (
+  RatioThresholdCard: ({ ratio, requiredRatio }: unknown) => (
     <div data-testid="ratio-threshold-card">{`ratio:${ratio}-required:${requiredRatio}`}</div>
   ),
 }));
@@ -40,7 +40,7 @@ vi.mock("@/features/integrations/plugins/shared/RatioThresholdCard", () => ({
 import { ConfiguredTrackerCard } from "@/features/integrations/plugins/ConfiguredTrackerCard";
 import type { TrackerIntegration } from "@/features/integrations/types";
 
-function buildTracker(metrics: any[]): TrackerIntegration {
+function buildTracker(metrics: unknown[]): TrackerIntegration {
   return {
     id: "tracker-1",
     pluginId: "seedpool",
@@ -92,7 +92,7 @@ describe("ConfiguredTrackerCard", () => {
     const tracker = buildTracker([
       { stat: "requiredRatio", label: "Required Ratio", format: "text", icon: "unknown-icon", tone: "unknown-tone" },
       { stat: "ratio", label: "Current Ratio", format: "text", icon: "unknown-icon", tone: "unknown-tone" },
-      { stat: "unknown-stat", label: "Unknown", format: "bytes", icon: "unknown-icon", tone: "unknown-tone" } as any,
+      { stat: "unknown-stat", label: "Unknown", format: "bytes", icon: "unknown-icon", tone: "unknown-tone" } as unknown,
     ]);
 
     render(<ConfiguredTrackerCard tracker={tracker} />);
@@ -162,7 +162,7 @@ describe("ConfiguredTrackerCard", () => {
       { stat: "leechingTorrents", label: "Leech Count", format: "count", icon: "coins", tone: "warning" },
       { stat: "ratio", label: "Ratio Null", format: "text", icon: "coins", tone: "primary" },
       { stat: "requiredRatio", label: "Required Null", format: "text", icon: "coins", tone: "primary" },
-      { stat: "unknown-stat", label: "Unknown Text", format: "text", icon: "coins", tone: "primary" } as any,
+      { stat: "unknown-stat", label: "Unknown Text", format: "text", icon: "coins", tone: "primary" } as unknown,
     ]);
 
     tracker.ratio = null;
@@ -204,3 +204,4 @@ describe("ConfiguredTrackerCard", () => {
     expect(tiles[3]).toHaveTextContent("H&R Null|text-muted-foreground|null");
   });
 });
+

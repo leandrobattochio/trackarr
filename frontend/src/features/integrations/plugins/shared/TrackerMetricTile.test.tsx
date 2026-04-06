@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/features/integrations/components/shared/MetricTooltip", () => ({
-  MetricTooltip: ({ label, eyebrow, description, children }: any) => (
+  MetricTooltip: ({ label, eyebrow, description, children }: unknown) => (
     <div data-testid="metric-tooltip">
       <span>{label}</span>
       <span>{eyebrow}</span>
@@ -128,3 +128,4 @@ describe("TrackerMetricTile", () => {
     expect(screen.getByText("--")).toBeInTheDocument();
   });
 });
+

@@ -8,8 +8,8 @@ const deleteMutate = vi.fn();
 
 vi.mock("sonner", () => ({
   toast: {
-    success: (...args: any[]) => successToast(...args),
-    error: (...args: any[]) => errorToast(...args),
+    success: (...args: unknown[]) => successToast(...args),
+    error: (...args: unknown[]) => errorToast(...args),
   },
 }));
 
@@ -51,7 +51,7 @@ const tracker: TrackerIntegration = {
 
 describe("useTrackerCardActions", () => {
   it("handles sync success/auth/unknown and network error branches", () => {
-    syncMutate.mockImplementation((_id: string, options: any) => {
+    syncMutate.mockImplementation((_id: string, options: unknown) => {
       options.onSuccess({ lastSyncResult: "success" });
       options.onSuccess({ lastSyncResult: "authFailed" });
       options.onSuccess({ lastSyncResult: "unknownError" });
@@ -69,7 +69,7 @@ describe("useTrackerCardActions", () => {
   });
 
   it("handles delete success and error branches", () => {
-    deleteMutate.mockImplementation((_id: string, options: any) => {
+    deleteMutate.mockImplementation((_id: string, options: unknown) => {
       options.onSuccess();
       options.onError(new Error("forbidden"));
     });
@@ -77,9 +77,10 @@ describe("useTrackerCardActions", () => {
     const { result } = renderHook(() => useTrackerCardActions(tracker));
     result.current.handleDelete();
 
-    expect(deleteMutate).toHaveBeenCalledWith("tracker-1", expect.any(Object));
+    expect(deleteMutate).toHaveBeenCalledWith("tracker-1", expect.unknown(Object));
     expect(successToast).toHaveBeenCalledWith("Seedpool removed");
     expect(errorToast).toHaveBeenCalledWith("Delete failed: forbidden");
     expect(result.current.actionsDisabled).toBe(false);
   });
 });
+

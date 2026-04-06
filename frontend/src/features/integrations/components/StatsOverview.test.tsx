@@ -2,19 +2,19 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("lucide-react", () => ({
-  ArrowUpFromLine: (props: any) => <svg data-testid="icon-up" {...props} />,
-  ArrowDownToLine: (props: any) => <svg data-testid="icon-down" {...props} />,
-  Gauge: (props: any) => <svg data-testid="icon-gauge" {...props} />,
-  Server: (props: any) => <svg data-testid="icon-server" {...props} />,
+  ArrowUpFromLine: (props: unknown) => <svg data-testid="icon-up" {...props} />,
+  ArrowDownToLine: (props: unknown) => <svg data-testid="icon-down" {...props} />,
+  Gauge: (props: unknown) => <svg data-testid="icon-gauge" {...props} />,
+  Server: (props: unknown) => <svg data-testid="icon-server" {...props} />,
 }));
 
 vi.mock("@/components/ui/card", () => ({
-  Card: ({ children }: any) => <div>{children}</div>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
+  Card: ({ children }: unknown) => <div>{children}</div>,
+  CardContent: ({ children }: unknown) => <div>{children}</div>,
 }));
 
 vi.mock("@/features/integrations/components/shared/MetricTooltip", () => ({
-  MetricTooltip: ({ children, label }: any) => <div data-testid={`tooltip-${label}`}>{children}</div>,
+  MetricTooltip: ({ children, label }: unknown) => <div data-testid={`tooltip-${label}`}>{children}</div>,
 }));
 
 vi.mock("@/shared/lib/formatters", () => ({
@@ -108,3 +108,4 @@ describe("StatsOverview", () => {
     expect(screen.getByText("0")).toBeInTheDocument();
   });
 });
+

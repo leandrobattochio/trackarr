@@ -9,22 +9,22 @@ vi.mock("lucide-react", () => ({
 }));
 
 vi.mock("@/components/ui/badge", () => ({
-  Badge: ({ children, variant }: any) => <div data-testid="badge" data-variant={variant}>{children}</div>,
+  Badge: ({ children, variant }: unknown) => <div data-testid="badge" data-variant={variant}>{children}</div>,
 }));
 
 vi.mock("@/components/ui/card", () => ({
-  Card: ({ children, className }: any) => <div data-testid="card" className={className}>{children}</div>,
-  CardHeader: ({ children }: any) => <div>{children}</div>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
-  CardTitle: ({ children }: any) => <h3>{children}</h3>,
+  Card: ({ children, className }: unknown) => <div data-testid="card" className={className}>{children}</div>,
+  CardHeader: ({ children }: unknown) => <div>{children}</div>,
+  CardContent: ({ children }: unknown) => <div>{children}</div>,
+  CardTitle: ({ children }: unknown) => <h3>{children}</h3>,
 }));
 
 vi.mock("@/features/integrations/components/shared/MetricTooltip", () => ({
-  MetricTooltip: ({ children }: any) => <div data-testid="metric-tooltip">{children}</div>,
+  MetricTooltip: ({ children }: unknown) => <div data-testid="metric-tooltip">{children}</div>,
 }));
 
 vi.mock("@/features/integrations/plugins/shared/TrackerCardFooter", () => ({
-  TrackerCardFooter: ({ onSync, onDelete, actionsDisabled }: any) => (
+  TrackerCardFooter: ({ onSync, onDelete, actionsDisabled }: unknown) => (
     <div data-testid="tracker-footer">
       <button type="button" onClick={onSync}>sync-now</button>
       <button type="button" onClick={onDelete}>delete-now</button>
@@ -149,3 +149,4 @@ describe("TrackerCardShell", () => {
     expect(screen.getByTestId("badge")).toHaveAttribute("data-variant", "destructive");
   });
 });
+

@@ -10,22 +10,22 @@ const dropSpy = vi.fn();
 const dragEndSpy = vi.fn();
 
 const integrationsQuery = {
-  data: [] as any[],
+  data: [] as unknown[],
   isLoading: false,
   error: null as Error | null,
 };
 
 const pluginsQuery = {
-  data: [] as any[],
+  data: [] as unknown[],
   isLoading: false,
 };
 
 const orderState = {
-  orderedIntegrations: [] as any[],
+  orderedIntegrations: [] as unknown[],
   draggedCardId: null as string | null,
   dropTargetCardId: null as string | null,
   handleCardDragStart: (id: string) => dragStartSpy(id),
-  handleCardDragOver: (event: any, id: string) => dragOverSpy(event, id),
+  handleCardDragOver: (event: unknown, id: string) => dragOverSpy(event, id),
   handleCardDrop: (targetId: string, sourceId?: string) => dropSpy(targetId, sourceId),
   handleCardDragEnd: () => dragEndSpy(),
   moveCard: (id: string, direction: -1 | 1) => moveCardSpy(id, direction),
@@ -39,11 +39,11 @@ vi.mock("lucide-react", () => ({
 }));
 
 vi.mock("@/layouts/DashboardLayout", () => ({
-  DashboardLayout: ({ children }: any) => <div data-testid="dashboard-layout">{children}</div>,
+  DashboardLayout: ({ children }: unknown) => <div data-testid="dashboard-layout">{children}</div>,
 }));
 
 vi.mock("@/features/integrations/components/TrackerCard", () => ({
-  TrackerCard: ({ tracker, reorderControls }: any) => (
+  TrackerCard: ({ tracker, reorderControls }: unknown) => (
     <div data-testid="tracker-card-inner">
       <span>{tracker.name}</span>
       {reorderControls}
@@ -52,11 +52,11 @@ vi.mock("@/features/integrations/components/TrackerCard", () => ({
 }));
 
 vi.mock("@/features/integrations/components/StatsOverview", () => ({
-  StatsOverview: ({ integrations }: any) => <div>{`stats-count:${integrations.length}`}</div>,
+  StatsOverview: ({ integrations }: unknown) => <div>{`stats-count:${integrations.length}`}</div>,
 }));
 
 vi.mock("@/features/integrations/components/AddIntegrationDialog", () => ({
-  AddIntegrationDialog: ({ addedPluginIds }: any) => <div>{`add-dialog:${addedPluginIds.join(",")}`}</div>,
+  AddIntegrationDialog: ({ addedPluginIds }: unknown) => <div>{`add-dialog:${addedPluginIds.join(",")}`}</div>,
 }));
 
 vi.mock("@/features/integrations/dashboard-order", () => ({
@@ -69,15 +69,15 @@ vi.mock("@/features/integrations/hooks", () => ({
 }));
 
 vi.mock("@/features/integrations/types", () => ({
-  mapIntegration: (...args: any[]) => mapIntegrationSpy(...args),
+  mapIntegration: (...args: unknown[]) => mapIntegrationSpy(...args),
 }));
 
 vi.mock("@/shared/hooks/use-page-title", () => ({
-  usePageTitle: (...args: any[]) => pageTitleSpy(...args),
+  usePageTitle: (...args: unknown[]) => pageTitleSpy(...args),
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, onMouseDown, disabled, ...props }: any) => (
+  Button: ({ children, onClick, onMouseDown, disabled, ...props }: unknown) => (
     <button type="button" onClick={onClick} onMouseDown={onMouseDown} disabled={disabled} {...props}>
       {children}
     </button>
@@ -127,7 +127,7 @@ describe("DashboardPage", () => {
     pluginsQuery.data = [{ pluginId: "p1" }, { pluginId: "p2" }];
     pluginsQuery.isLoading = false;
 
-    mapIntegrationSpy.mockImplementation((raw: any) => ({
+    mapIntegrationSpy.mockImplementation((raw: unknown) => ({
       id: raw.id,
       pluginId: raw.pluginId,
       name: raw.id === "int-1" ? "First Tracker" : "Second Tracker",
@@ -175,3 +175,4 @@ describe("DashboardPage", () => {
     expect(moveCardSpy).toHaveBeenCalledWith("int-1", 1);
   });
 });
+

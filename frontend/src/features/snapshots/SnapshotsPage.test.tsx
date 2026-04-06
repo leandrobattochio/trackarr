@@ -32,24 +32,24 @@ const filtersState = {
 };
 
 const integrationsQuery = {
-  data: [] as any[],
+  data: [] as unknown[],
   isLoading: false,
 };
 
 const pluginsQuery = {
-  data: [] as any[],
+  data: [] as unknown[],
   isLoading: false,
 };
 
 const snapshotsQuery = {
-  data: undefined as any,
+  data: undefined as unknown,
   isLoading: false,
   isFetching: false,
   error: null as Error | null,
 };
 
 vi.mock("react-router-dom", () => ({
-  Link: ({ children, to }: any) => <a href={to}>{children}</a>,
+  Link: ({ children, to }: unknown) => <a href={to}>{children}</a>,
 }));
 
 vi.mock("lucide-react", () => ({
@@ -58,23 +58,23 @@ vi.mock("lucide-react", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, asChild, ...props }: any) =>
+  Button: ({ children, asChild, ...props }: unknown) =>
     asChild ? <span data-testid="button-as-child">{children}</span> : <button type="button" {...props}>{children}</button>,
 }));
 
 vi.mock("@/components/ui/card", () => ({
-  Card: ({ children }: any) => <div>{children}</div>,
-  CardHeader: ({ children }: any) => <div>{children}</div>,
-  CardTitle: ({ children }: any) => <h2>{children}</h2>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
+  Card: ({ children }: unknown) => <div>{children}</div>,
+  CardHeader: ({ children }: unknown) => <div>{children}</div>,
+  CardTitle: ({ children }: unknown) => <h2>{children}</h2>,
+  CardContent: ({ children }: unknown) => <div>{children}</div>,
 }));
 
 vi.mock("@/layouts/DashboardLayout", () => ({
-  DashboardLayout: ({ children }: any) => <div data-testid="dashboard-layout">{children}</div>,
+  DashboardLayout: ({ children }: unknown) => <div data-testid="dashboard-layout">{children}</div>,
 }));
 
 vi.mock("@/shared/hooks/use-page-title", () => ({
-  usePageTitle: (...args: any[]) => pageTitleSpy(...args),
+  usePageTitle: (...args: unknown[]) => pageTitleSpy(...args),
 }));
 
 vi.mock("@/features/integrations/hooks", () => ({
@@ -83,24 +83,24 @@ vi.mock("@/features/integrations/hooks", () => ({
 }));
 
 vi.mock("@/features/integrations/types", () => ({
-  mapIntegration: (...args: any[]) => mapIntegrationSpy(...args),
+  mapIntegration: (...args: unknown[]) => mapIntegrationSpy(...args),
 }));
 
 vi.mock("@/features/snapshots/range", () => ({
-  formatSnapshotRangeLabel: (...args: any[]) => formatSnapshotRangeLabelSpy(...args),
+  formatSnapshotRangeLabel: (...args: unknown[]) => formatSnapshotRangeLabelSpy(...args),
 }));
 
 vi.mock("@/shared/lib/formatters", () => ({
-  formatBytes: (...args: any[]) => formatBytesSpy(...args),
+  formatBytes: (...args: unknown[]) => formatBytesSpy(...args),
 }));
 
 vi.mock("@/features/snapshots/hooks", () => ({
   useSnapshotFilters: () => filtersState,
-  useSnapshots: (...args: any[]) => useSnapshotsSpy(...args),
+  useSnapshots: (...args: unknown[]) => useSnapshotsSpy(...args),
 }));
 
 vi.mock("@/features/snapshots/components", () => ({
-  SnapshotFiltersCard: (props: any) => (
+  SnapshotFiltersCard: (props: unknown) => (
     <div data-testid="filters-card">
       <button type="button" onClick={() => props.onIntegrationChange("integration-2")}>filter-change-integration</button>
       <button type="button" onClick={() => props.onRangeChange("custom")}>filter-change-range</button>
@@ -111,10 +111,10 @@ vi.mock("@/features/snapshots/components", () => ({
       <span>{`busy:${String(props.isBusy)}`}</span>
     </div>
   ),
-  SnapshotSummaryCards: ({ count, firstSnapshotLabel, latestSnapshotLabel }: any) => (
+  SnapshotSummaryCards: ({ count, firstSnapshotLabel, latestSnapshotLabel }: unknown) => (
     <div data-testid="summary-cards">{`${count}|${firstSnapshotLabel}|${latestSnapshotLabel}`}</div>
   ),
-  SnapshotLineChartCard: ({ title, yAxisFormatter, tooltipValueFormatter, onToggleSeries, seriesOptions }: any) => (
+  SnapshotLineChartCard: ({ title, yAxisFormatter, tooltipValueFormatter, onToggleSeries, seriesOptions }: unknown) => (
     <div data-testid={`line-chart-card-${title}`}>
       <span>{yAxisFormatter(10)}</span>
       <span>{tooltipValueFormatter(11, seriesOptions[0].key).label}</span>
@@ -275,3 +275,4 @@ describe("SnapshotsPage", () => {
     fireEvent.click(screen.getByText("toggle-Torrent Activity"));
   });
 });
+

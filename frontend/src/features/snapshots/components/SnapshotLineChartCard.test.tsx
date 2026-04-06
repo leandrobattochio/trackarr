@@ -1,26 +1,26 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-const linePropsList: any[] = [];
-const chartTooltipContentProps: any[] = [];
+const linePropsList: unknown[] = [];
+const chartTooltipContentProps: unknown[] = [];
 
 vi.mock("recharts", () => ({
   CartesianGrid: () => <div data-testid="grid" />,
-  LineChart: ({ children }: any) => <div data-testid="line-chart">{children}</div>,
+  LineChart: ({ children }: unknown) => <div data-testid="line-chart">{children}</div>,
   XAxis: () => <div data-testid="x-axis" />,
-  YAxis: ({ tickFormatter, width }: any) => (
+  YAxis: ({ tickFormatter, width }: unknown) => (
     <div data-testid="y-axis" data-width={width}>
       {tickFormatter(1234)}
     </div>
   ),
-  Line: (props: any) => {
+  Line: (props: unknown) => {
     linePropsList.push(props);
     return <div data-testid={`line-${props.dataKey}`}>{String(props.strokeWidth)}</div>;
   },
 }));
 
 vi.mock("@/components/ui/checkbox", () => ({
-  Checkbox: ({ checked, onCheckedChange }: any) => (
+  Checkbox: ({ checked, onCheckedChange }: unknown) => (
     <button type="button" onClick={() => onCheckedChange(!checked)}>
       checkbox:{String(checked)}
     </button>
@@ -28,18 +28,18 @@ vi.mock("@/components/ui/checkbox", () => ({
 }));
 
 vi.mock("@/components/ui/card", () => ({
-  Card: ({ children }: any) => <div>{children}</div>,
-  CardHeader: ({ children }: any) => <div>{children}</div>,
-  CardTitle: ({ children }: any) => <h2>{children}</h2>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
+  Card: ({ children }: unknown) => <div>{children}</div>,
+  CardHeader: ({ children }: unknown) => <div>{children}</div>,
+  CardTitle: ({ children }: unknown) => <h2>{children}</h2>,
+  CardContent: ({ children }: unknown) => <div>{children}</div>,
 }));
 
 vi.mock("@/components/ui/chart", () => ({
-  ChartContainer: ({ children }: any) => <div>{children}</div>,
-  ChartLegend: ({ content }: any) => <div>{content}</div>,
+  ChartContainer: ({ children }: unknown) => <div>{children}</div>,
+  ChartLegend: ({ content }: unknown) => <div>{content}</div>,
   ChartLegendContent: () => <div data-testid="legend-content" />,
-  ChartTooltip: ({ content }: any) => <div>{content}</div>,
-  ChartTooltipContent: (props: any) => {
+  ChartTooltip: ({ content }: unknown) => <div>{content}</div>,
+  ChartTooltipContent: (props: unknown) => {
     chartTooltipContentProps.push(props);
     return <div data-testid="tooltip-content" />;
   },
@@ -127,3 +127,4 @@ describe("SnapshotLineChartCard", () => {
     expect(linePropsList[1].strokeWidth).toBe(2);
   });
 });
+
