@@ -12,7 +12,16 @@ export default defineConfig({
     exclude: ["cypress/**", "dist/**"],
     coverage: {
       include: ["src/**"],
-      exclude: ["cypress/**", "dist/**", "src/features/plugins/types.ts", "src/features/settings/types.ts"],
+      exclude: [
+        "cypress/**",
+        "dist/**",
+        "src/vite-env.d.ts",
+        "src/main.tsx",
+        "src/app/App.tsx",
+        "src/features/plugins/types.ts",
+        "src/features/settings/types.ts",
+        "src/features/snapshots/types.ts",
+      ],
     },
   },
   resolve: {

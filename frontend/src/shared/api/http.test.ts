@@ -79,4 +79,14 @@ describe("requestText", () => {
 
     await expect(requestText("/plugins")).rejects.toThrow("Plugin already exists");
   });
+
+  it("falls back to status text for text requests when error body is unavailable", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      statusText: "Gateway Timeout",
+      json: vi.fn().mockRejectedValue(new Error("invalid json")),
+    }));
+
+    await expect(requestText("/plugins")).rejects.toThrow("Gateway Timeout");
+  });
 });
