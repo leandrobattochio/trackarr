@@ -177,3 +177,5 @@ static string ResolveSqliteDatabasePath(string connectionString, string fallback
         ? fallbackFileName
         : dataSource;
 }
+
+public partial class Program;
