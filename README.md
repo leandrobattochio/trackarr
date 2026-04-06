@@ -60,7 +60,7 @@ The frontend runs on `http://localhost:8080` in development and proxies `/api` r
 ### Backend
 
 - ASP.NET Core Web API on `.NET 10`
-- Entity Framework Core with SQLite or PostgreSQL
+- Entity Framework Core with PostgreSQL
 - Hangfire + `Hangfire.Storage.SQLite`
 - Scalar/OpenAPI in development
 - YAML plugin engine powered by `YamlDotNet`
@@ -150,7 +150,8 @@ Notes:
 
 - Keep this file local only. Do not commit machine-specific or secret values.
 - Use environment variables instead when you want settings that also work in CI or Docker.
-- If `ConnectionStrings__PostgresConnection` is not set, the app falls back to SQLite for the main application database.
+- `Plugins:Directory` should point at your local plugin YAML folder. In this repo, `../../plugins` resolves to `backend/plugins`.
+- `ConnectionStrings:PostgresConnection` is required for the main application database.
 
 ### 1. Run the backend
 
@@ -168,8 +169,7 @@ Development defaults:
 
 On startup the backend:
 
-- applies EF Core migrations automatically when using SQLite
-- creates the PostgreSQL schema automatically when `ConnectionStrings__PostgresConnection` is provided
+- applies EF Core migrations automatically to the configured PostgreSQL database
 - seeds built-in plugin YAML files into the active plugins directory if missing
 - schedules recurring jobs for saved integrations
 
@@ -188,18 +188,11 @@ Frontend dev server:
 
 ## Docker deployment
 
-The Docker setup builds the frontend, publishes the backend, and serves everything from one container.
+The Docker setup builds the frontend, publishes the backend, starts the API container, and connects it to the bundled PostgreSQL sidecar.
 
 ```powershell
 cd docker
 docker compose up --build
-```
-
-To run with the bundled PostgreSQL sidecar instead of SQLite for the main application database:
-
-```powershell
-cd docker
-docker compose --profile postgres up --build
 ```
 
 Default runtime values:
@@ -213,7 +206,6 @@ Relevant environment variables from `docker/docker-compose.yml`:
 
 - `ConnectionStrings__PostgresConnection`
 - `APP_TIMEZONE`
-- `Database__Directory`
 - `Hangfire__Directory`
 - `Plugins__Directory`
 - `POSTGRES_DB`
@@ -223,21 +215,21 @@ Relevant environment variables from `docker/docker-compose.yml`:
 
 Database precedence:
 
-- If `ConnectionStrings__PostgresConnection` is set to a non-empty PostgreSQL connection string, TrackArr uses PostgreSQL for the EF Core application database
-- Otherwise TrackArr falls back to the existing SQLite database in `/data`
+- TrackArr uses PostgreSQL for the EF Core application database
 - Hangfire storage remains SQLite and continues to use `Hangfire__Directory`
+- Plugin YAML files remain on disk and use `Plugins__Directory`
 
 ## Data storage
 
 By default TrackArr stores:
 
-- application data in SQLite
+- application data in PostgreSQL
 - Hangfire job state in a separate SQLite database
 - plugin YAML files on disk
 
-If PostgreSQL is configured, only the application data moves to PostgreSQL. Hangfire job state and plugin YAML files remain on disk.
+Hangfire job state and plugin YAML files remain on disk.
 
-In production, the container redirects the SQLite-backed files into `/data` and `/data/plugins` so they survive container restarts when the volume is mounted.
+In the Docker setup, Hangfire files live under `/data` and plugin YAML files default to `/data/templates`, so both persist when the mounted volume is retained.
 
 ## API overview
 
