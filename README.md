@@ -16,6 +16,7 @@ TrackArr is a self-hosted dashboard for private tracker monitoring. It lets you 
 - Runs recurring sync jobs per integration using cron expressions
 - Supports built-in and custom tracker plugins
 - Lets you inspect, create, and edit disk-backed plugin definitions from the UI
+- Includes a settings area for HTTP defaults and runtime information
 - Ships as a single production container with the React frontend served by ASP.NET Core
 
 ## Core features
@@ -25,7 +26,7 @@ TrackArr is a self-hosted dashboard for private tracker monitoring. It lets you 
 - Automatic recurring sync with Hangfire-backed scheduling
 - Snapshot charts for uploaded/downloaded bytes and torrent activity
 - In-app YAML editor for plugin authoring with schema-aware validation, completions, snippets, and hover docs
-- Built-in plugin catalog seeded to disk on first run
+- Settings page for the shared `User-Agent` header and system information
 
 ## Screenshots
 
@@ -39,9 +40,9 @@ The screenshot below also shows the ratio-warning treatment in context: integrat
 
 ### Manage Plugins
 
-The plugin-management screen is where disk-backed plugin definitions are inspected, created, and edited. The catalog on the left shows the YAML files currently loaded from disk, while the editor on the right exposes the full definition that drives integration forms, HTTP steps, mappings, and dashboard metrics.
+The plugin-management screen is where plugin definitions are inspected, created, and edited. The catalog on the left shows the YAML files currently available, while the editor on the right exposes the definition that drives integration forms, HTTP steps, mappings, and dashboard metrics.
 
-This is also where the newer editor capabilities matter: YAML saves are blocked when the document is malformed or semantically invalid, and the editor provides TrackArr-specific validation and authoring help while you work.
+Saves are blocked when the document is malformed or semantically invalid, and the editor includes TrackArr-specific validation and authoring help while you work.
 
 ![TrackArr manage plugins page showing the plugin catalog and YAML editor](screenshots/manage_plugins.png)
 
@@ -114,12 +115,7 @@ Built-in plugins currently included:
 - `fearnopeer`
 - `seedpool`
 
-Plugin loading:
-
-1. Plugin definitions are loaded from YAML files on disk
-2. The Manage Plugins UI creates new files and edits existing files in place
-
-There is no database fallback or override layer for plugin templates.
+Plugin definitions are loaded from YAML files on disk. The Manage Plugins page edits those files directly.
 
 ## Local development
 
@@ -131,7 +127,7 @@ There is no database fallback or override layer for plugin templates.
 
 ### Local development config
 
-`appsettings.Development.json` is intentionally untracked. If you want local development defaults, create `backend/src/TrackerStats.Api/appsettings.Development.json` on your machine with your own values.
+`appsettings.Development.json` is intentionally untracked. If you want local development defaults, create `backend/src/TrackerStats.Api/appsettings.Development.json` on your machine.
 
 Example:
 
@@ -150,7 +146,7 @@ Notes:
 
 - Keep this file local only. Do not commit machine-specific or secret values.
 - Use environment variables instead when you want settings that also work in CI or Docker.
-- `Plugins:Directory` should point at your local plugin YAML folder. In this repo, `../../plugins` resolves to `backend/plugins`.
+- Set `Plugins:Directory` to your local plugin YAML folder. In this repo, `../../plugins` resolves to `backend/plugins`.
 - `ConnectionStrings:PostgresConnection` is required for the main application database.
 
 ### 1. Run the backend
@@ -170,7 +166,7 @@ Development defaults:
 On startup the backend:
 
 - applies EF Core migrations automatically to the configured PostgreSQL database
-- seeds built-in plugin YAML files into the active plugins directory if missing
+- creates the default application settings row if it does not exist
 - schedules recurring jobs for saved integrations
 
 ### 2. Run the frontend
@@ -188,7 +184,7 @@ Frontend dev server:
 
 ## Docker deployment
 
-The Docker setup builds the frontend, publishes the backend, starts the API container, and connects it to the bundled PostgreSQL sidecar.
+The Docker setup builds the frontend, publishes the backend, starts the API container, and runs PostgreSQL alongside it.
 
 ```powershell
 cd docker
@@ -213,11 +209,11 @@ Relevant environment variables from `docker/docker-compose.yml`:
 - `POSTGRES_PASSWORD`
 - `POSTGRES_PORT`
 
-Database precedence:
+Storage layout:
 
-- TrackArr uses PostgreSQL for the EF Core application database
-- Hangfire storage remains SQLite and continues to use `Hangfire__Directory`
-- Plugin YAML files remain on disk and use `Plugins__Directory`
+- PostgreSQL stores the main application data
+- Hangfire stores job data in a SQLite file under `Hangfire__Directory`
+- Plugin definitions are read from `Plugins__Directory`
 
 ## Data storage
 
@@ -227,9 +223,7 @@ By default TrackArr stores:
 - Hangfire job state in a separate SQLite database
 - plugin YAML files on disk
 
-Hangfire job state and plugin YAML files remain on disk.
-
-In the Docker setup, Hangfire files live under `/data` and plugin YAML files default to `/data/templates`, so both persist when the mounted volume is retained.
+In Docker, Hangfire files live under `/data` and plugin definitions default to `/data/templates`, so both persist with the mounted volume.
 
 ## API overview
 
@@ -246,6 +240,9 @@ Main endpoints:
 - `GET /api/plugins/{pluginId}`
 - `POST /api/plugins`
 - `PUT /api/plugins/{pluginId}`
+- `GET /api/settings`
+- `PUT /api/settings`
+- `GET /api/about`
 
 Plugin create/update requests use raw YAML in the request body.
 
@@ -254,12 +251,15 @@ Plugin create/update requests use raw YAML in the request body.
 - `/` dashboard for integrations and sync status
 - `/snapshots` chart view for historical metrics
 - `/plugins` YAML plugin management with schema-backed IntelliSense and save-blocking validation
+- `/settings` shared HTTP settings and system information
 - `/help` usage guidance
 
 ## Notes and constraints
 
 - Each integration payload must include a `cron` field because recurring scheduling is derived from the saved payload
 - `required_ratio` is required by the current integration flow and is parsed from the payload JSON
+- The Settings page lets you edit the shared `User-Agent` header used by plugin HTTP requests
 - Sensitive plugin fields are masked in the UI and preserved on update if the user leaves them blank
-- Plugin templates are always loaded from disk, and the Manage Plugins UI currently supports create/edit but not delete
+- The About tab shows runtime details such as version, environment, database engine, migrations, directories, and uptime
+- Plugin definitions are loaded from disk, and the Manage Plugins UI currently supports create/edit but not delete
 - Help, snapshots, and plugin-management routes are lazy-loaded in the frontend, and the Monaco/YAML editor stack is split into dedicated chunks
