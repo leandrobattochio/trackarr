@@ -136,30 +136,30 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - run: dotnet restore backend/TrackerStats.sln
+      - run: dotnet restore "${{ github.workspace }}/backend/TrackerStats.sln"
 
       - name: Install reportgenerator
         shell: bash
         run: |
-          if [ ! -f ./backend/.tools/reportgenerator ]; then
-            dotnet tool install --tool-path backend/.tools dotnet-reportgenerator-globaltool
+          if [ ! -f "${{ github.workspace }}/backend/.tools/reportgenerator" ]; then
+            dotnet tool install --tool-path "${{ github.workspace }}/backend/.tools" dotnet-reportgenerator-globaltool
           fi
 
       - name: Run backend tests with coverage
         run: >
-          dotnet test backend/TrackerStats.sln
+          dotnet test "${{ github.workspace }}/backend/TrackerStats.sln"
           --configuration Release
           --no-restore
           --collect:"XPlat Code Coverage"
-          --settings backend/coverage.runsettings
-          --results-directory backend/TestResults
+          --settings "${{ github.workspace }}/backend/coverage.runsettings"
+          --results-directory "${{ github.workspace }}/backend/TestResults"
           --logger "trx;LogFileName=tests.trx"
 
       - name: Generate HTML coverage report
         run: >
-          ./backend/.tools/reportgenerator
-          -reports:"backend/TestResults/**/coverage.cobertura.xml"
-          -targetdir:"backend/CoverageReport"
+          "${{ github.workspace }}/backend/.tools/reportgenerator"
+          -reports:"${{ github.workspace }}/backend/TestResults/**/coverage.cobertura.xml"
+          -targetdir:"${{ github.workspace }}/backend/CoverageReport"
           -filefilters:"-**/obj/**/*.cs;-**/Data/AppDbContext.cs"
           -reporttypes:"Html;Cobertura"
 
@@ -192,13 +192,13 @@ jobs:
 
       - run: corepack enable
       - run: yarn install --frozen-lockfile
-        working-directory: frontend
+        working-directory: ${{ github.workspace }}/frontend
 
-      - run: dotnet restore backend/TrackerStats.sln
+      - run: dotnet restore "${{ github.workspace }}/backend/TrackerStats.sln"
 
       - name: Run backend Testcontainers end-to-end tests
         run: >
-          dotnet test backend/tests/TrackerStats.Api.EndToEndTests/TrackerStats.Api.EndToEndTests.csproj
+          dotnet test "${{ github.workspace }}/backend/tests/TrackerStats.Api.EndToEndTests/TrackerStats.Api.EndToEndTests.csproj"
           --configuration Release
           --no-restore
 
@@ -215,8 +215,8 @@ jobs:
 
       - name: Start frontend app
         shell: bash
-        working-directory: frontend
         run: |
+          cd "${{ github.workspace }}/frontend"
           mkdir -p .e2e
           yarn dev --host 127.0.0.1 --port 8080 > .e2e/frontend.log 2>&1 &
           echo $! > .e2e/frontend.pid
@@ -243,7 +243,7 @@ jobs:
 
       - name: Run Cypress browser end-to-end tests
         run: yarn e2e
-        working-directory: frontend
+        working-directory: ${{ github.workspace }}/frontend
 
       - name: Stop local app processes
         if: always()
