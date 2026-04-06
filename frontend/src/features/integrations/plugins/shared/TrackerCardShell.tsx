@@ -25,6 +25,7 @@ function getStatusBadgeVariant(status: string): "default" | "secondary" | "destr
 
 export function TrackerCardShell({ tracker, metrics, ratio }: TrackerCardShellProps) {
   const { actionsDisabled, handleDelete, handleSync, isDeleting, isSyncing } = useTrackerCardActions(tracker);
+  const needsConfigurationFix = !tracker.configurationValid;
   const isBelowRequiredRatio =
     tracker.ratio !== null &&
     tracker.requiredRatio !== null &&
@@ -76,10 +77,10 @@ export function TrackerCardShell({ tracker, metrics, ratio }: TrackerCardShellPr
               </div>
             </div>
           </div>
-          <Badge variant={getStatusBadgeVariant(tracker.status)}>
+          <Badge variant={needsConfigurationFix ? "destructive" : getStatusBadgeVariant(tracker.status)}>
             {isSyncing && <RefreshCw className="mr-1 h-3 w-3 animate-spin" />}
-            {(tracker.status === "authFailed" || tracker.status === "unknownError") && <AlertTriangle className="mr-1 h-3 w-3" />}
-            {tracker.statusLabel}
+            {(needsConfigurationFix || tracker.status === "authFailed" || tracker.status === "unknownError") && <AlertTriangle className="mr-1 h-3 w-3" />}
+            {needsConfigurationFix ? "needs fixing" : tracker.statusLabel}
           </Badge>
         </div>
       </CardHeader>

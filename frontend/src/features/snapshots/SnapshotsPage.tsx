@@ -140,6 +140,7 @@ export default function SnapshotsPage() {
   );
 
   const activeIntegration = integrations.find((integration) => integration.id === submittedFilters.integrationId) ?? null;
+  const byteUnitSystem = activeIntegration?.byteUnitSystem ?? "binary";
 
   const snapshotsQuery = useSnapshots(
     {
@@ -407,7 +408,7 @@ export default function SnapshotsPage() {
                           <YAxis
                             tickLine={false}
                             axisLine={false}
-                            tickFormatter={(value) => formatBytes(value)}
+                            tickFormatter={(value) => formatBytes(value, byteUnitSystem)}
                             width={88}
                           />
                           <ChartTooltip
@@ -424,7 +425,7 @@ export default function SnapshotsPage() {
                                       {name === "uploadedBytes" ? "Uploaded" : "Downloaded"}
                                     </span>
                                     <span className="font-mono font-medium text-foreground">
-                                      {formatBytes(Number(value))}
+                                      {formatBytes(Number(value), byteUnitSystem)}
                                     </span>
                                   </div>
                                 )}

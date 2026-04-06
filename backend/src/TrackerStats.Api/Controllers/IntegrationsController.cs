@@ -14,6 +14,7 @@ public class IntegrationsController(
     IIntegrationSnapshotRepository snapshotRepository,
     ITrackerPluginRegistry registry,
     ITrackerPluginHttpClientFactory httpClientFactory,
+    IntegrationConfigurationValidator configurationValidator,
     IntegrationSyncService syncService,
     IntegrationRecurringJobScheduler recurringJobScheduler)
     : ControllerBase
@@ -27,7 +28,11 @@ public class IntegrationsController(
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var integrations = await repository.ListAsync(ct);
-        return Ok(integrations.Select(i => ToResponse(i, recurringJobScheduler.GetNextExecutionUtc(i.Id))));
+        return Ok(integrations.Select(integration =>
+        {
+            var validation = configurationValidator.Validate(integration);
+            return ToResponse(integration, recurringJobScheduler.GetNextExecutionUtc(integration.Id), validation);
+        }));
     }
 
     [HttpPost("{id:guid}/sync")]
@@ -40,7 +45,11 @@ public class IntegrationsController(
         if (!outcome.PluginExists || outcome.Integration is null)
             return BadRequest(new { error = $"Plugin '{outcome.Integration?.PluginId ?? "unknown"}' not found." });
 
-        return Ok(ToResponse(outcome.Integration, recurringJobScheduler.GetNextExecutionUtc(outcome.Integration.Id)));
+        if (!outcome.ConfigurationIsValid)
+            return BadRequest(new { error = outcome.ConfigurationError ?? "Integration configuration is invalid." });
+
+        var validation = configurationValidator.Validate(outcome.Integration);
+        return Ok(ToResponse(outcome.Integration, recurringJobScheduler.GetNextExecutionUtc(outcome.Integration.Id), validation));
     }
 
     [HttpGet("{id:guid}/snapshots")]
@@ -95,9 +104,9 @@ public class IntegrationsController(
             return BadRequest(new { error = $"Plugin '{request.PluginId}' not found." });
 
         var mergedPayload = MergeSensitiveFields(plugin, integration.Payload, request.Payload);
-        var payloadValidationError = TryValidatePayload(plugin, mergedPayload);
-        if (payloadValidationError is not null)
-            return BadRequest(new { error = payloadValidationError });
+        var validation = configurationValidator.Validate(request.PluginId, mergedPayload);
+        if (!validation.IsValid)
+            return BadRequest(new { error = validation.Error });
 
         integration.Payload = mergedPayload;
         integration.RequiredRatio = ParseRequiredRatio(mergedPayload);
@@ -105,7 +114,7 @@ public class IntegrationsController(
         await repository.UpdateAsync(integration, ct);
         recurringJobScheduler.Schedule(integration);
 
-        return Ok(ToResponse(integration, recurringJobScheduler.GetNextExecutionUtc(integration.Id)));
+        return Ok(ToResponse(integration, recurringJobScheduler.GetNextExecutionUtc(integration.Id), validation));
     }
 
     [HttpPost]
@@ -115,9 +124,9 @@ public class IntegrationsController(
         if (plugin is null)
             return BadRequest(new { error = $"Plugin '{request.PluginId}' not found." });
 
-        var payloadValidationError = TryValidatePayload(plugin, request.Payload);
-        if (payloadValidationError is not null)
-            return BadRequest(new { error = payloadValidationError });
+        var validation = configurationValidator.Validate(request.PluginId, request.Payload);
+        if (!validation.IsValid)
+            return BadRequest(new { error = validation.Error });
 
         var integration = new Integration
         {
@@ -130,16 +139,16 @@ public class IntegrationsController(
         await repository.AddAsync(integration, ct);
         recurringJobScheduler.Schedule(integration);
 
-        return CreatedAtAction(nameof(Create), new { id = integration.Id }, ToResponse(integration, recurringJobScheduler.GetNextExecutionUtc(integration.Id)));
+        return CreatedAtAction(nameof(Create), new { id = integration.Id }, ToResponse(integration, recurringJobScheduler.GetNextExecutionUtc(integration.Id), validation));
     }
 
     // ---------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------
 
-    private object ToResponse(Integration i, DateTime? nextAutomaticSyncAt)
+    private object ToResponse(Integration i, DateTime? nextAutomaticSyncAt, IntegrationConfigurationValidationResult validation)
     {
-        var plugin = registry.GetById(i.PluginId);
+        var plugin = validation.Plugin;
         var payload = RemoveSensitiveFields(plugin, ParsePayload(i.Payload));
         var hasStats = i.Ratio.HasValue || i.UploadedBytes.HasValue || i.DownloadedBytes.HasValue;
 
@@ -151,6 +160,7 @@ public class IntegrationsController(
                 ? null
                 : new
                 {
+                    byteUnitSystem = plugin.Dashboard.ByteUnitSystem,
                     metrics = plugin.Dashboard.Metrics.Select(metric => new
                     {
                         stat = metric.Stat,
@@ -166,6 +176,8 @@ public class IntegrationsController(
             lastSyncAt = NormalizeUtc(i.LastSyncAt),
             nextAutomaticSyncAt = NormalizeUtc(nextAutomaticSyncAt),
             lastSyncResult = i.LastSyncResult is null ? null : ToSyncResult(i.LastSyncResult.Value),
+            configurationValid = validation.IsValid,
+            configurationError = validation.Error,
             stats = hasStats
                 ? (object?)new
                 {
@@ -209,39 +221,6 @@ public class IntegrationsController(
             PluginProcessResult.UnknownError => "unknownError",
             _ => "unknownError"
         };
-
-    private static string? TryValidatePayload(ITrackerPlugin plugin, string payloadJson)
-    {
-        Dictionary<string, string?> payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize<Dictionary<string, string?>>(payloadJson, _jsonOpts) ?? [];
-        }
-        catch
-        {
-            return "Payload is not valid JSON.";
-        }
-
-        var missingFields = plugin.Fields
-            .Where(f => f.Required && string.IsNullOrEmpty(payload.GetValueOrDefault(f.Name)))
-            .Select(f => f.Name)
-            .ToList();
-
-        if (missingFields.Count > 0)
-            return $"Payload is missing required fields: {string.Join(", ", missingFields)}.";
-
-        foreach (var field in plugin.Fields.Where(f => string.Equals(f.Type, "number", StringComparison.OrdinalIgnoreCase)))
-        {
-            var rawValue = payload.GetValueOrDefault(field.Name);
-            if (string.IsNullOrWhiteSpace(rawValue))
-                continue;
-
-            if (!decimal.TryParse(rawValue, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out _))
-                return $"Field '{field.Name}' must be a valid decimal number.";
-        }
-
-        return null;
-    }
 
     private static Dictionary<string, string?> ParsePayload(string payload)
     {

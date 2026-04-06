@@ -34,7 +34,7 @@ public class YamlPluginEngine(
                     "POST" => HttpMethod.Post,
                     "PUT" => HttpMethod.Put,
                     "DELETE" => HttpMethod.Delete,
-                    _ => HttpMethod.Get
+                    _ => throw new InvalidOperationException($"Unsupported HTTP method '{step.Method}' in step '{step.Name}'.")
                 };
 
                 using var request = new HttpRequestMessage(method, url);

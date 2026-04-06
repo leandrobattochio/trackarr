@@ -1,7 +1,7 @@
 import { ArrowUpFromLine, ArrowDownToLine, Gauge, Server } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MetricTooltip } from "@/features/integrations/components/shared/MetricTooltip";
-import { formatBytes } from "@/shared/lib/formatters";
+import { formatBytes, type ByteUnitSystem } from "@/shared/lib/formatters";
 import { useAnimatedNumber } from "@/shared/hooks/use-animated-number";
 import type { TrackerIntegration } from "@/features/integrations/types";
 
@@ -9,14 +9,14 @@ interface StatsOverviewProps {
   integrations: TrackerIntegration[];
 }
 
-function AnimatedBytesStat({ value }: { value: number }) {
+function AnimatedBytesStat({ value, unitSystem }: { value: number; unitSystem: ByteUnitSystem }) {
   const animatedValue = useAnimatedNumber(value, {
     duration: 1200,
     decimals: 0,
     easing: "easeOutCubic",
   });
 
-  return <>{formatBytes(animatedValue)}</>;
+  return <>{formatBytes(animatedValue, unitSystem)}</>;
 }
 
 function AnimatedRatioStat({ value }: { value: number }) {
@@ -44,11 +44,12 @@ export function StatsOverview({ integrations }: StatsOverviewProps) {
   const totalDown = integrations.reduce((s, t) => s + (t.downloaded ?? 0), 0);
   const avgRatio = totalDown > 0 ? totalUp / totalDown : 0;
   const totalActive = integrations.reduce((s, t) => s + (t.activeTorrents ?? 0), 0);
+  const byteUnitSystem = resolveOverviewByteUnitSystem(integrations);
 
   const stats = [
     {
       label: "Total Uploaded",
-      value: <AnimatedBytesStat value={totalUp} />,
+      value: <AnimatedBytesStat value={totalUp} unitSystem={byteUnitSystem} />,
       icon: ArrowUpFromLine,
       color: "text-success",
       tooltip: {
@@ -58,7 +59,7 @@ export function StatsOverview({ integrations }: StatsOverviewProps) {
     },
     {
       label: "Total Downloaded",
-      value: <AnimatedBytesStat value={totalDown} />,
+      value: <AnimatedBytesStat value={totalDown} unitSystem={byteUnitSystem} />,
       icon: ArrowDownToLine,
       color: "text-primary",
       tooltip: {
@@ -116,4 +117,13 @@ export function StatsOverview({ integrations }: StatsOverviewProps) {
       ))}
     </div>
   );
+}
+
+function resolveOverviewByteUnitSystem(integrations: TrackerIntegration[]): ByteUnitSystem {
+  if (integrations.length === 0) return "binary";
+
+  const first = integrations[0].byteUnitSystem;
+  return integrations.every((integration) => integration.byteUnitSystem === first)
+    ? first
+    : "binary";
 }

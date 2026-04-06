@@ -11,6 +11,7 @@ public class IntegrationSyncService(
     IIntegrationSnapshotRepository snapshotRepository,
     ITrackerPluginRegistry registry,
     ITrackerPluginHttpClientFactory httpClientFactory,
+    IntegrationConfigurationValidator configurationValidator,
     ILogger<IntegrationSyncService> logger)
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
@@ -21,15 +22,18 @@ public class IntegrationSyncService(
         if (integration is null)
             return IntegrationSyncOutcome.NotFound(integrationId);
 
-        var plugin = registry.GetById(integration.PluginId);
-        if (plugin is null)
+        var validation = configurationValidator.Validate(integration);
+        if (validation.Plugin is null)
             return IntegrationSyncOutcome.PluginMissing(integration);
+
+        if (!validation.IsValid)
+            return IntegrationSyncOutcome.InvalidConfiguration(integration, validation.Error ?? "Integration configuration is invalid.");
 
         try
         {
             var dict = JsonSerializer.Deserialize<Dictionary<string, string?>>(integration.Payload, JsonOptions) ?? [];
             var configuration = new PluginConfiguration(dict);
-            plugin = registry.CreateById(integration.PluginId, configuration)
+            var plugin = registry.CreateById(integration.PluginId, configuration)
                 ?? throw new InvalidOperationException($"Plugin '{integration.PluginId}' not found.");
 
             using var httpClient = httpClientFactory.CreateClient(plugin);
@@ -99,14 +103,19 @@ public record IntegrationSyncOutcome(
     Integration? Integration,
     PluginProcessResult? Result,
     bool WasFound,
-    bool PluginExists)
+    bool PluginExists,
+    bool ConfigurationIsValid,
+    string? ConfigurationError)
 {
     public static IntegrationSyncOutcome NotFound(Guid integrationId) =>
-        new(null, null, WasFound: false, PluginExists: false);
+        new(null, null, WasFound: false, PluginExists: false, ConfigurationIsValid: false, ConfigurationError: null);
 
     public static IntegrationSyncOutcome PluginMissing(Integration integration) =>
-        new(integration, null, WasFound: true, PluginExists: false);
+        new(integration, null, WasFound: true, PluginExists: false, ConfigurationIsValid: false, ConfigurationError: null);
+
+    public static IntegrationSyncOutcome InvalidConfiguration(Integration integration, string error) =>
+        new(integration, null, WasFound: true, PluginExists: true, ConfigurationIsValid: false, ConfigurationError: error);
 
     public static IntegrationSyncOutcome Completed(Integration integration, PluginProcessResult result) =>
-        new(integration, result, WasFound: true, PluginExists: true);
+        new(integration, result, WasFound: true, PluginExists: true, ConfigurationIsValid: true, ConfigurationError: null);
 }

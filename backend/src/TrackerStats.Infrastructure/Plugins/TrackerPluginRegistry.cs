@@ -43,14 +43,15 @@ public class TrackerPluginRegistry(
 
     private IReadOnlyDictionary<string, PluginRegistration> LoadRegistrations() =>
         loader.LoadDefinitions()
-            .GroupBy(definition => definition.Definition.PluginId, StringComparer.OrdinalIgnoreCase)
+            .Where(definition => definition.IsValid)
+            .GroupBy(definition => definition.Definition!.PluginId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 group => group.Key,
                 group =>
                 {
                     var definition = group.First();
                     return new PluginRegistration(
-                        new Yaml.YamlTrackerPlugin(definition.Definition, engine, interpolator),
+                        new Yaml.YamlTrackerPlugin(definition.Definition!, engine, interpolator),
                         definition.Source);
                 },
                 StringComparer.OrdinalIgnoreCase);

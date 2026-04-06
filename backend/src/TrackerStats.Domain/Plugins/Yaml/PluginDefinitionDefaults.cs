@@ -39,7 +39,7 @@ public static class PluginDefinitionDefaults
     }
 
     public static IReadOnlyList<string> GetReservedFieldViolations(PluginDefinition definition) =>
-        definition.Fields
+        GetAllUserDefinedFields(definition)
             .Where(f => IsReservedField(f.Name))
             .Select(f => f.Name)
             .ToList();
@@ -47,7 +47,7 @@ public static class PluginDefinitionDefaults
     public static void ApplyDefaults(PluginDefinition definition)
     {
         var existingNames = new HashSet<string>(
-            definition.Fields.Select(f => f.Name),
+            GetAllUserDefinedFields(definition).Select(f => f.Name),
             StringComparer.OrdinalIgnoreCase);
 
         var merged = new List<FieldDefinition>();
@@ -58,6 +58,7 @@ public static class PluginDefinitionDefaults
         }
         merged.AddRange(definition.Fields);
         definition.Fields = merged;
+        definition.CustomFields ??= [];
 
         definition.Http ??= new HttpConfig();
         if (string.IsNullOrWhiteSpace(definition.Http.BaseUrl))
@@ -96,22 +97,7 @@ public static class PluginDefinitionDefaults
                     Sensitive = field.Sensitive
                 })
                 .ToList(),
-            Http = CreateEditableHttp(definition.Http),
-            AuthFailure = CreateEditableAuthFailure(definition.AuthFailure),
-            Steps = definition.Steps,
-            Mapping = definition.Mapping,
-            Dashboard = definition.Dashboard
-        };
-    }
-
-    public static PluginDefinition NormalizeEngineOwnedProperties(PluginDefinition definition)
-    {
-        return new PluginDefinition
-        {
-            PluginId = definition.PluginId,
-            DisplayName = definition.DisplayName,
-            Fields = definition.Fields
-                .Where(field => !IsReservedField(field.Name))
+            CustomFields = definition.CustomFields
                 .Select(field => new FieldDefinition
                 {
                     Name = field.Name,
@@ -128,6 +114,12 @@ public static class PluginDefinitionDefaults
             Dashboard = definition.Dashboard
         };
     }
+
+    public static IReadOnlyList<FieldDefinition> GetEffectiveFields(PluginDefinition definition) =>
+        [.. definition.Fields, .. definition.CustomFields];
+
+    private static IReadOnlyList<FieldDefinition> GetAllUserDefinedFields(PluginDefinition definition) =>
+        [.. definition.Fields, .. definition.CustomFields];
 
     private static HttpConfig? CreateEditableHttp(HttpConfig? http)
     {

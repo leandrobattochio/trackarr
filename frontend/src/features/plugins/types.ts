@@ -14,8 +14,11 @@ export interface ApiPluginListItem {
   pluginId: string;
   displayName: string;
   source: PluginSource;
-  dashboard: ApiDashboardConfig;
+  definitionValid: boolean;
+  definitionError: string | null;
+  dashboard: ApiDashboardConfig | null;
   fields: ApiPluginFieldDefinition[];
+  customFields: ApiPluginFieldDefinition[];
 }
 
 export interface SavePluginResponse {

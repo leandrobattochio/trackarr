@@ -1,32 +1,20 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using TrackerStats.Domain.Plugins;
-using TrackerStats.Domain.Plugins.Yaml;
-using TrackerStats.Domain.Repositories;
+using System.Data.Common;
 using YamlDotNet.Core;
+using TrackerStats.Domain.Plugins.Yaml;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using PluginDefinitionEntity = TrackerStats.Domain.Entities.PluginDefinition;
-using YamlPluginDefinition = TrackerStats.Domain.Plugins.Yaml.PluginDefinition;
 
 namespace TrackerStats.Api.Controllers;
 
 [ApiController]
 [Route("api/plugins")]
 public class PluginsController(
-    ITrackerPluginRegistry registry,
     IYamlPluginDefinitionLoader loader,
-    IPluginDefinitionRepository repository,
-    IIntegrationRepository integrationRepository) : ControllerBase
+    IConfiguration configuration) : ControllerBase
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     private static readonly IDeserializer Deserializer = new DeserializerBuilder()
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
-        .IgnoreUnmatchedProperties()
         .Build();
 
     private static readonly ISerializer Serializer = new SerializerBuilder()
@@ -37,30 +25,47 @@ public class PluginsController(
     [HttpGet]
     public IActionResult GetAll()
     {
-        var plugins = registry.GetCatalog().Select(p => new
+        var plugins = loader.LoadDefinitions().Select(plugin => new
         {
-            pluginId = p.PluginId,
-            displayName = p.DisplayName,
-            source = p.Source,
-            dashboard = new
-            {
-                metrics = p.Dashboard.Metrics.Select(metric => new
+            pluginId = plugin.PluginId,
+            displayName = plugin.DisplayName,
+            source = plugin.Source,
+            definitionValid = plugin.IsValid,
+            definitionError = plugin.Error,
+            dashboard = plugin.Definition is null
+                ? null
+                : new
                 {
-                    stat = metric.Stat,
-                    label = metric.Label,
-                    format = metric.Format,
-                    icon = metric.Icon,
-                    tone = metric.Tone
+                    byteUnitSystem = plugin.Definition.Dashboard.ByteUnitSystem,
+                    metrics = plugin.Definition.Dashboard.Metrics.Select(metric => new
+                    {
+                        stat = metric.Stat,
+                        label = metric.Label,
+                        format = metric.Format,
+                        icon = metric.Icon,
+                        tone = metric.Tone
+                    }).ToList()
+                },
+            fields = plugin.Definition is null
+                ? Enumerable.Empty<object>()
+                : plugin.Definition.Fields.Select(f => (object)new
+                {
+                    name = f.Name,
+                    label = f.Label,
+                    type = f.Type,
+                    required = f.Required,
+                    sensitive = f.Sensitive
+                }),
+            customFields = plugin.Definition is null
+                ? Enumerable.Empty<object>()
+                : plugin.Definition.CustomFields.Select(f => (object)new
+                {
+                    name = f.Name,
+                    label = f.Label,
+                    type = f.Type,
+                    required = f.Required,
+                    sensitive = f.Sensitive
                 })
-            },
-            fields = p.Fields.Select(f => new
-            {
-                name = f.Name,
-                label = f.Label,
-                type = f.Type,
-                required = f.Required,
-                sensitive = f.Sensitive
-            })
         });
 
         return Ok(plugins);
@@ -70,12 +75,15 @@ public class PluginsController(
     public IActionResult GetByPluginId(string pluginId)
     {
         var loadedDefinition = loader.LoadDefinitions()
-            .FirstOrDefault(definition => string.Equals(definition.Definition.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(definition => string.Equals(definition.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
 
         if (loadedDefinition is null)
             return NotFound();
 
-        var editableDefinition = PluginDefinitionDefaults.CreateEditableDefinition(loadedDefinition.Definition);
+        if (!loadedDefinition.IsValid)
+            return Content(loadedDefinition.RawContent, "application/yaml");
+
+        var editableDefinition = PluginDefinitionDefaults.CreateEditableDefinition(loadedDefinition.Definition!);
         var yaml = Serializer.Serialize(editableDefinition);
         return Content(yaml, "application/yaml");
     }
@@ -89,30 +97,27 @@ public class PluginsController(
             return BadRequest(new { error = parseResult.Error });
 
         var definition = parseResult.Definition!;
-
-        if (registry.GetById(definition.PluginId) is not null)
+        if (FindPluginPath(definition.PluginId) is not null)
             return Conflict(new { error = $"Plugin '{definition.PluginId}' already exists." });
 
-        var now = DateTime.UtcNow;
-        await repository.AddAsync(new PluginDefinitionEntity
-        {
-            Id = Guid.NewGuid(),
-            PluginId = definition.PluginId,
-            DefinitionJson = JsonSerializer.Serialize(definition, JsonOptions),
-            CreatedAt = now,
-            UpdatedAt = now
-        }, ct);
+        var pluginsDirectory = ResolvePluginsDirectory();
+        Directory.CreateDirectory(pluginsDirectory);
 
-        return CreatedAtAction(nameof(GetByPluginId), new { pluginId = definition.PluginId }, null);
+        var targetPath = Path.Combine(pluginsDirectory, $"{definition.PluginId}.yaml");
+        await System.IO.File.WriteAllTextAsync(targetPath, yaml, ct);
+
+        return CreatedAtAction(nameof(GetByPluginId), new { pluginId = definition.PluginId }, new
+        {
+            pluginId = definition.PluginId,
+            source = "disk"
+        });
     }
 
     [HttpPut("{pluginId}")]
     public async Task<IActionResult> Update(string pluginId, CancellationToken ct)
     {
-        var existingCatalogEntry = registry.GetCatalog()
-            .FirstOrDefault(plugin => string.Equals(plugin.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
-
-        if (existingCatalogEntry is null)
+        var existingPath = FindPluginPath(pluginId);
+        if (existingPath is null)
             return NotFound();
 
         var yaml = await ReadRequestBodyAsync(ct);
@@ -124,43 +129,8 @@ public class PluginsController(
         if (!string.Equals(definition.PluginId, pluginId, StringComparison.OrdinalIgnoreCase))
             return BadRequest(new { error = "Plugin ID in YAML must match the route parameter." });
 
-        var storedDefinition = await repository.GetByPluginIdAsync(pluginId, ct);
-        var now = DateTime.UtcNow;
-
-        if (storedDefinition is null)
-        {
-            await repository.AddAsync(new PluginDefinitionEntity
-            {
-                Id = Guid.NewGuid(),
-                PluginId = definition.PluginId,
-                DefinitionJson = JsonSerializer.Serialize(definition, JsonOptions),
-                CreatedAt = now,
-                UpdatedAt = now
-            }, ct);
-
-            return Ok(new { pluginId = definition.PluginId, source = "database" });
-        }
-
-        storedDefinition.DefinitionJson = JsonSerializer.Serialize(definition, JsonOptions);
-        storedDefinition.UpdatedAt = now;
-        await repository.UpdateAsync(storedDefinition, ct);
-
-        return Ok(new { pluginId = definition.PluginId, source = "database" });
-    }
-
-    [HttpDelete("{pluginId}")]
-    public async Task<IActionResult> Delete(string pluginId, CancellationToken ct)
-    {
-        var storedDefinition = await repository.GetByPluginIdAsync(pluginId, ct);
-        if (storedDefinition is null)
-            return NotFound();
-
-        var pluginIsInUse = await integrationRepository.ExistsByPluginIdAsync(pluginId, ct);
-        if (pluginIsInUse)
-            return Conflict(new { error = $"Plugin '{pluginId}' cannot be deleted because it is currently used by one or more integrations." });
-
-        await repository.DeleteAsync(storedDefinition.Id, ct);
-        return NoContent();
+        await System.IO.File.WriteAllTextAsync(existingPath, yaml, ct);
+        return Ok(new { pluginId = definition.PluginId, source = "disk" });
     }
 
     private async Task<string> ReadRequestBodyAsync(CancellationToken ct)
@@ -176,7 +146,7 @@ public class PluginsController(
 
         try
         {
-            var definition = Deserializer.Deserialize<YamlPluginDefinition>(yaml);
+            var definition = Deserializer.Deserialize<PluginDefinition>(yaml);
             if (definition is null)
                 return new ParseDefinitionResult(null, "YAML could not be deserialized into a plugin definition.");
 
@@ -191,7 +161,7 @@ public class PluginsController(
         }
     }
 
-    private static string? ValidateDefinition(YamlPluginDefinition definition)
+    private static string? ValidateDefinition(PluginDefinition definition)
     {
         if (string.IsNullOrWhiteSpace(definition.PluginId))
             return "Plugin definition is missing required field 'pluginId'.";
@@ -202,16 +172,20 @@ public class PluginsController(
         if (definition.Fields is null)
             return "Plugin definition is missing required field 'fields'.";
 
+        definition.CustomFields ??= [];
+
         if (definition.Steps is null || definition.Steps.Count == 0)
             return "Plugin definition is missing required field 'steps'.";
 
-        if (definition.Fields.Any(field => string.IsNullOrWhiteSpace(field.Name)))
+        var effectiveFields = PluginDefinitionDefaults.GetEffectiveFields(definition);
+
+        if (effectiveFields.Any(field => string.IsNullOrWhiteSpace(field.Name)))
             return "Each field must define 'name'.";
 
-        if (definition.Fields.Any(field => string.IsNullOrWhiteSpace(field.Label)))
+        if (effectiveFields.Any(field => string.IsNullOrWhiteSpace(field.Label)))
             return "Each field must define 'label'.";
 
-        if (definition.Fields.Any(field => string.IsNullOrWhiteSpace(field.Type)))
+        if (effectiveFields.Any(field => string.IsNullOrWhiteSpace(field.Type)))
             return "Each field must define 'type'.";
 
         var reservedPropertyViolation = PluginDefinitionDefaults.GetReservedPropertyViolation(definition);
@@ -235,23 +209,18 @@ public class PluginsController(
 
         var allowedStats = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "ratio",
-            "uploadedBytes",
-            "downloadedBytes",
-            "seedBonus",
-            "buffer",
-            "hitAndRuns",
-            "requiredRatio",
-            "seedingTorrents",
-            "leechingTorrents",
-            "activeTorrents"
+            "ratio", "uploadedBytes", "downloadedBytes", "seedBonus", "buffer", "hitAndRuns",
+            "requiredRatio", "seedingTorrents", "leechingTorrents", "activeTorrents"
         };
 
         var allowedFormats = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "bytes",
-            "count",
-            "text"
+            "bytes", "count", "text"
+        };
+
+        var allowedByteUnitSystems = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "binary", "decimal"
         };
 
         if (definition.Dashboard.Metrics.Any(metric => string.IsNullOrWhiteSpace(metric.Stat)))
@@ -269,8 +238,102 @@ public class PluginsController(
         if (definition.Dashboard.Metrics.Any(metric => !allowedFormats.Contains(metric.Format)))
             return "Dashboard metrics contain an unsupported 'format' value.";
 
+        if (!string.IsNullOrWhiteSpace(definition.Dashboard.ByteUnitSystem)
+            && !allowedByteUnitSystems.Contains(definition.Dashboard.ByteUnitSystem))
+            return "Dashboard config contains an unsupported 'byteUnitSystem' value.";
+
         return null;
     }
 
-    private sealed record ParseDefinitionResult(YamlPluginDefinition? Definition, string? Error);
+    private string? FindPluginPath(string pluginId)
+    {
+        var pluginsDirectory = ResolvePluginsDirectory();
+        if (!Directory.Exists(pluginsDirectory))
+            return null;
+
+        var directPath = Path.Combine(pluginsDirectory, $"{pluginId}.yaml");
+        if (System.IO.File.Exists(directPath))
+            return directPath;
+
+        foreach (var path in Directory.EnumerateFiles(pluginsDirectory, "*.yaml", SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                var content = System.IO.File.ReadAllText(path);
+                var yamlPluginId = TryExtractScalar(content, "pluginId");
+                if (string.Equals(yamlPluginId, pluginId, StringComparison.OrdinalIgnoreCase))
+                    return path;
+            }
+            catch
+            {
+            }
+        }
+
+        return null;
+    }
+
+    private string ResolvePluginsDirectory()
+    {
+        var configuredDirectory = configuration["Plugins:Directory"];
+        if (!string.IsNullOrWhiteSpace(configuredDirectory))
+            return ResolvePath(configuredDirectory);
+
+        return ResolveSqliteDirectory();
+    }
+
+    private string ResolveSqliteDirectory()
+    {
+        var configuredDatabaseDirectory = configuration["Database:Directory"];
+        if (!string.IsNullOrWhiteSpace(configuredDatabaseDirectory))
+            return ResolvePath(configuredDatabaseDirectory);
+
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return Path.GetFullPath(AppContext.BaseDirectory);
+
+        var builder = new DbConnectionStringBuilder { ConnectionString = connectionString };
+        var dataSourceKey = builder.ContainsKey("Data Source")
+            ? "Data Source"
+            : builder.ContainsKey("DataSource")
+                ? "DataSource"
+                : "Data Source";
+
+        var dataSource = builder.TryGetValue(dataSourceKey, out var value)
+            ? value?.ToString()
+            : null;
+
+        if (string.IsNullOrWhiteSpace(dataSource))
+            return Path.GetFullPath(AppContext.BaseDirectory);
+
+        var resolvedPath = Path.IsPathRooted(dataSource)
+            ? dataSource
+            : Path.Combine(AppContext.BaseDirectory, dataSource);
+
+        var directory = Path.GetDirectoryName(resolvedPath);
+        return string.IsNullOrWhiteSpace(directory)
+            ? Path.GetFullPath(AppContext.BaseDirectory)
+            : Path.GetFullPath(directory);
+    }
+
+    private static string ResolvePath(string path) =>
+        Path.IsPathRooted(path)
+            ? path
+            : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, path));
+
+    private static string? TryExtractScalar(string content, string key)
+    {
+        foreach (var rawLine in content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var line = rawLine.Trim();
+            if (!line.StartsWith($"{key}:", StringComparison.Ordinal))
+                continue;
+
+            var value = line[(key.Length + 1)..].Trim().Trim('"', '\'');
+            return string.IsNullOrWhiteSpace(value) ? null : value;
+        }
+
+        return null;
+    }
+
+    private sealed record ParseDefinitionResult(PluginDefinition? Definition, string? Error);
 }

@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { MetricTooltip } from "@/features/integrations/components/shared/MetricTooltip";
 import { useAnimatedNumber } from "@/shared/hooks/use-animated-number";
-import { formatBytes } from "@/shared/lib/formatters";
+import { formatBytes, type ByteUnitSystem } from "@/shared/lib/formatters";
 
 interface TrackerMetricTileProps {
   label: string;
@@ -75,7 +75,7 @@ function getMetricTooltipCopy(label: string) {
   }
 }
 
-function AnimatedBytesValue({ value }: { value: number | null }) {
+function AnimatedBytesValue({ value, unitSystem }: { value: number | null; unitSystem: ByteUnitSystem }) {
   const animatedValue = useAnimatedNumber(value ?? 0, {
     duration: 1200,
     decimals: 0,
@@ -86,7 +86,7 @@ function AnimatedBytesValue({ value }: { value: number | null }) {
     return <span>--</span>;
   }
 
-  return <span>{formatBytes(animatedValue)}</span>;
+  return <span>{formatBytes(animatedValue, unitSystem)}</span>;
 }
 
 function AnimatedLongValue({ value }: { value: number | null }) {
@@ -116,15 +116,16 @@ interface BytesMetricTileProps {
   icon: LucideIcon;
   iconClassName: string;
   value: number | null;
+  unitSystem: ByteUnitSystem;
 }
 
-export function BytesMetricTile({ label, icon, iconClassName, value }: BytesMetricTileProps) {
+export function BytesMetricTile({ label, icon, iconClassName, value, unitSystem }: BytesMetricTileProps) {
   return (
     <TrackerMetricTile
       label={label}
       icon={icon}
       iconClassName={iconClassName}
-      value={<AnimatedBytesValue value={value} />}
+      value={<AnimatedBytesValue value={value} unitSystem={unitSystem} />}
     />
   );
 }

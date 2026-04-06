@@ -1,27 +1,15 @@
 using System.Data.Common;
-using System.Text.Json;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using TrackerStats.Domain.Plugins.Yaml;
-using TrackerStats.Domain.Repositories;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using YamlPluginDefinition = TrackerStats.Domain.Plugins.Yaml.PluginDefinition;
 
 namespace TrackerStats.Infrastructure.Plugins.Yaml;
 
-public sealed class YamlPluginDefinitionLoader(
-    IServiceScopeFactory scopeFactory,
-    IConfiguration configuration) : IYamlPluginDefinitionLoader
+public sealed class YamlPluginDefinitionLoader(IConfiguration configuration) : IYamlPluginDefinitionLoader
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
     private readonly IDeserializer _deserializer = new DeserializerBuilder()
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
-        .IgnoreUnmatchedProperties()
         .Build();
 
     public IReadOnlyList<LoadedYamlPluginDefinition> LoadDefinitions()
@@ -29,13 +17,10 @@ public sealed class YamlPluginDefinitionLoader(
         var definitions = new Dictionary<string, LoadedYamlPluginDefinition>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var definition in LoadDiskDefinitions())
-            definitions[definition.Definition.PluginId] = definition;
-
-        foreach (var definition in LoadDatabaseDefinitions())
-            definitions[definition.Definition.PluginId] = definition;
+            definitions[definition.PluginId] = definition;
 
         return definitions.Values
-            .OrderBy(definition => definition.Definition.PluginId, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(definition => definition.PluginId, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
@@ -50,39 +35,62 @@ public sealed class YamlPluginDefinitionLoader(
                      .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
             var content = File.ReadAllText(path);
-            var definition = DeserializeYamlDefinition(content, path);
-            RejectReservedFields(definition, path);
-            PluginDefinitionDefaults.ApplyDefaults(definition);
-            yield return new LoadedYamlPluginDefinition(definition, "disk");
+            var fallbackPluginId = Path.GetFileNameWithoutExtension(path);
+            var fallbackDisplayName = fallbackPluginId;
+            LoadedYamlPluginDefinition loadedDefinition;
+
+            try
+            {
+                var definition = DeserializeYamlDefinition(content, path);
+                RejectReservedFields(definition, path);
+                PluginDefinitionDefaults.ApplyDefaults(definition);
+                loadedDefinition = new LoadedYamlPluginDefinition(
+                    definition.PluginId,
+                    definition.DisplayName,
+                    "disk",
+                    definition,
+                    content,
+                    null);
+            }
+            catch (Exception ex)
+            {
+                loadedDefinition = new LoadedYamlPluginDefinition(
+                    TryExtractScalar(content, "pluginId") ?? fallbackPluginId,
+                    TryExtractScalar(content, "displayName") ?? fallbackDisplayName,
+                    "disk",
+                    null,
+                    content,
+                    ex.Message);
+            }
+
+            yield return loadedDefinition;
         }
     }
 
-    private IEnumerable<LoadedYamlPluginDefinition> LoadDatabaseDefinitions()
-    {
-        using var scope = scopeFactory.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IPluginDefinitionRepository>();
-        var definitions = repository.ListAsync(CancellationToken.None).GetAwaiter().GetResult();
-
-        foreach (var storedDefinition in definitions.OrderBy(definition => definition.PluginId, StringComparer.OrdinalIgnoreCase))
-        {
-            var definition = JsonSerializer.Deserialize<YamlPluginDefinition>(storedDefinition.DefinitionJson, JsonOptions)
-                ?? throw new InvalidOperationException($"Database plugin definition '{storedDefinition.PluginId}' could not be deserialized.");
-
-            definition = PluginDefinitionDefaults.NormalizeEngineOwnedProperties(definition);
-            PluginDefinitionDefaults.ApplyDefaults(definition);
-            yield return new LoadedYamlPluginDefinition(definition, "database");
-        }
-    }
-
-    private YamlPluginDefinition DeserializeYamlDefinition(string content, string path) =>
-        _deserializer.Deserialize<YamlPluginDefinition>(content)
+    private PluginDefinition DeserializeYamlDefinition(string content, string path) =>
+        _deserializer.Deserialize<PluginDefinition>(content)
         ?? throw new InvalidOperationException($"Plugin definition file '{path}' could not be deserialized.");
 
-    private static void RejectReservedFields(YamlPluginDefinition definition, string source)
+    private static void RejectReservedFields(PluginDefinition definition, string source)
     {
         var violation = PluginDefinitionDefaults.GetReservedPropertyViolation(definition);
         if (violation is not null)
             throw new InvalidOperationException($"Plugin definition '{source}' is invalid. {violation}");
+    }
+
+    private static string? TryExtractScalar(string content, string key)
+    {
+        foreach (var rawLine in content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var line = rawLine.Trim();
+            if (!line.StartsWith($"{key}:", StringComparison.Ordinal))
+                continue;
+
+            var value = line[(key.Length + 1)..].Trim().Trim('"', '\'');
+            return string.IsNullOrWhiteSpace(value) ? null : value;
+        }
+
+        return null;
     }
 
     private string ResolvePluginsDirectory()
@@ -136,4 +144,5 @@ public sealed class YamlPluginDefinitionLoader(
         Path.IsPathRooted(path)
             ? path
             : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, path));
+
 }

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { Plus, Check, ChevronLeft, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { usePlugins, useCreateIntegration } from "@/features/integrations/hooks";
-import type { ApiPlugin } from "@/features/integrations/types";
+import type { ApiPlugin, ApiPluginField } from "@/features/integrations/types";
 import { useDebounce } from "@/shared/hooks/use-debounce";
 import { toast } from "sonner";
 
@@ -58,7 +58,7 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
 
   function handleSelectPlugin(plugin: ApiPlugin) {
     setSelectedPlugin(plugin);
-    setFieldValues(Object.fromEntries(plugin.fields.map((f) => [f.name, ""])));
+    setFieldValues(Object.fromEntries(getAllFields(plugin).map((f) => [f.name, ""])));
   }
 
   function handleBack() {
@@ -169,29 +169,18 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-              {selectedPlugin.fields.map((field) => (
-                <div key={field.name} className="space-y-1.5">
-                  <Label htmlFor={field.name}>
-                    {field.label}
-                    {field.required && <span className="ml-1 text-destructive">*</span>}
-                  </Label>
-                  <Input
-                    id={field.name}
-                    type={getInputType(field.type, field.sensitive)}
-                    required={field.required}
-                    value={fieldValues[field.name] ?? ""}
-                    placeholder={getFieldPlaceholder(field.type)}
-                    autoComplete="off"
-                    step={field.type === "number" ? "any" : undefined}
-                    onChange={(e) =>
-                      setFieldValues((prev) => ({ ...prev, [field.name]: e.target.value }))
-                    }
-                  />
-                  {getFieldHelpText(field.type) && (
-                    <p className="text-xs text-muted-foreground">{getFieldHelpText(field.type)}</p>
-                  )}
-                </div>
-              ))}
+              <FieldSection
+                title="Connection"
+                fields={selectedPlugin.fields}
+                fieldValues={fieldValues}
+                onChange={setFieldValues}
+              />
+              <FieldSection
+                title="Custom Fields"
+                fields={selectedPlugin.customFields}
+                fieldValues={fieldValues}
+                onChange={setFieldValues}
+              />
 
               <Button type="submit" className="w-full" disabled={isCreating}>
                 {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -202,5 +191,49 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function getAllFields(plugin: ApiPlugin) {
+  return [...plugin.fields, ...plugin.customFields];
+}
+
+interface FieldSectionProps {
+  title: string;
+  fields: ApiPluginField[];
+  fieldValues: Record<string, string>;
+  onChange: Dispatch<SetStateAction<Record<string, string>>>;
+}
+
+function FieldSection({ title, fields, fieldValues, onChange }: FieldSectionProps) {
+  if (fields.length === 0) return null;
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
+      {fields.map((field) => (
+        <div key={field.name} className="space-y-1.5">
+          <Label htmlFor={field.name}>
+            {field.label}
+            {field.required && <span className="ml-1 text-destructive">*</span>}
+          </Label>
+          <Input
+            id={field.name}
+            type={getInputType(field.type, field.sensitive)}
+            required={field.required}
+            value={fieldValues[field.name] ?? ""}
+            placeholder={getFieldPlaceholder(field.type)}
+            autoComplete="off"
+            step={field.type === "number" ? "any" : undefined}
+            onChange={(e) =>
+              onChange((prev) => ({ ...prev, [field.name]: e.target.value }))
+            }
+          />
+          {getFieldHelpText(field.type) && (
+            <p className="text-xs text-muted-foreground">{getFieldHelpText(field.type)}</p>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }

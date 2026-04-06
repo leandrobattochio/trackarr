@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import {
   Activity,
+  AlertTriangle,
   ArrowDownCircle,
   ChartLine,
   Disc3,
@@ -75,9 +76,25 @@ export function TrackerCardFooter({
   onSync,
   onDelete,
 }: TrackerCardFooterProps) {
+  const syncDisabled = actionsDisabled || !tracker.configurationValid;
+  const syncDescription = tracker.configurationValid
+    ? "Fetch the latest tracker stats immediately instead of waiting for the next scheduled sync."
+    : tracker.configurationError ?? "This integration no longer matches the current plugin definition and must be fixed before syncing.";
+
   return (
     <>
       <div className="space-y-3 border-t border-border/50 pt-3 text-xs text-muted-foreground">
+        {!tracker.configurationValid && (
+          <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-medium text-foreground">Integration needs fixing</p>
+                <p>{tracker.configurationError ?? "This integration no longer matches the current plugin definition."}</p>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <FooterStatusChip
             label="Seeding"
@@ -125,7 +142,7 @@ export function TrackerCardFooter({
         <MetricTooltip
           label="Sync Now"
           eyebrow="Manual Refresh"
-          description="Fetch the latest tracker stats immediately instead of waiting for the next scheduled sync."
+          description={syncDescription}
         >
           <span className="flex-1">
             <Button
@@ -133,7 +150,7 @@ export function TrackerCardFooter({
               variant="outline"
               className="flex w-full"
               onClick={onSync}
-              disabled={actionsDisabled}
+              disabled={syncDisabled}
             >
               <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
               {isSyncing ? "Syncing..." : "Sync"}

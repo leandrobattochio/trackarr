@@ -48,7 +48,10 @@ export function useDeleteIntegration() {
 export function usePlugins() {
   return useQuery({
     queryKey: PLUGINS_KEY,
-    queryFn: api.plugins.list,
+    queryFn: async () => {
+      const plugins = await api.plugins.list();
+      return plugins.filter((plugin) => plugin.definitionValid && plugin.dashboard !== null);
+    },
     staleTime: Infinity,
   });
 }

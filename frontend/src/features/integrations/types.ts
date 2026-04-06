@@ -1,3 +1,5 @@
+import type { ByteUnitSystem } from "@/shared/lib/formatters";
+
 // ---------------------------------------------------------------------------
 // Backend API response types (mirrors what IntegrationsController returns)
 // ---------------------------------------------------------------------------
@@ -24,6 +26,7 @@ export interface ApiDashboardMetric {
 }
 
 export interface ApiDashboardConfig {
+  byteUnitSystem?: ByteUnitSystem | null;
   metrics: ApiDashboardMetric[];
 }
 
@@ -37,6 +40,8 @@ export interface ApiIntegration {
   lastSyncAt: string | null;
   nextAutomaticSyncAt: string | null;
   lastSyncResult: ApiSyncResult | null;
+  configurationValid: boolean;
+  configurationError: string | null;
   stats: ApiIntegrationStats | null;
 }
 
@@ -54,8 +59,11 @@ export interface ApiPlugin {
   pluginId: string;
   displayName: string;
   source?: string;
-  dashboard: ApiDashboardConfig;
+  definitionValid: boolean;
+  definitionError: string | null;
+  dashboard: ApiDashboardConfig | null;
   fields: ApiPluginField[];
+  customFields: ApiPluginField[];
 }
 
 export interface CreateIntegrationDto {
@@ -77,7 +85,8 @@ export type IntegrationStatus = "success" | "authFailed" | "unknownError" | "pen
 export interface TrackerIntegration {
   id: string;
   pluginId: string;
-  dashboard: ApiDashboardConfig;
+  dashboard: ApiDashboardConfig | null;
+  byteUnitSystem: ByteUnitSystem;
   name: string;
   payload: Record<string, string>;
   url: string | null;
@@ -97,6 +106,8 @@ export interface TrackerIntegration {
   nextAutomaticSyncExact: string | null;
   status: IntegrationStatus;
   statusLabel: string;
+  configurationValid: boolean;
+  configurationError: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -163,7 +174,8 @@ export function mapIntegration(
   return {
     id: integration.id,
     pluginId: integration.pluginId,
-    dashboard: integration.dashboard ?? plugin!.dashboard,
+    dashboard: integration.dashboard ?? plugin?.dashboard ?? null,
+    byteUnitSystem: integration.dashboard?.byteUnitSystem ?? plugin?.dashboard?.byteUnitSystem ?? "binary",
     name: plugin?.displayName ?? integration.pluginId,
     payload: Object.fromEntries(
       Object.entries(integration.payload).map(([key, value]) => [key, value ?? ""]),
@@ -185,5 +197,7 @@ export function mapIntegration(
     nextAutomaticSyncExact: integration.nextAutomaticSyncAt ? formatExactTime(integration.nextAutomaticSyncAt) : null,
     status,
     statusLabel: getStatusLabel(status),
+    configurationValid: integration.configurationValid,
+    configurationError: integration.configurationError,
   };
 }

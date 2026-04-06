@@ -5,7 +5,7 @@ export const pluginApi = {
   list: () => request<ApiPluginListItem[]>("/plugins"),
   getDefinition: (pluginId: string) => requestText(`/plugins/${pluginId}`),
   createDefinition: (yaml: string) =>
-    request<void>("/plugins", {
+    request<SavePluginResponse>("/plugins", {
       method: "POST",
       headers: { "Content-Type": "application/yaml" },
       body: yaml,
@@ -15,9 +15,5 @@ export const pluginApi = {
       method: "PUT",
       headers: { "Content-Type": "application/yaml" },
       body: yaml,
-    }),
-  deleteDefinition: (pluginId: string) =>
-    request<void>(`/plugins/${pluginId}`, {
-      method: "DELETE",
     }),
 };

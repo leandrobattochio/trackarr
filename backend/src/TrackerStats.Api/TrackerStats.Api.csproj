@@ -26,18 +26,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\plugins\bj-share.yaml">
-      <Link>bj-share.yaml</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-    <Content Include="..\..\plugins\fearnopeer.yaml">
-      <Link>fearnopeer.yaml</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-    <Content Include="..\..\plugins\seedpool.yaml">
-      <Link>seedpool.yaml</Link>
+    <Content Include="..\..\plugins\*.yaml">
+      <Link>%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>

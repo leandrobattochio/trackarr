@@ -23,7 +23,9 @@ export function useCreatePluginDefinition() {
 
   return useMutation({
     mutationFn: (yaml: string) => pluginApi.createDefinition(yaml),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: MANAGE_PLUGINS_KEY }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MANAGE_PLUGINS_KEY });
+    },
   });
 }
 
@@ -35,18 +37,6 @@ export function useUpdatePluginDefinition() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: MANAGE_PLUGINS_KEY });
       queryClient.invalidateQueries({ queryKey: [...MANAGE_PLUGINS_KEY, variables.pluginId] });
-    },
-  });
-}
-
-export function useDeletePluginDefinition() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (pluginId: string) => pluginApi.deleteDefinition(pluginId),
-    onSuccess: (_, pluginId) => {
-      queryClient.invalidateQueries({ queryKey: MANAGE_PLUGINS_KEY });
-      queryClient.removeQueries({ queryKey: [...MANAGE_PLUGINS_KEY, pluginId] });
     },
   });
 }

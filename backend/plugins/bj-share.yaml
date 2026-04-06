@@ -7,6 +7,8 @@ fields:
     type: text
     required: true
     sensitive: true
+
+customFields:
   - name: username
     label: User Name
     type: text

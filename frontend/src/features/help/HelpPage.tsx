@@ -62,7 +62,7 @@ const pluginNotes = [
   {
     name: "YAML validation",
     detail:
-      "The editor validates YAML syntax before save. If the document cannot be parsed, the page shows the validation error and the save is blocked.",
+      "Plugin YAML is validated by the backend when you save. If the definition is invalid, the returned error is shown above the editor.",
   },
   {
     name: "Deleting overrides",

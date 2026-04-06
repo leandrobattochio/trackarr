@@ -55,6 +55,7 @@ function renderMetricTile(metric: ApiDashboardMetric, tracker: TrackerIntegratio
           icon={Icon}
           iconClassName={iconClassName}
           value={resolveNumberMetricValue(tracker, metric.stat)}
+          unitSystem={tracker.byteUnitSystem}
         />
       );
     case "count":

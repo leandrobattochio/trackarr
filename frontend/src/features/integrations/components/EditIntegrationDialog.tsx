@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { MetricTooltip } from "@/features/integrations/components/shared/MetricTooltip";
 import { usePlugins, useUpdateIntegration } from "@/features/integrations/hooks";
-import type { TrackerIntegration } from "@/features/integrations/types";
+import type { ApiPlugin, ApiPluginField, TrackerIntegration } from "@/features/integrations/types";
 import { toast } from "sonner";
 
 interface EditIntegrationDialogProps {
@@ -54,7 +54,7 @@ export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegra
     if (!plugin) return tracker.payload;
 
     return Object.fromEntries(
-      plugin.fields.map((field) => [
+      getAllFields(plugin).map((field) => [
         field.name,
         field.sensitive ? "" : (tracker.payload[field.name] ?? ""),
       ]),
@@ -120,29 +120,20 @@ export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegra
 
         {plugin ? (
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-            {plugin.fields.map((field) => (
-              <div key={field.name} className="space-y-1.5">
-                <Label htmlFor={`${tracker.id}-${field.name}`}>
-                  {field.label}
-                  {field.required && <span className="ml-1 text-destructive">*</span>}
-                </Label>
-                <Input
-                  id={`${tracker.id}-${field.name}`}
-                  type={getInputType(field.type, field.sensitive)}
-                  required={field.required}
-                  value={fieldValues[field.name] ?? ""}
-                  placeholder={field.sensitive ? SENSITIVE_MASK : getFieldPlaceholder(field.type)}
-                  autoComplete="off"
-                  step={field.type === "number" ? "any" : undefined}
-                  onChange={(e) =>
-                    setFieldValues((prev) => ({ ...prev, [field.name]: e.target.value }))
-                  }
-                />
-                {getFieldHelpText(field.type) && (
-                  <p className="text-xs text-muted-foreground">{getFieldHelpText(field.type)}</p>
-                )}
-              </div>
-            ))}
+            <FieldSection
+              title="Connection"
+              trackerId={tracker.id}
+              fields={plugin.fields}
+              fieldValues={fieldValues}
+              onChange={setFieldValues}
+            />
+            <FieldSection
+              title="Custom Fields"
+              trackerId={tracker.id}
+              fields={plugin.customFields}
+              fieldValues={fieldValues}
+              onChange={setFieldValues}
+            />
 
             <Button type="submit" className="w-full" disabled={isUpdating}>
               {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -156,5 +147,50 @@ export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegra
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function getAllFields(plugin: ApiPlugin) {
+  return [...plugin.fields, ...plugin.customFields];
+}
+
+interface FieldSectionProps {
+  title: string;
+  trackerId: string;
+  fields: ApiPluginField[];
+  fieldValues: Record<string, string>;
+  onChange: Dispatch<SetStateAction<Record<string, string>>>;
+}
+
+function FieldSection({ title, trackerId, fields, fieldValues, onChange }: FieldSectionProps) {
+  if (fields.length === 0) return null;
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
+      {fields.map((field) => (
+        <div key={field.name} className="space-y-1.5">
+          <Label htmlFor={`${trackerId}-${field.name}`}>
+            {field.label}
+            {field.required && <span className="ml-1 text-destructive">*</span>}
+          </Label>
+          <Input
+            id={`${trackerId}-${field.name}`}
+            type={getInputType(field.type, field.sensitive)}
+            required={field.required}
+            value={fieldValues[field.name] ?? ""}
+            placeholder={field.sensitive ? SENSITIVE_MASK : getFieldPlaceholder(field.type)}
+            autoComplete="off"
+            step={field.type === "number" ? "any" : undefined}
+            onChange={(e) =>
+              onChange((prev) => ({ ...prev, [field.name]: e.target.value }))
+            }
+          />
+          {getFieldHelpText(field.type) && (
+            <p className="text-xs text-muted-foreground">{getFieldHelpText(field.type)}</p>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }

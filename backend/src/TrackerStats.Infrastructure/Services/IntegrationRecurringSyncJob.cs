@@ -22,6 +22,16 @@ public class IntegrationRecurringSyncJob(
             return;
         }
 
+        if (!outcome.ConfigurationIsValid)
+        {
+            logger.LogWarning(
+                "Integration {IntegrationId} is no longer valid for plugin '{PluginId}': {Error}",
+                integrationId,
+                outcome.Integration?.PluginId,
+                outcome.ConfigurationError);
+            return;
+        }
+
         logger.LogInformation("Recurring sync finished for integration {IntegrationId} with result {Result}.", integrationId, outcome.Result);
     }
 }

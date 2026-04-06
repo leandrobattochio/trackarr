@@ -21,7 +21,7 @@ public sealed class YamlTrackerPlugin(
     public DashboardConfig Dashboard => Definition.Dashboard;
     public AuthMode AuthMode => ResolveAuthMode(Definition);
 
-    public IReadOnlyList<PluginField> Fields => Definition.Fields
+    public IReadOnlyList<PluginField> Fields => PluginDefinitionDefaults.GetEffectiveFields(Definition)
         .Select(definitionField => new PluginField(
             definitionField.Name,
             definitionField.Label,
@@ -41,10 +41,12 @@ public sealed class YamlTrackerPlugin(
 
     private static AuthMode ResolveAuthMode(PluginDefinition definition)
     {
-        if (definition.Fields.Any(field => field.Name.Equals("cookie", StringComparison.OrdinalIgnoreCase)))
+        var fields = PluginDefinitionDefaults.GetEffectiveFields(definition);
+
+        if (fields.Any(field => field.Name.Equals("cookie", StringComparison.OrdinalIgnoreCase)))
             return AuthMode.Cookie;
 
-        if (definition.Fields.Any(field => field.Name.Equals("apiKey", StringComparison.OrdinalIgnoreCase)))
+        if (fields.Any(field => field.Name.Equals("apiKey", StringComparison.OrdinalIgnoreCase)))
             return AuthMode.ApiKey;
 
         return AuthMode.UsernamePassword;
