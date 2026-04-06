@@ -1,14 +1,13 @@
-import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SnapshotFiltersCard, SnapshotLineChartCard, SnapshotSummaryCards } from "@/features/snapshots/components";
 import { useIntegrations, usePlugins } from "@/features/integrations/hooks";
 import { mapIntegration } from "@/features/integrations/types";
-import { useSnapshots } from "@/features/snapshots/hooks";
-import { defaultSnapshotRange, formatSnapshotRangeLabel, isSnapshotRangeKey, type SnapshotRangeKey } from "@/features/snapshots/range";
-import type { SnapshotFilters } from "@/features/snapshots/types";
+import { useSnapshotFilters, useSnapshots } from "@/features/snapshots/hooks";
+import { formatSnapshotRangeLabel } from "@/features/snapshots/range";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { formatBytes } from "@/shared/lib/formatters";
@@ -52,23 +51,8 @@ const torrentSeriesOptions = [
 type TransferSeriesKey = (typeof transferSeriesOptions)[number]["key"];
 type TorrentSeriesKey = (typeof torrentSeriesOptions)[number]["key"];
 
-function toLocalDateTimeInputValue(date: Date) {
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return offsetDate.toISOString().slice(0, 16);
-}
-
 function toUtcIsoFromLocalInput(value: string) {
   return new Date(value).toISOString();
-}
-
-function getDefaultCustomRange() {
-  const now = new Date();
-  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-
-  return {
-    from: toLocalDateTimeInputValue(oneHourAgo),
-    to: toLocalDateTimeInputValue(now),
-  };
 }
 
 function formatAxisTime(iso: string) {
@@ -94,29 +78,22 @@ function formatExactDateTime(iso: string) {
 
 export default function SnapshotsPage() {
   usePageTitle("TrackArr | Snapshots");
-
-  const [searchParams, setSearchParams] = useSearchParams();
-  const initialCustomRange = useMemo(() => getDefaultCustomRange(), []);
-  const initialIntegrationId = searchParams.get("integrationId") ?? "";
-  const initialRangeParam = searchParams.get("range");
-  const initialRange: SnapshotRangeKey = isSnapshotRangeKey(initialRangeParam)
-    ? initialRangeParam
-    : defaultSnapshotRange;
-  const initialFrom = searchParams.get("from") ?? initialCustomRange.from;
-  const initialTo = searchParams.get("to") ?? initialCustomRange.to;
-
-  const [integrationId, setIntegrationId] = useState(initialIntegrationId);
-  const [range, setRange] = useState<SnapshotRangeKey>(initialRange);
-  const [from, setFrom] = useState(initialFrom);
-  const [to, setTo] = useState(initialTo);
-  const [submittedFilters, setSubmittedFilters] = useState<SnapshotFilters>({
-    integrationId: initialIntegrationId,
-    range: initialRange,
-    from: initialRange === "custom" ? initialFrom : undefined,
-    to: initialRange === "custom" ? initialTo : undefined,
-  });
-  const [activeFilterAction, setActiveFilterAction] = useState<"apply" | "reset" | null>(null);
-  const [isFilterTransitionPending, startFilterTransition] = useTransition();
+  const {
+    integrationId,
+    range,
+    from,
+    to,
+    submittedFilters,
+    activeFilterAction,
+    isFilterTransitionPending,
+    clearActiveFilterAction,
+    setFrom,
+    setTo,
+    handleApplyFilters,
+    handleIntegrationChange,
+    handleRangeChange,
+    handleResetFilters,
+  } = useSnapshotFilters();
   const [visibleTransferSeries, setVisibleTransferSeries] = useState<Record<TransferSeriesKey, boolean>>({
     uploadedBytes: true,
     downloadedBytes: true,
@@ -154,19 +131,8 @@ export default function SnapshotsPage() {
 
   useEffect(() => {
     if (!snapshotsQuery.isFetching)
-      setActiveFilterAction(null);
-  }, [snapshotsQuery.isFetching]);
-
-  useEffect(() => {
-    if (!initialIntegrationId)
-      return;
-
-    setSearchParams({
-      integrationId: initialIntegrationId,
-      range: initialRange,
-      ...(initialRange === "custom" ? { from: initialFrom, to: initialTo } : {}),
-    }, { replace: true });
-  }, [initialFrom, initialIntegrationId, initialRange, initialTo, setSearchParams]);
+      clearActiveFilterAction();
+  }, [clearActiveFilterAction, snapshotsQuery.isFetching]);
 
   const deferredSnapshotItems = useDeferredValue(snapshotsQuery.data?.items ?? []);
 
@@ -196,59 +162,6 @@ export default function SnapshotsPage() {
       ...current,
       [key]: checked,
     }));
-  }
-
-  function handleApplyFilters() {
-    if (!integrationId)
-      return;
-
-    applyFilters(integrationId, range, from, to);
-  }
-
-  function applyFilters(nextIntegrationId: string, nextRange: SnapshotRangeKey, nextFrom: string, nextTo: string) {
-    startFilterTransition(() => {
-      setActiveFilterAction("apply");
-
-      const nextFilters: SnapshotFilters = {
-        integrationId: nextIntegrationId,
-        range: nextRange,
-        from: nextRange === "custom" ? nextFrom : undefined,
-        to: nextRange === "custom" ? nextTo : undefined,
-      };
-
-      setSubmittedFilters(nextFilters);
-      setSearchParams({
-        integrationId: nextIntegrationId,
-        range: nextRange,
-        ...(nextRange === "custom" ? { from: nextFrom, to: nextTo } : {}),
-      });
-    });
-  }
-
-  function handleIntegrationChange(nextIntegrationId: string) {
-    setIntegrationId(nextIntegrationId);
-
-    if (!nextIntegrationId || (range === "custom" && (!from || !to)))
-      return;
-
-    applyFilters(nextIntegrationId, range, from, to);
-  }
-
-  function handleRangeChange(nextRange: SnapshotRangeKey) {
-    setRange(nextRange);
-
-    if (!integrationId || nextRange === "custom")
-      return;
-
-    applyFilters(integrationId, nextRange, from, to);
-  }
-
-  function handleResetFilters() {
-    const defaultCustomRange = getDefaultCustomRange();
-
-    setActiveFilterAction(null);
-    setFrom(defaultCustomRange.from);
-    setTo(defaultCustomRange.to);
   }
 
   return (

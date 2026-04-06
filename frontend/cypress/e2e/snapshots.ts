@@ -160,8 +160,8 @@ Then("the snapshots request should use the custom range", () => {
     .its("request.query")
     .should((query) => {
       expect(query.range).to.equal("custom");
-      expect(query.from).to.equal("2026-04-06T00:00:00.000Z");
-      expect(query.to).to.equal("2026-04-06T00:30:00.000Z");
+      expect(query.from).to.equal(new Date("2026-04-06T00:00").toISOString());
+      expect(query.to).to.equal(new Date("2026-04-06T00:30").toISOString());
     });
 
   cy.url().should("include", "range=custom");
