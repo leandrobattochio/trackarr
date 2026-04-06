@@ -1,12 +1,11 @@
 # TrackArr
 
-## Coverage
-
-Frontend (`frontend/`):
-[![Frontend coverage](https://codecov.io/github/leandrobattochio/trackarr/graph/badge.svg?flag=frontend)](https://app.codecov.io/github/leandrobattochio/trackarr)
-
-Backend (`backend/`):
-[![Backend coverage](https://codecov.io/github/leandrobattochio/trackarr/graph/badge.svg?flag=backend)](https://app.codecov.io/github/leandrobattochio/trackarr)
+| Status | Badge |
+| --- | --- |
+| CI pipeline | [![CI](https://github.com/leandrobattochio/trackarr/actions/workflows/ci.yml/badge.svg)](https://github.com/leandrobattochio/trackarr/actions/workflows/ci.yml) |
+| Cypress E2E | [![Full Stack E2E](https://github.com/leandrobattochio/trackarr/actions/workflows/full-stack-e2e.yml/badge.svg)](https://github.com/leandrobattochio/trackarr/actions/workflows/full-stack-e2e.yml) |
+| Frontend coverage (`frontend/`) | [![Frontend coverage](https://codecov.io/github/leandrobattochio/trackarr/graph/badge.svg?flag=frontend)](https://app.codecov.io/github/leandrobattochio/trackarr?flags%5B0%5D=frontend) |
+| Backend coverage (`backend/`) | [![Backend coverage](https://codecov.io/github/leandrobattochio/trackarr/graph/badge.svg?flag=backend)](https://app.codecov.io/github/leandrobattochio/trackarr?flags%5B0%5D=backend) |
 
 TrackArr is a self-hosted dashboard for private tracker monitoring. It lets you register tracker integrations, sync stats manually or on a schedule, keep historical snapshots, and define new tracker connectors through YAML instead of hard-coded backend logic.
 
