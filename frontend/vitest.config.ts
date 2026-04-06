@@ -9,6 +9,20 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    exclude: ["cypress/**", "dist/**"],
+    coverage: {
+      include: ["src/**"],
+      exclude: [
+        "cypress/**",
+        "dist/**",
+        "src/vite-env.d.ts",
+        "src/main.tsx",
+        "src/app/App.tsx",
+        "src/features/plugins/types.ts",
+        "src/features/settings/types.ts",
+        "src/features/snapshots/types.ts",
+      ],
+    },
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },

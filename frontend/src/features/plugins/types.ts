@@ -1,3 +1,4 @@
+/* c8 ignore start */
 import type { ApiDashboardConfig } from "@/features/integrations/types";
 
 export interface ApiPluginFieldDefinition {
@@ -21,3 +22,4 @@ export interface ApiPluginListItem {
 export interface SavePluginResponse {
   pluginId: string;
 }
+/* c8 ignore stop */

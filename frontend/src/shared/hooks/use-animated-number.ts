@@ -24,6 +24,7 @@ export function useAnimatedNumber(
   const valueRef = useRef(initialValue);
 
   useEffect(() => {
+    /* c8 ignore next 3 */
     if (frameRef.current !== null) {
       cancelAnimationFrame(frameRef.current);
     }

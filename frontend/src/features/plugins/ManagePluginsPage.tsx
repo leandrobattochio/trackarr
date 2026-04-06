@@ -10,6 +10,7 @@ import {
   useUpdatePluginDefinition,
 } from "@/features/plugins/hooks";
 import { NEW_PLUGIN_TEMPLATE } from "@/features/plugins/plugin-template";
+import { tryGetPluginId } from "@/features/plugins/plugin-id";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,11 +20,6 @@ import { toast } from "sonner";
 import { cn } from "@/shared/lib/utils";
 
 const EDITOR_HEIGHT = "70vh";
-
-function tryGetPluginId(yaml: string) {
-  const match = yaml.match(/^\s*pluginId\s*:\s*["']?([A-Za-z0-9-]+)["']?\s*$/m);
-  return match?.[1] ?? null;
-}
 
 export default function ManagePluginsPage() {
   usePageTitle("TrackArr | Manage Plugins");

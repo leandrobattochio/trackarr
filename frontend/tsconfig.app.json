@@ -25,7 +25,9 @@
     "strict": false,
     "target": "ES2020",
     "types": [
-      "vitest/globals"
+      "vitest/globals",
+      "react",
+      "react-dom"
     ],
     "useDefineForClassFields": true
   },

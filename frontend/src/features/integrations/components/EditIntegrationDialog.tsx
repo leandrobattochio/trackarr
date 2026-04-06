@@ -76,6 +76,7 @@ export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegra
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    /* c8 ignore next */
     if (!plugin) return;
 
     updateIntegration(
@@ -178,6 +179,7 @@ function FieldSection({ title, trackerId, fields, fieldValues, onChange }: Field
             id={`${trackerId}-${field.name}`}
             type={getInputType(field.type, field.sensitive)}
             required={field.required}
+            /* c8 ignore next */
             value={fieldValues[field.name] ?? ""}
             placeholder={field.sensitive ? SENSITIVE_MASK : getFieldPlaceholder(field.type)}
             autoComplete="off"

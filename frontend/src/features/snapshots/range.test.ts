@@ -13,5 +13,9 @@ describe("snapshot range helpers", () => {
     expect(formatSnapshotRangeLabel("15m")).toBe("15 min");
     expect(formatSnapshotRangeLabel("custom", "2026-04-05T10:00", "2026-04-05T11:00"))
       .toBe("2026-04-05T10:00 to 2026-04-05T11:00");
+    expect(formatSnapshotRangeLabel("custom")).toBe("Custom range");
+    expect(formatSnapshotRangeLabel("15m" as unknown, undefined, undefined)).toBe("15 min");
+    expect(formatSnapshotRangeLabel("ghost" as unknown)).toBe("ghost");
   });
 });
+
