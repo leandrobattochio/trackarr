@@ -1,4 +1,4 @@
-import { CircleHelp, ChartLine, LayoutDashboard, Puzzle } from "lucide-react";
+import { CircleHelp, ChartLine, LayoutDashboard, Puzzle, Settings2 } from "lucide-react";
 import { NavLink } from "@/layouts/NavLink";
 import {
   Sidebar,
@@ -16,6 +16,7 @@ const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Snapshots", url: "/snapshots", icon: ChartLine },
   { title: "Manage Plugins", url: "/plugins", icon: Puzzle },
+  { title: "Settings", url: "/settings", icon: Settings2 },
   { title: "Help", url: "/help", icon: CircleHelp },
 ];
 
