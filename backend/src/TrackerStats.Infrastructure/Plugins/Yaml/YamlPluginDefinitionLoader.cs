@@ -47,7 +47,6 @@ public sealed class YamlPluginDefinitionLoader(IConfiguration configuration) : I
                 loadedDefinition = new LoadedYamlPluginDefinition(
                     definition.PluginId,
                     definition.DisplayName,
-                    "disk",
                     definition,
                     content,
                     null);
@@ -57,7 +56,6 @@ public sealed class YamlPluginDefinitionLoader(IConfiguration configuration) : I
                 loadedDefinition = new LoadedYamlPluginDefinition(
                     TryExtractScalar(content, "pluginId") ?? fallbackPluginId,
                     TryExtractScalar(content, "displayName") ?? fallbackDisplayName,
-                    "disk",
                     null,
                     content,
                     ex.Message);

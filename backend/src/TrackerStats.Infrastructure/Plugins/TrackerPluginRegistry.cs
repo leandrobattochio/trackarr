@@ -36,8 +36,7 @@ public class TrackerPluginRegistry(
                     plugin.PluginId,
                     plugin.DisplayName,
                     plugin.Dashboard,
-                    plugin.Fields,
-                    registration.Source);
+                    plugin.Fields);
             })
             .ToList();
 
@@ -51,8 +50,7 @@ public class TrackerPluginRegistry(
                 {
                     var definition = group.First();
                     return new PluginRegistration(
-                        new Yaml.YamlTrackerPlugin(definition.Definition!, engine, interpolator),
-                        definition.Source);
+                        new Yaml.YamlTrackerPlugin(definition.Definition!, engine, interpolator));
                 },
                 StringComparer.OrdinalIgnoreCase);
 
@@ -64,5 +62,5 @@ public class TrackerPluginRegistry(
             _ => (ITrackerPlugin)ActivatorUtilities.CreateInstance(serviceProvider, prototype.GetType(), configuration)
         };
 
-    private sealed record PluginRegistration(ITrackerPlugin Prototype, string Source);
+    private sealed record PluginRegistration(ITrackerPlugin Prototype);
 }

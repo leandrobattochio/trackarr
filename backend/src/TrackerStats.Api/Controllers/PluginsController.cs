@@ -29,7 +29,6 @@ public class PluginsController(
         {
             pluginId = plugin.PluginId,
             displayName = plugin.DisplayName,
-            source = plugin.Source,
             definitionValid = plugin.IsValid,
             definitionError = plugin.Error,
             dashboard = plugin.Definition is null
@@ -108,8 +107,7 @@ public class PluginsController(
 
         return CreatedAtAction(nameof(GetByPluginId), new { pluginId = definition.PluginId }, new
         {
-            pluginId = definition.PluginId,
-            source = "disk"
+            pluginId = definition.PluginId
         });
     }
 
@@ -130,7 +128,7 @@ public class PluginsController(
             return BadRequest(new { error = "Plugin ID in YAML must match the route parameter." });
 
         await System.IO.File.WriteAllTextAsync(existingPath, yaml, ct);
-        return Ok(new { pluginId = definition.PluginId, source = "disk" });
+        return Ok(new { pluginId = definition.PluginId });
     }
 
     private async Task<string> ReadRequestBodyAsync(CancellationToken ct)
