@@ -41,6 +41,17 @@ function getInputType(type: string, sensitive: boolean): string {
   return "text";
 }
 
+function buildInitialFieldValues(plugin: ApiPlugin | undefined, payload: Record<string, string>) {
+  if (!plugin) return payload;
+
+  return Object.fromEntries(
+    getAllFields(plugin).map((field) => [
+      field.name,
+      field.sensitive ? "" : (payload[field.name] ?? ""),
+    ]),
+  );
+}
+
 export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegrationDialogProps) {
   const [open, setOpen] = useState(false);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
@@ -50,27 +61,16 @@ export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegra
 
   const plugin = plugins.find((item) => item.pluginId === tracker.pluginId);
 
-  function buildInitialFieldValues() {
-    if (!plugin) return tracker.payload;
-
-    return Object.fromEntries(
-      getAllFields(plugin).map((field) => [
-        field.name,
-        field.sensitive ? "" : (tracker.payload[field.name] ?? ""),
-      ]),
-    );
-  }
-
   useEffect(() => {
     if (open) {
-      setFieldValues(buildInitialFieldValues());
+      setFieldValues(buildInitialFieldValues(plugin, tracker.payload));
     }
   }, [open, tracker.payload, plugin]);
 
   function handleOpenChange(value: boolean) {
     setOpen(value);
     if (!value) {
-      setFieldValues(buildInitialFieldValues());
+      setFieldValues(buildInitialFieldValues(plugin, tracker.payload));
     }
   }
 
