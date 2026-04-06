@@ -12,10 +12,12 @@ RUN yarn build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
 WORKDIR /src
+COPY backend/Directory.Packages.props ./backend/
 COPY backend/src/TrackerStats.Api/TrackerStats.Api.csproj ./backend/src/TrackerStats.Api/
 COPY backend/src/TrackerStats.Application/TrackerStats.Application.csproj ./backend/src/TrackerStats.Application/
 COPY backend/src/TrackerStats.Domain/TrackerStats.Domain.csproj ./backend/src/TrackerStats.Domain/
 COPY backend/src/TrackerStats.Infrastructure/TrackerStats.Infrastructure.csproj ./backend/src/TrackerStats.Infrastructure/
+COPY backend/src/TrackerStats.PluginEngine/TrackerStats.PluginEngine.csproj ./backend/src/TrackerStats.PluginEngine/
 RUN dotnet restore ./backend/src/TrackerStats.Api/TrackerStats.Api.csproj
 COPY backend/ ./backend/
 WORKDIR /src/backend/src/TrackerStats.Api
@@ -28,8 +30,10 @@ ENV ASPNETCORE_URLS=http://0.0.0.0:3000
 ENV APP_TIMEZONE=${APP_TIMEZONE}
 ENV TZ=${APP_TIMEZONE}
 USER root
-RUN mkdir -p /data
+RUN mkdir -p /data /data/templates
 EXPOSE 3000
 COPY --from=backend-build /app/publish ./
 COPY --from=frontend-build /src/frontend/dist ./wwwroot
-ENTRYPOINT ["dotnet", "TrackerStats.Api.dll"]
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

@@ -10,18 +10,20 @@ services:
       - "3000:3000"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__PostgresConnection: ${POSTGRES_CONNECTION_STRING:-}
+      ConnectionStrings__PostgresConnection: ${POSTGRES_CONNECTION_STRING:-Host=postgres;Port=5432;Database=${POSTGRES_DB:-trackarr};Username=${POSTGRES_USER:-trackarr};Password=${POSTGRES_PASSWORD:-trackarr}}
       Database__Directory: /data
       Hangfire__Directory: /data
-      Plugins__Directory: ${PLUGINS_DIRECTORY:-/data/plugins}
+      Plugins__Directory: ${PLUGINS_DIRECTORY:-/data/templates}
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
       TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - trackarr_data:/data
     restart: unless-stopped
 
   postgres:
-    profiles: ["postgres"]
     image: postgres:17-alpine
     container_name: trackarr-postgres
     environment:
