@@ -11,6 +11,7 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     exclude: ["cypress/**", "dist/**"],
     coverage: {
+      include: ["src/**"],
       exclude: ["cypress/**", "dist/**", "src/features/plugins/types.ts"],
     },
   },

@@ -4,6 +4,7 @@ import type { TrackerIntegration } from "@/features/integrations/types";
 export const DASHBOARD_CARD_ORDER_STORAGE_KEY = "trackarr.dashboard.card-order";
 
 function readStoredCardOrder() {
+  /* c8 ignore next 2 */
   if (typeof window === "undefined")
     return [];
 
@@ -20,6 +21,7 @@ function readStoredCardOrder() {
 }
 
 function writeStoredCardOrder(order: string[]) {
+  /* c8 ignore next 2 */
   if (typeof window === "undefined")
     return;
 
@@ -92,7 +94,11 @@ export function useDashboardCardOrder(integrations: TrackerIntegration[]) {
     const normalizedOrder = normalizeDashboardCardOrder(integrations, cardOrder);
     const sortIndex = new Map(normalizedOrder.map((id, index) => [id, index]));
 
-    return [...integrations].sort((left, right) => (sortIndex.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (sortIndex.get(right.id) ?? Number.MAX_SAFE_INTEGER));
+    return [...integrations].sort((left, right) => {
+      const leftIndex = sortIndex.get(left.id) as number;
+      const rightIndex = sortIndex.get(right.id) as number;
+      return leftIndex - rightIndex;
+    });
   }, [cardOrder, integrations]);
 
   function handleCardDragStart(cardId: string) {

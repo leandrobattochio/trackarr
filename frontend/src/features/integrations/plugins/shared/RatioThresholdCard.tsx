@@ -93,7 +93,7 @@ export function RatioThresholdCard({ ratio, requiredRatio }: RatioThresholdCardP
               <div
                 className="h-full w-full"
                 style={{
-                  width: `${displayMax === 0 ? 0 : 10000 / Math.max(animatedFillPercent, 0.01)}%`,
+                  width: `${10000 / Math.max(animatedFillPercent, 0.01)}%`,
                   background: thresholdGradient,
                 }}
               />

@@ -46,4 +46,22 @@ describe("dashboard card ordering helpers", () => {
   it("moves a card onto a target to its left", () => {
     expect(reorderDashboardCardOrder(["alpha", "beta", "gamma"], "gamma", "alpha")).toEqual(["gamma", "alpha", "beta"]);
   });
+
+  it("deduplicates stored order and appends missing ids in current integration order", () => {
+    const integrations = [createTracker("alpha"), createTracker("beta"), createTracker("gamma")];
+
+    expect(normalizeDashboardCardOrder(integrations, ["beta", "beta", "gamma", "unknown"])).toEqual([
+      "beta",
+      "gamma",
+      "alpha",
+    ]);
+  });
+
+  it("returns original order when dragged and target ids are invalid or equal", () => {
+    const order = ["alpha", "beta", "gamma"];
+
+    expect(reorderDashboardCardOrder(order, "alpha", "alpha")).toEqual(order);
+    expect(reorderDashboardCardOrder(order, "missing", "alpha")).toEqual(order);
+    expect(reorderDashboardCardOrder(order, "alpha", "missing")).toEqual(order);
+  });
 });

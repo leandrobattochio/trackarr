@@ -115,4 +115,97 @@ describe("mapIntegration", () => {
     expect(result.statusLabel).toBe("unknown error");
     expect(result.lastSync).toBe("Just now");
   });
+
+  it("maps auth failed status and covers future/past day relative formatting branches", () => {
+    const integration: ApiIntegration = {
+      id: "integration-4",
+      pluginId: "auth-plugin",
+      dashboard: {
+        byteUnitSystem: "binary",
+        metrics: [],
+      },
+      payload: {},
+      url: null,
+      requiredRatio: null,
+      lastSyncAt: "2026-04-04T00:00:00.000Z",
+      nextAutomaticSyncAt: "2026-04-08T00:00:00.000Z",
+      lastSyncResult: "authFailed",
+      configurationValid: true,
+      configurationError: null,
+      stats: {
+        ratio: null,
+        uploadedBytes: null,
+        downloadedBytes: null,
+        seedBonus: null,
+        buffer: null,
+        hitAndRuns: null,
+        requiredRatio: 1.1,
+        seedingTorrents: null,
+        leechingTorrents: null,
+        activeTorrents: null,
+      },
+    };
+
+    const result = mapIntegration(integration, []);
+
+    expect(result.status).toBe("authFailed");
+    expect(result.statusLabel).toBe("auth failed");
+    expect(result.lastSync).toBe("2d ago");
+    expect(result.nextAutomaticSync).toBe("in 2d");
+    expect(result.requiredRatio).toBe(1.1);
+    expect(result.byteUnitSystem).toBe("binary");
+  });
+
+  it("formats next sync under a minute when the date is in the near future", () => {
+    const integration: ApiIntegration = {
+      id: "integration-5",
+      pluginId: "soon-plugin",
+      dashboard: null,
+      payload: {},
+      url: null,
+      requiredRatio: null,
+      lastSyncAt: null,
+      nextAutomaticSyncAt: "2026-04-06T00:00:30.000Z",
+      lastSyncResult: null,
+      configurationValid: true,
+      configurationError: null,
+      stats: null,
+    };
+
+    const result = mapIntegration(integration, []);
+    expect(result.nextAutomaticSync).toBe("in under a minute");
+  });
+
+  it("derives success from stats when lastSyncResult is null and covers minute/hour branches", () => {
+    const integration: ApiIntegration = {
+      id: "integration-6",
+      pluginId: "stats-only",
+      dashboard: null,
+      payload: {},
+      url: null,
+      requiredRatio: null,
+      lastSyncAt: "2026-04-05T22:00:00.000Z",
+      nextAutomaticSyncAt: "2026-04-06T00:45:00.000Z",
+      lastSyncResult: null,
+      configurationValid: true,
+      configurationError: null,
+      stats: {
+        ratio: 1.1,
+        uploadedBytes: 100,
+        downloadedBytes: 90,
+        seedBonus: null,
+        buffer: null,
+        hitAndRuns: null,
+        requiredRatio: null,
+        seedingTorrents: null,
+        leechingTorrents: null,
+        activeTorrents: null,
+      },
+    };
+
+    const result = mapIntegration(integration, []);
+    expect(result.status).toBe("success");
+    expect(result.lastSync).toBe("2h ago");
+    expect(result.nextAutomaticSync).toBe("in 45 min");
+  });
 });
