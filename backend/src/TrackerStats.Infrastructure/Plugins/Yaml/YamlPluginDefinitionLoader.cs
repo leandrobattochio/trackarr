@@ -128,9 +128,11 @@ public sealed class YamlPluginDefinitionLoader(IConfiguration configuration) : I
         if (string.IsNullOrWhiteSpace(dataSource))
             return Path.GetFullPath(AppContext.BaseDirectory);
 
-        var resolvedPath = Path.IsPathRooted(dataSource)
-            ? dataSource
-            : Path.Combine(AppContext.BaseDirectory, dataSource);
+        var normalizedDataSource = NormalizeDataSourcePath(dataSource);
+
+        var resolvedPath = Path.IsPathRooted(normalizedDataSource)
+            ? normalizedDataSource
+            : Path.Combine(AppContext.BaseDirectory, normalizedDataSource);
 
         var directory = Path.GetDirectoryName(resolvedPath);
         return string.IsNullOrWhiteSpace(directory)
@@ -142,5 +144,9 @@ public sealed class YamlPluginDefinitionLoader(IConfiguration configuration) : I
         Path.IsPathRooted(path)
             ? path
             : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, path));
+
+    private static string NormalizeDataSourcePath(string dataSource) =>
+        dataSource.Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar);
 
 }
