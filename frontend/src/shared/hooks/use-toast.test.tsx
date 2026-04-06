@@ -66,6 +66,25 @@ describe("useToast", () => {
 
     unmount();
   });
+
+  it("does not enqueue duplicate removals for the same toast id", () => {
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    const { result, unmount } = renderHook(() => useToast());
+
+    let controls: ReturnType<typeof result.current.toast> | undefined;
+
+    act(() => {
+      controls = result.current.toast({ title: "Queue Once" });
+    });
+
+    act(() => {
+      result.current.dismiss(controls?.id);
+      result.current.dismiss(controls?.id);
+    });
+
+    expect(setTimeoutSpy).toHaveBeenCalledTimes(1);
+    unmount();
+  });
 });
 
 describe("toast reducer", () => {
@@ -83,6 +102,43 @@ describe("toast reducer", () => {
 
     expect(reducer(initialState, { type: "REMOVE_TOAST" })).toEqual({
       toasts: [],
+    });
+  });
+
+  it("dismisses only matching toast id and keeps non-target toasts open", () => {
+    const initialState = {
+      toasts: [
+        { id: "toast-1", title: "First", open: true },
+        { id: "toast-2", title: "Second", open: true },
+      ],
+    };
+
+    expect(reducer(initialState, { type: "DISMISS_TOAST", toastId: "toast-1" })).toEqual({
+      toasts: [
+        { id: "toast-1", title: "First", open: false },
+        { id: "toast-2", title: "Second", open: true },
+      ],
+    });
+  });
+
+  it("updates only the matching toast and leaves others unchanged", () => {
+    const initialState = {
+      toasts: [
+        { id: "toast-1", title: "First", open: true },
+        { id: "toast-2", title: "Second", open: true },
+      ],
+    };
+
+    expect(
+      reducer(initialState, {
+        type: "UPDATE_TOAST",
+        toast: { id: "toast-1", title: "Updated" },
+      }),
+    ).toEqual({
+      toasts: [
+        { id: "toast-1", title: "Updated", open: true },
+        { id: "toast-2", title: "Second", open: true },
+      ],
     });
   });
 });

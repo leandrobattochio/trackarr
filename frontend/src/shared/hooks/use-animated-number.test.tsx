@@ -59,4 +59,28 @@ describe("useAnimatedNumber", () => {
 
     expect(result.current).toBe(1.5);
   });
+
+  it("cancels in-flight frames when target changes and on cleanup", () => {
+    const cancelSpy = vi.fn((handle: number) => clearTimeout(handle));
+    vi.stubGlobal("cancelAnimationFrame", cancelSpy);
+
+    const { rerender, unmount } = renderHook(
+      ({ target }) => useAnimatedNumber(target, { duration: 200, initialValue: 0 }),
+      { initialProps: { target: 10 } },
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(32);
+    });
+
+    rerender({ target: 20 });
+
+    act(() => {
+      vi.advanceTimersByTime(16);
+    });
+
+    unmount();
+
+    expect(cancelSpy).toHaveBeenCalled();
+  });
 });
