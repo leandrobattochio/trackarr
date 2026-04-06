@@ -1,3 +1,5 @@
+import type { SnapshotRangeKey } from "@/features/snapshots/range";
+
 export interface ApiSnapshotItem {
   id: string;
   integrationId: string;
@@ -16,6 +18,7 @@ export interface ApiSnapshotItem {
 
 export interface ApiSnapshotsResponse {
   integrationId: string;
+  range: SnapshotRangeKey;
   from: string | null;
   to: string | null;
   items: ApiSnapshotItem[];
@@ -23,6 +26,7 @@ export interface ApiSnapshotsResponse {
 
 export interface SnapshotFilters {
   integrationId: string;
-  from: string;
-  to: string;
+  range: SnapshotRangeKey;
+  from?: string;
+  to?: string;
 }
