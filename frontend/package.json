@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "resolutions": {
-    "dompurify": "^3.3.2"
+    "@tootallnate/once": "^3.0.1",
+    "diff": "^8.0.3",
+    "dompurify": "^3.3.2",
+    "serialize-javascript": "^7.0.5"
   },
   "scripts": {
     "dev": "vite",

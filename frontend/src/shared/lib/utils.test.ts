@@ -3,7 +3,9 @@ import { cn } from "@/shared/lib/utils";
 
 describe("cn", () => {
   it("merges truthy class values", () => {
-    expect(cn("base", false && "hidden", "active")).toBe("base active");
+    const hidden = "" as string;
+
+    expect(cn("base", hidden, "active")).toBe("base active");
   });
 
   it("merges tailwind conflicts using tailwind-merge", () => {

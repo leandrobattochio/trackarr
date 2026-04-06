@@ -129,9 +129,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOTNET_CLI_HOME: ${{ github.workspace }}/backend/.dotnet
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
@@ -139,30 +136,30 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - run: dotnet restore TrackerStats.sln
+      - run: dotnet restore backend/TrackerStats.sln
 
       - name: Install reportgenerator
         shell: bash
         run: |
-          if [ ! -f ./.tools/reportgenerator ]; then
-            dotnet tool install --tool-path .tools dotnet-reportgenerator-globaltool
+          if [ ! -f ./backend/.tools/reportgenerator ]; then
+            dotnet tool install --tool-path backend/.tools dotnet-reportgenerator-globaltool
           fi
 
       - name: Run backend tests with coverage
         run: >
-          dotnet test TrackerStats.sln
+          dotnet test backend/TrackerStats.sln
           --configuration Release
           --no-restore
           --collect:"XPlat Code Coverage"
-          --settings coverage.runsettings
-          --results-directory TestResults
+          --settings backend/coverage.runsettings
+          --results-directory backend/TestResults
           --logger "trx;LogFileName=tests.trx"
 
       - name: Generate HTML coverage report
         run: >
-          ./.tools/reportgenerator
-          -reports:"TestResults/**/coverage.cobertura.xml"
-          -targetdir:"CoverageReport"
+          ./backend/.tools/reportgenerator
+          -reports:"backend/TestResults/**/coverage.cobertura.xml"
+          -targetdir:"backend/CoverageReport"
           -filefilters:"-**/obj/**/*.cs;-**/Data/AppDbContext.cs"
           -reporttypes:"Html;Cobertura"
 
