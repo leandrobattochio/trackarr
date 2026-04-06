@@ -91,12 +91,21 @@ When("I drag the {string} card onto the {string} card", (sourceTitle: string, ta
 
     expect(sourceCard, `source card for ${sourceTitle}`).to.not.equal(undefined);
     expect(targetCard, `target card for ${targetTitle}`).to.not.equal(undefined);
+    expect(sourceCard, `source card element for ${sourceTitle}`).to.not.equal(null);
 
-    const sourceCardId = sourceCard?.getAttribute("data-tracker-id") ?? "";
+    if (!sourceCard)
+      throw new Error(`Expected to find source card for ${sourceTitle}.`);
+
+    const sourceCardId = sourceCard.getAttribute("data-tracker-id");
+    expect(sourceCardId, `data-tracker-id for ${sourceTitle}`).to.be.ok;
+
+    if (!sourceCardId)
+      throw new Error(`Expected source card ${sourceTitle} to have a data-tracker-id attribute.`);
+
     const dataTransfer = new window.DataTransfer();
     dataTransfer.setData("text/plain", sourceCardId);
 
-    sourceCard?.dispatchEvent(new window.DragEvent("dragstart", {
+    sourceCard.dispatchEvent(new window.DragEvent("dragstart", {
       bubbles: true,
       cancelable: true,
       dataTransfer,
