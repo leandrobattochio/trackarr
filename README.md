@@ -8,7 +8,7 @@ TrackArr is a self-hosted dashboard for private tracker monitoring. It lets you 
 - Stores historical snapshots for time-based charts
 - Runs recurring sync jobs per integration using cron expressions
 - Supports built-in and custom tracker plugins
-- Lets you inspect, create, override, and delete plugin definitions from the UI
+- Lets you inspect, create, and edit disk-backed plugin definitions from the UI
 - Ships as a single production container with the React frontend served by ASP.NET Core
 
 ## Core features
@@ -17,7 +17,7 @@ TrackArr is a self-hosted dashboard for private tracker monitoring. It lets you 
 - Manual sync for any configured integration
 - Automatic recurring sync with Hangfire-backed scheduling
 - Snapshot charts for uploaded/downloaded bytes and torrent activity
-- In-app YAML editor for plugin authoring and overrides with schema-aware validation, completions, snippets, and hover docs
+- In-app YAML editor for plugin authoring with schema-aware validation, completions, snippets, and hover docs
 - Built-in plugin catalog seeded to disk on first run
 
 ## Screenshots
@@ -32,7 +32,7 @@ The screenshot below also shows the ratio-warning treatment in context: integrat
 
 ### Manage Plugins
 
-The plugin-management screen is where built-in disk definitions and database overrides are inspected and edited. The catalog on the left shows the active source for each plugin, while the editor on the right exposes the full YAML definition that drives integration forms, HTTP steps, mappings, and dashboard metrics.
+The plugin-management screen is where disk-backed plugin definitions are inspected, created, and edited. The catalog on the left shows the YAML files currently loaded from disk, while the editor on the right exposes the full definition that drives integration forms, HTTP steps, mappings, and dashboard metrics.
 
 This is also where the newer editor capabilities matter: YAML saves are blocked when the document is malformed or semantically invalid, and the editor provides TrackArr-specific validation and authoring help while you work.
 
@@ -92,26 +92,27 @@ The production container serves the API and the built frontend together on port 
 TrackArr uses YAML plugin definitions to describe how to connect to a tracker:
 
 - `fields`: form inputs required to configure an integration
+- `customFields`: optional tracker-specific inputs beyond the shared integration fields
 - `http`: shared base URL and headers
 - `steps`: HTTP requests and extraction rules
 - `mapping`: how extracted values map into TrackArr stats
-- `dashboard`: which stats should be shown on the UI card
+- `dashboard`: which stats should be shown on the UI card, including optional `byteUnitSystem` for binary vs decimal byte formatting
 
 The frontend plugin editor validates more than generic YAML syntax. It understands the TrackArr plugin structure, shows completions for supported fields and enums, offers snippets for common blocks, and blocks saves when the document is malformed or semantically invalid.
 
 Built-in plugins currently included:
 
+- `asc`
 - `bj-share`
 - `fearnopeer`
 - `seedpool`
 
-Plugin loading order:
+Plugin loading:
 
-1. YAML files from disk are loaded first
-2. Database plugin definitions are loaded after that
-3. If the same `pluginId` exists in both places, the database definition wins
+1. Plugin definitions are loaded from YAML files on disk
+2. The Manage Plugins UI creates new files and edits existing files in place
 
-That means you can ship defaults on disk and override them safely from the UI.
+There is no database fallback or override layer for plugin templates.
 
 ## Local development
 
@@ -223,7 +224,6 @@ Main endpoints:
 - `GET /api/plugins/{pluginId}`
 - `POST /api/plugins`
 - `PUT /api/plugins/{pluginId}`
-- `DELETE /api/plugins/{pluginId}`
 
 Plugin create/update requests use raw YAML in the request body.
 
@@ -239,5 +239,5 @@ Plugin create/update requests use raw YAML in the request body.
 - Each integration payload must include a `cron` field because recurring scheduling is derived from the saved payload
 - `required_ratio` is required by the current integration flow and is parsed from the payload JSON
 - Sensitive plugin fields are masked in the UI and preserved on update if the user leaves them blank
-- Disk plugins cannot be deleted from the UI, but they can be overridden by saving a database-backed version with the same `pluginId`
+- Plugin templates are always loaded from disk, and the Manage Plugins UI currently supports create/edit but not delete
 - Help, snapshots, and plugin-management routes are lazy-loaded in the frontend, and the Monaco/YAML editor stack is split into dedicated chunks
