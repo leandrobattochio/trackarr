@@ -33,7 +33,7 @@ public class TrackerPluginRegistryTests
     public void CreateById_should_apply_configuration_to_created_plugin_instance()
     {
         var definition = CreateDefinition("seedpool", "Seedpool");
-        PluginDefinitionDefaults.ApplyDefaults(definition);
+        PluginDefinitionDefaults.ApplyDefaults(definition, "test-user-agent");
         var sut = CreateRegistry(
         [
             new LoadedYamlPluginDefinition("seedpool", "Seedpool", definition, "raw", null)

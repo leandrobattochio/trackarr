@@ -7,6 +7,8 @@ namespace TrackerStats.PluginEngine.IntegrationTests;
 
 public class YamlPluginDefinitionLoaderIntegrationTests
 {
+    private static readonly FakeApplicationSettingsService SettingsService = new();
+
     [Fact]
     public void LoadDefinitions_should_load_repo_plugin_files_and_apply_defaults()
     {
@@ -17,7 +19,7 @@ public class YamlPluginDefinitionLoaderIntegrationTests
                 ["Plugins:Directory"] = pluginsDirectory
             })
             .Build();
-        var sut = new YamlPluginDefinitionLoader(configuration);
+        var sut = new YamlPluginDefinitionLoader(configuration, SettingsService);
 
         var definitions = sut.LoadDefinitions();
 
@@ -66,7 +68,7 @@ public class YamlPluginDefinitionLoaderIntegrationTests
                     ["Plugins:Directory"] = pluginsDirectory
                 })
                 .Build();
-            var sut = new YamlPluginDefinitionLoader(configuration);
+            var sut = new YamlPluginDefinitionLoader(configuration, SettingsService);
 
             var definitions = sut.LoadDefinitions();
 

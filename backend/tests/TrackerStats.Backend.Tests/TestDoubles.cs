@@ -5,11 +5,14 @@ using Hangfire.Storage;
 using Hangfire.Storage.Monitoring;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TrackerStats.Domain.Entities;
 using TrackerStats.Domain.Plugins;
 using TrackerStats.Domain.Plugins.Yaml;
 using TrackerStats.Domain.Repositories;
+using TrackerStats.Domain.Services;
 
 namespace TrackerStats.Backend.Tests;
 
@@ -301,6 +304,41 @@ internal sealed class FakeStorageConnection : IStorageConnection
 internal sealed class FakeYamlPluginDefinitionLoader(IReadOnlyList<LoadedYamlPluginDefinition> definitions) : IYamlPluginDefinitionLoader
 {
     public IReadOnlyList<LoadedYamlPluginDefinition> LoadDefinitions() => definitions;
+}
+
+internal sealed class FakeApplicationSettingsService(string userAgent = "test-user-agent") : IApplicationSettingsService
+{
+    private string _userAgent = userAgent;
+
+    public ApplicationSettingsSnapshot GetRequired() => new(_userAgent);
+
+    public Task<ApplicationSettingsSnapshot> UpdateUserAgentAsync(string userAgent, CancellationToken ct)
+    {
+        _userAgent = userAgent.Trim();
+        return Task.FromResult(new ApplicationSettingsSnapshot(_userAgent));
+    }
+}
+
+internal sealed class FakeAboutService(string databaseEngine = "SQLite") : IAboutService
+{
+    public AboutSnapshot Get() => new(
+        "1.0.0-test",
+        "10.0.0",
+        false,
+        databaseEngine,
+        3,
+        "/data",
+        "/app",
+        "Development",
+        "01:23:45");
+}
+
+internal sealed class FakeHostEnvironment(string contentRootPath) : IHostEnvironment
+{
+    public string EnvironmentName { get; set; } = Environments.Development;
+    public string ApplicationName { get; set; } = "TrackerStats.Tests";
+    public string ContentRootPath { get; set; } = contentRootPath;
+    public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
 }
 
 internal sealed class ListLogger<T> : ILogger<T>

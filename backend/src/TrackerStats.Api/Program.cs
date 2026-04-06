@@ -6,6 +6,7 @@ using Scalar.AspNetCore;
 using TrackerStats.Domain.Plugins;
 using TrackerStats.Domain.Plugins.Yaml;
 using TrackerStats.Domain.Repositories;
+using TrackerStats.Domain.Services;
 using TrackerStats.Infrastructure.Data;
 using TrackerStats.Infrastructure.Plugins;
 using TrackerStats.Infrastructure.Plugins.Yaml;
@@ -17,11 +18,10 @@ using TrackerStats.PluginEngine.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
 var postgresConnectionString = builder.Configuration.GetConnectionString("PostgresConnection");
-var usePostgres = !string.IsNullOrWhiteSpace(postgresConnectionString);
-var connectionString = usePostgres
-    ? postgresConnectionString
-    : ResolveSqliteConnectionString(builder.Configuration, builder.Environment, "DefaultConnection", "Database:Directory");
-var hangfireConnectionString = ResolveSqliteConnectionString(builder.Configuration, builder.Environment, "HangfireConnection", "Hangfire:Directory");
+if (string.IsNullOrWhiteSpace(postgresConnectionString))
+    throw new InvalidOperationException("Connection string 'PostgresConnection' was not found.");
+
+var hangfireConnectionString = ResolveHangfireConnectionString(builder.Configuration, builder.Environment);
 var hangfireDatabasePath = ResolveSqliteDatabasePath(hangfireConnectionString, "hangfire.db");
 
 builder.Services.AddControllers();
@@ -29,13 +29,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<AppDbContext>(opts =>
 {
-    if (usePostgres)
-    {
-        opts.UseNpgsql(connectionString);
-        return;
-    }
-
-    opts.UseSqlite(connectionString);
+    opts.UseNpgsql(postgresConnectionString);
 });
 
 builder.Services.AddHangfire(config => config
@@ -47,6 +41,8 @@ builder.Services.AddHangfireServer();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IIntegrationRepository, IntegrationRepository>();
 builder.Services.AddScoped<IIntegrationSnapshotRepository, IntegrationSnapshotRepository>();
+builder.Services.AddSingleton<IApplicationSettingsService, ApplicationSettingsService>();
+builder.Services.AddScoped<IAboutService, AboutService>();
 builder.Services.AddSingleton<ITrackerPluginHttpClientFactory, TrackerPluginHttpClientFactory>();
 builder.Services.AddSingleton<IntegrationConfigurationValidator>();
 builder.Services.AddScoped<IntegrationSyncService>();
@@ -73,14 +69,8 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (usePostgres)
-    {
-        await db.Database.EnsureCreatedAsync();
-    }
-    else
-    {
-        await db.Database.MigrateAsync();
-    }
+    await db.Database.MigrateAsync();
+    await db.EnsureSeedDataAsync();
 }
 
 if (app.Environment.IsDevelopment())
@@ -115,19 +105,17 @@ if (app.Environment.IsProduction())
 
 app.Run();
 
-static string ResolveSqliteConnectionString(
+static string ResolveHangfireConnectionString(
     IConfiguration configuration,
-    IHostEnvironment environment,
-    string connectionStringName,
-    string directoryConfigKey)
+    IHostEnvironment environment)
 {
-    var connectionString = configuration.GetConnectionString(connectionStringName)
-        ?? throw new InvalidOperationException($"Connection string '{connectionStringName}' was not found.");
+    var connectionString = configuration.GetConnectionString("HangfireConnection")
+        ?? throw new InvalidOperationException("Connection string 'HangfireConnection' was not found.");
 
     if (!environment.IsProduction())
         return connectionString;
 
-    var databaseDirectory = configuration[directoryConfigKey];
+    var databaseDirectory = configuration["Hangfire:Directory"];
     if (string.IsNullOrWhiteSpace(databaseDirectory))
         return connectionString;
 
@@ -149,7 +137,7 @@ static string ResolveSqliteConnectionString(
         : null;
 
     var databaseFileName = string.IsNullOrWhiteSpace(currentDataSource)
-        ? "trackerstats.db"
+        ? "hangfire.db"
         : Path.GetFileName(currentDataSource);
 
     builder[dataSourceKey] = Path.Combine(databaseDirectory, databaseFileName);

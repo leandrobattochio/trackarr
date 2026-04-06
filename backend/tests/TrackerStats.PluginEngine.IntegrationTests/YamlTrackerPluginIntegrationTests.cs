@@ -41,7 +41,7 @@ public class YamlTrackerPluginIntegrationTests
                 }
             }
         };
-        PluginDefinitionDefaults.ApplyDefaults(definition);
+        PluginDefinitionDefaults.ApplyDefaults(definition, "test-user-agent");
 
         var plugin = new YamlTrackerPlugin(
             definition,

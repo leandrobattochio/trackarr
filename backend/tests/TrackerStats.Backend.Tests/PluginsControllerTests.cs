@@ -647,13 +647,16 @@ public class PluginsControllerTests
     }
 
     [Fact]
-    public async Task Create_should_write_plugin_yaml_to_database_directory_when_plugins_directory_is_not_configured()
+    public async Task Create_should_write_plugin_yaml_to_app_base_directory_when_plugins_directory_is_not_configured()
     {
-        using var fixture = new PluginsFixture(usePluginsDirectory: false, useDatabaseDirectory: true);
+        using var fixture = new PluginsFixture(usePluginsDirectory: false);
         var controller = fixture.CreateController();
+        var pluginPath = Path.Combine(AppContext.BaseDirectory, "base-plugin.yaml");
+        if (File.Exists(pluginPath))
+            File.Delete(pluginPath);
         var yaml = """
-            pluginId: db-plugin
-            displayName: Db Plugin
+            pluginId: base-plugin
+            displayName: Base Plugin
             fields: []
             steps:
               - name: profile
@@ -667,10 +670,18 @@ public class PluginsControllerTests
             """;
         TestHttp.SetYamlBody(controller, yaml);
 
-        var result = await controller.Create(CancellationToken.None);
+        try
+        {
+            var result = await controller.Create(CancellationToken.None);
 
-        result.ShouldBeOfType<CreatedAtActionResult>();
-        File.Exists(Path.Combine(fixture.PluginsDirectory, "db-plugin.yaml")).ShouldBeTrue();
+            result.ShouldBeOfType<CreatedAtActionResult>();
+            File.Exists(pluginPath).ShouldBeTrue();
+        }
+        finally
+        {
+            if (File.Exists(pluginPath))
+                File.Delete(pluginPath);
+        }
     }
 
     [Fact]
@@ -699,71 +710,6 @@ public class PluginsControllerTests
 
         result.ShouldBeOfType<CreatedAtActionResult>();
         Directory.Exists(fixture.PluginsDirectory).ShouldBeTrue();
-    }
-
-    [Fact]
-    public async Task Create_should_write_plugin_yaml_to_directory_resolved_from_connection_string()
-    {
-        using var fixture = new PluginsFixture(usePluginsDirectory: false, useDatabaseDirectory: false, useConnectionString: true);
-        var controller = fixture.CreateController();
-        var yaml = """
-            pluginId: connection-plugin
-            displayName: Connection Plugin
-            fields: []
-            steps:
-              - name: profile
-                method: GET
-                url: "/"
-                responseType: html
-            dashboard:
-              metrics:
-                - stat: ratio
-                  label: Ratio
-            """;
-        TestHttp.SetYamlBody(controller, yaml);
-
-        var result = await controller.Create(CancellationToken.None);
-
-        result.ShouldBeOfType<CreatedAtActionResult>();
-        File.Exists(Path.Combine(fixture.PluginsDirectory, "connection-plugin.yaml")).ShouldBeTrue();
-    }
-
-    [Fact]
-    public async Task Create_should_fall_back_to_app_base_directory_when_connection_string_is_missing()
-    {
-        using var fixture = new PluginsFixture(usePluginsDirectory: false, useDatabaseDirectory: false, useConnectionString: false);
-        var controller = fixture.CreateController();
-        var pluginPath = Path.Combine(AppContext.BaseDirectory, "fallback-plugin.yaml");
-        if (File.Exists(pluginPath))
-            File.Delete(pluginPath);
-        TestHttp.SetYamlBody(controller, """
-            pluginId: fallback-plugin
-            displayName: Fallback Plugin
-            fields: []
-            steps:
-              - name: profile
-                method: GET
-                url: "/"
-                responseType: html
-            dashboard:
-              metrics:
-                - stat: ratio
-                  label: Ratio
-                  format: text
-            """);
-
-        try
-        {
-            var result = await controller.Create(CancellationToken.None);
-
-            result.ShouldBeOfType<CreatedAtActionResult>();
-            File.Exists(pluginPath).ShouldBeTrue();
-        }
-        finally
-        {
-            if (File.Exists(pluginPath))
-                File.Delete(pluginPath);
-        }
     }
 
     [Fact]
@@ -823,49 +769,70 @@ public class PluginsControllerTests
             .ShouldBe("Plugin definition must define at least one dashboard metric.");
     }
 
+    [Fact]
+    public async Task Create_should_write_plugin_yaml_to_relative_plugins_directory_from_content_root()
+    {
+        using var fixture = new PluginsFixture(usePluginsDirectory: true, relativePluginsDirectory: "plugins");
+        var controller = fixture.CreateController();
+        TestHttp.SetYamlBody(controller, """
+            pluginId: relative-plugin
+            displayName: Relative Plugin
+            fields: []
+            steps:
+              - name: profile
+                method: GET
+                url: "/"
+                responseType: html
+            dashboard:
+              metrics:
+                - stat: ratio
+                  label: Ratio
+                  format: text
+            """);
+
+        var result = await controller.Create(CancellationToken.None);
+
+        result.ShouldBeOfType<CreatedAtActionResult>();
+        File.Exists(Path.Combine(fixture.PluginsDirectory, "relative-plugin.yaml")).ShouldBeTrue();
+    }
+
     private sealed class PluginsFixture : IDisposable
     {
-        public PluginsFixture(bool usePluginsDirectory = true, bool useDatabaseDirectory = false, bool useConnectionString = false)
+        public PluginsFixture(bool usePluginsDirectory = true, string? relativePluginsDirectory = null)
         {
-            PluginsDirectory = Path.Combine(Path.GetTempPath(), $"trackerstats-plugins-{Guid.NewGuid():N}");
+            RootDirectory = Path.Combine(Path.GetTempPath(), $"trackerstats-plugins-{Guid.NewGuid():N}");
+            PluginsDirectory = relativePluginsDirectory is null
+                ? Path.Combine(RootDirectory, "plugins")
+                : Path.Combine(RootDirectory, relativePluginsDirectory);
             Directory.CreateDirectory(PluginsDirectory);
             UsePluginsDirectory = usePluginsDirectory;
-            UseDatabaseDirectory = useDatabaseDirectory;
-            UseConnectionString = useConnectionString;
+            RelativePluginsDirectory = relativePluginsDirectory;
         }
 
+        public string RootDirectory { get; }
         public string PluginsDirectory { get; }
         private bool UsePluginsDirectory { get; }
-        private bool UseDatabaseDirectory { get; }
-        private bool UseConnectionString { get; }
+        private string? RelativePluginsDirectory { get; }
 
         public PluginsController CreateController()
         {
             var values = new Dictionary<string, string?>();
 
             if (UsePluginsDirectory)
-                values["Plugins:Directory"] = PluginsDirectory;
-
-            if (UseDatabaseDirectory)
-                values["Database:Directory"] = PluginsDirectory;
-
-            if (UseConnectionString)
-            {
-                var relative = Path.GetRelativePath(AppContext.BaseDirectory, Path.Combine(PluginsDirectory, "trackerstats.db"));
-                values["ConnectionStrings:DefaultConnection"] = $"Data Source={relative}";
-            }
+                values["Plugins:Directory"] = RelativePluginsDirectory ?? PluginsDirectory;
 
             var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(values)
                 .Build();
-            var loader = new YamlPluginDefinitionLoader(configuration);
-            return new PluginsController(loader, configuration);
+            var hostEnvironment = new FakeHostEnvironment(RootDirectory);
+            var loader = new YamlPluginDefinitionLoader(configuration, new FakeApplicationSettingsService(), hostEnvironment);
+            return new PluginsController(loader, configuration, hostEnvironment);
         }
 
         public void Dispose()
         {
-            if (Directory.Exists(PluginsDirectory))
-                Directory.Delete(PluginsDirectory, recursive: true);
+            if (Directory.Exists(RootDirectory))
+                Directory.Delete(RootDirectory, recursive: true);
         }
     }
 }

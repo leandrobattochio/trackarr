@@ -74,7 +74,7 @@ public class PluginDefinitionDefaultsTests
             Dashboard = new DashboardConfig { Metrics = [new DashboardMetricDefinition { Stat = "ratio", Label = "Ratio", Format = "text" }] }
         };
 
-        PluginDefinitionDefaults.ApplyDefaults(definition);
+        PluginDefinitionDefaults.ApplyDefaults(definition, "test-user-agent");
 
         definition.Fields.Count(field => string.Equals(field.Name, "baseUrl", StringComparison.OrdinalIgnoreCase)).ShouldBe(1);
         definition.Fields.ShouldContain(field => field.Name == "cron");

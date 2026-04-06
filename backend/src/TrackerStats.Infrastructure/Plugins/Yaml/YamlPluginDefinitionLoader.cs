@@ -1,12 +1,16 @@
-using System.Data.Common;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using TrackerStats.Domain.Services;
 using TrackerStats.Domain.Plugins.Yaml;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace TrackerStats.Infrastructure.Plugins.Yaml;
 
-public sealed class YamlPluginDefinitionLoader(IConfiguration configuration) : IYamlPluginDefinitionLoader
+public sealed class YamlPluginDefinitionLoader(
+    IConfiguration configuration,
+    IApplicationSettingsService settingsService,
+    IHostEnvironment? hostEnvironment = null) : IYamlPluginDefinitionLoader
 {
     private readonly IDeserializer _deserializer = new DeserializerBuilder()
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
@@ -27,6 +31,7 @@ public sealed class YamlPluginDefinitionLoader(IConfiguration configuration) : I
     private IEnumerable<LoadedYamlPluginDefinition> LoadDiskDefinitions()
     {
         var pluginsDirectory = ResolvePluginsDirectory();
+        var settings = settingsService.GetRequired();
 
         if (!Directory.Exists(pluginsDirectory))
             yield break;
@@ -57,7 +62,7 @@ public sealed class YamlPluginDefinitionLoader(IConfiguration configuration) : I
             {
                 var definition = DeserializeYamlDefinition(content, path);
                 RejectReservedFields(definition, path);
-                PluginDefinitionDefaults.ApplyDefaults(definition);
+                PluginDefinitionDefaults.ApplyDefaults(definition, settings.UserAgent);
                 loadedDefinition = new LoadedYamlPluginDefinition(
                     definition.PluginId,
                     definition.DisplayName,
@@ -111,56 +116,16 @@ public sealed class YamlPluginDefinitionLoader(IConfiguration configuration) : I
         if (!string.IsNullOrWhiteSpace(configuredDirectory))
             return ResolvePath(configuredDirectory);
 
-        return ResolveSqliteDirectory();
+        return Path.GetFullPath(GetBasePath());
     }
 
-    private string ResolveSqliteDirectory()
-    {
-        var configuredDatabaseDirectory = configuration["Database:Directory"];
-        if (!string.IsNullOrWhiteSpace(configuredDatabaseDirectory))
-            return ResolvePath(configuredDatabaseDirectory);
-
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
-        if (string.IsNullOrWhiteSpace(connectionString))
-            return Path.GetFullPath(AppContext.BaseDirectory);
-
-        var builder = new DbConnectionStringBuilder
-        {
-            ConnectionString = connectionString
-        };
-
-        var dataSourceKey = builder.ContainsKey("Data Source")
-            ? "Data Source"
-            : builder.ContainsKey("DataSource")
-                ? "DataSource"
-                : "Data Source";
-
-        var dataSource = builder.TryGetValue(dataSourceKey, out var value)
-            ? value?.ToString()
-            : null;
-
-        if (string.IsNullOrWhiteSpace(dataSource))
-            return Path.GetFullPath(AppContext.BaseDirectory);
-
-        var normalizedDataSource = NormalizeDataSourcePath(dataSource);
-
-        var resolvedPath = Path.IsPathRooted(normalizedDataSource)
-            ? normalizedDataSource
-            : Path.Combine(AppContext.BaseDirectory, normalizedDataSource);
-
-        var directory = Path.GetDirectoryName(resolvedPath);
-        return string.IsNullOrWhiteSpace(directory)
-            ? Path.GetFullPath(AppContext.BaseDirectory)
-            : Path.GetFullPath(directory);
-    }
-
-    private static string ResolvePath(string path) =>
+    private string ResolvePath(string path) =>
         Path.IsPathRooted(path)
             ? path
-            : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, path));
+            : Path.GetFullPath(Path.Combine(GetBasePath(), path));
 
-    private static string NormalizeDataSourcePath(string dataSource) =>
-        dataSource.Replace('\\', Path.DirectorySeparatorChar)
-            .Replace('/', Path.DirectorySeparatorChar);
-
+    private string GetBasePath() =>
+        string.IsNullOrWhiteSpace(hostEnvironment?.ContentRootPath)
+            ? AppContext.BaseDirectory
+            : hostEnvironment.ContentRootPath;
 }

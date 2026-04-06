@@ -6,6 +6,7 @@ namespace TrackerStats.Backend.Tests;
 
 public sealed class YamlPluginDefinitionLoaderTests : IDisposable
 {
+    private static readonly FakeApplicationSettingsService SettingsService = new();
     private readonly string _rootDirectory = Path.Combine(Path.GetTempPath(), $"trackerstats-loader-{Guid.NewGuid():N}");
 
     public YamlPluginDefinitionLoaderTests()
@@ -14,13 +15,15 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
     }
 
     [Fact]
-    public void LoadDefinitions_should_load_from_database_directory_when_plugins_directory_is_not_configured()
+    public void LoadDefinitions_should_load_from_app_base_directory_when_plugins_directory_is_not_configured()
     {
-        var pluginsDirectory = Path.Combine(_rootDirectory, "data");
-        Directory.CreateDirectory(pluginsDirectory);
-        File.WriteAllText(Path.Combine(pluginsDirectory, "seedpool.yaml"), """
-            pluginId: seedpool
-            displayName: Seedpool
+        var pluginsDirectory = AppContext.BaseDirectory;
+        var path = Path.Combine(pluginsDirectory, "base-plugin.yaml");
+        var originalContent = File.Exists(path) ? File.ReadAllText(path) : null;
+        var hadOriginal = File.Exists(path);
+        File.WriteAllText(path, """
+            pluginId: base-plugin
+            displayName: Base Plugin
             fields: []
             steps:
               - name: profile
@@ -32,19 +35,26 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
                 - stat: ratio
                   label: Ratio
             """);
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
+        var configuration = new ConfigurationBuilder().Build();
+        var loader = new YamlPluginDefinitionLoader(configuration, SettingsService);
+
+        try
+        {
+            var definitions = loader.LoadDefinitions();
+
+            definitions.ShouldContain(definition => definition.PluginId == "base-plugin" && definition.IsValid);
+        }
+        finally
+        {
+            if (hadOriginal)
             {
-                ["Database:Directory"] = pluginsDirectory
-            })
-            .Build();
-        var loader = new YamlPluginDefinitionLoader(configuration);
-
-        var definitions = loader.LoadDefinitions();
-
-        definitions.Count.ShouldBe(1);
-        definitions[0].PluginId.ShouldBe("seedpool");
-        definitions[0].IsValid.ShouldBeTrue();
+                File.WriteAllText(path, originalContent!);
+            }
+            else if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
     }
 
     [Fact]
@@ -56,7 +66,7 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
                 ["Plugins:Directory"] = Path.Combine(_rootDirectory, "missing")
             })
             .Build();
-        var loader = new YamlPluginDefinitionLoader(configuration);
+        var loader = new YamlPluginDefinitionLoader(configuration, SettingsService);
 
         loader.LoadDefinitions().ShouldBeEmpty();
     }
@@ -79,7 +89,7 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
                 ["Plugins:Directory"] = pluginsDirectory
             })
             .Build();
-        var loader = new YamlPluginDefinitionLoader(configuration);
+        var loader = new YamlPluginDefinitionLoader(configuration, SettingsService);
 
         var definitions = loader.LoadDefinitions();
 
@@ -102,7 +112,7 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
                 ["Plugins:Directory"] = pluginsDirectory
             })
             .Build();
-        var loader = new YamlPluginDefinitionLoader(configuration);
+        var loader = new YamlPluginDefinitionLoader(configuration, SettingsService);
 
         var definitions = loader.LoadDefinitions();
 
@@ -113,15 +123,14 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
     }
 
     [Fact]
-    public void LoadDefinitions_should_resolve_relative_sqlite_connection_directory()
+    public void LoadDefinitions_should_resolve_relative_plugins_directory_from_content_root()
     {
-        var appBase = AppContext.BaseDirectory;
-        var relativeDirectory = Path.Combine("loader-db", Guid.NewGuid().ToString("N"));
-        var pluginsDirectory = Path.GetFullPath(Path.Combine(appBase, relativeDirectory));
+        var contentRoot = Path.Combine(_rootDirectory, "content-root");
+        var pluginsDirectory = Path.Combine(contentRoot, "plugins");
         Directory.CreateDirectory(pluginsDirectory);
-        File.WriteAllText(Path.Combine(pluginsDirectory, "tracker.yaml"), """
-            pluginId: tracker
-            displayName: Tracker
+        File.WriteAllText(Path.Combine(pluginsDirectory, "dev-plugin.yaml"), """
+            pluginId: dev-plugin
+            displayName: Development Plugin
             fields: []
             steps:
               - name: profile
@@ -136,55 +145,15 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:DefaultConnection"] = $"Data Source={relativeDirectory}\\trackerstats.db"
+                ["Plugins:Directory"] = "plugins"
             })
             .Build();
-        var loader = new YamlPluginDefinitionLoader(configuration);
+        var loader = new YamlPluginDefinitionLoader(configuration, SettingsService, new FakeHostEnvironment(contentRoot));
 
         var definitions = loader.LoadDefinitions();
 
         definitions.Count.ShouldBe(1);
-        definitions[0].PluginId.ShouldBe("tracker");
-    }
-
-    [Fact]
-    public void LoadDefinitions_should_fall_back_to_app_base_directory_when_connection_string_has_no_data_source()
-    {
-        var pluginsDirectory = AppContext.BaseDirectory;
-        var path = Path.Combine(pluginsDirectory, "base-fallback.yaml");
-        File.WriteAllText(path, """
-            pluginId: base-fallback
-            displayName: Base Fallback
-            fields: []
-            steps:
-              - name: profile
-                method: GET
-                url: /
-                responseType: html
-            dashboard:
-              metrics:
-                - stat: ratio
-                  label: Ratio
-            """);
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:DefaultConnection"] = "Mode=Memory"
-            })
-            .Build();
-        var loader = new YamlPluginDefinitionLoader(configuration);
-
-        try
-        {
-            var definitions = loader.LoadDefinitions();
-
-            definitions.ShouldContain(x => x.PluginId == "base-fallback");
-        }
-        finally
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
+        definitions[0].PluginId.ShouldBe("dev-plugin");
     }
 
     public void Dispose()

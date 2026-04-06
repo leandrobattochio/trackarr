@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using TrackerStats.Domain.Entities;
@@ -7,18 +6,14 @@ using TrackerStats.Infrastructure.Repositories;
 
 namespace TrackerStats.Backend.Tests;
 
-public sealed class RepositoryTests : IDisposable
+public sealed class RepositoryTests
 {
-    private readonly SqliteConnection _connection;
     private readonly DbContextOptions<AppDbContext> _options;
 
     public RepositoryTests()
     {
-        _connection = new SqliteConnection("Data Source=:memory:");
-        _connection.Open();
-
         _options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(_connection)
+            .UseInMemoryDatabase($"trackerstats-tests-{Guid.NewGuid():N}")
             .Options;
 
         using var db = CreateDbContext();
@@ -132,8 +127,6 @@ public sealed class RepositoryTests : IDisposable
             snapshots[1].Ratio.ShouldBe(1.3m);
         }
     }
-
-    public void Dispose() => _connection.Dispose();
 
     private AppDbContext CreateDbContext() => new(_options);
 }

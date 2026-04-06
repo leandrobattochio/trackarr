@@ -14,9 +14,6 @@ public static class PluginDefinitionDefaults
 
     private static readonly IReadOnlyList<int> DefaultAuthFailureStatusCodes = [401, 403];
 
-    private const string DefaultUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36";
-
     public static bool IsReservedField(string fieldName) =>
         ReservedFieldNames.Contains(fieldName);
 
@@ -44,7 +41,7 @@ public static class PluginDefinitionDefaults
             .Select(f => f.Name)
             .ToList();
 
-    public static void ApplyDefaults(PluginDefinition definition)
+    public static void ApplyDefaults(PluginDefinition definition, string userAgent)
     {
         var existingNames = new HashSet<string>(
             GetAllUserDefinedFields(definition).Select(f => f.Name),
@@ -65,7 +62,7 @@ public static class PluginDefinitionDefaults
             definition.Http.BaseUrl = "{{baseUrl}}";
 
         if (!definition.Http.Headers.ContainsKey("User-Agent"))
-            definition.Http.Headers["User-Agent"] = DefaultUserAgent;
+            definition.Http.Headers["User-Agent"] = userAgent;
 
         if (definition.AuthFailure is null)
         {

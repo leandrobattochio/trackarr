@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using System.Data.Common;
+using Microsoft.Extensions.Hosting;
 using YamlDotNet.Core;
 using TrackerStats.Domain.Plugins.Yaml;
 using YamlDotNet.Serialization;
@@ -11,7 +11,8 @@ namespace TrackerStats.Api.Controllers;
 [Route("api/plugins")]
 public class PluginsController(
     IYamlPluginDefinitionLoader loader,
-    IConfiguration configuration) : ControllerBase
+    IConfiguration configuration,
+    IHostEnvironment? hostEnvironment = null) : ControllerBase
 {
     private static readonly IDeserializer Deserializer = new DeserializerBuilder()
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
@@ -276,47 +277,18 @@ public class PluginsController(
         if (!string.IsNullOrWhiteSpace(configuredDirectory))
             return ResolvePath(configuredDirectory);
 
-        return ResolveSqliteDirectory();
+        return Path.GetFullPath(GetBasePath());
     }
 
-    private string ResolveSqliteDirectory()
-    {
-        var configuredDatabaseDirectory = configuration["Database:Directory"];
-        if (!string.IsNullOrWhiteSpace(configuredDatabaseDirectory))
-            return ResolvePath(configuredDatabaseDirectory);
-
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
-        if (string.IsNullOrWhiteSpace(connectionString))
-            return Path.GetFullPath(AppContext.BaseDirectory);
-
-        var builder = new DbConnectionStringBuilder { ConnectionString = connectionString };
-        var dataSourceKey = builder.ContainsKey("Data Source")
-            ? "Data Source"
-            : builder.ContainsKey("DataSource")
-                ? "DataSource"
-                : "Data Source";
-
-        var dataSource = builder.TryGetValue(dataSourceKey, out var value)
-            ? value?.ToString()
-            : null;
-
-        if (string.IsNullOrWhiteSpace(dataSource))
-            return Path.GetFullPath(AppContext.BaseDirectory);
-
-        var resolvedPath = Path.IsPathRooted(dataSource)
-            ? dataSource
-            : Path.Combine(AppContext.BaseDirectory, dataSource);
-
-        var directory = Path.GetDirectoryName(resolvedPath);
-        return string.IsNullOrWhiteSpace(directory)
-            ? Path.GetFullPath(AppContext.BaseDirectory)
-            : Path.GetFullPath(directory);
-    }
-
-    private static string ResolvePath(string path) =>
+    private string ResolvePath(string path) =>
         Path.IsPathRooted(path)
             ? path
-            : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, path));
+            : Path.GetFullPath(Path.Combine(GetBasePath(), path));
+
+    private string GetBasePath() =>
+        string.IsNullOrWhiteSpace(hostEnvironment?.ContentRootPath)
+            ? AppContext.BaseDirectory
+            : hostEnvironment.ContentRootPath;
 
     private static string? TryExtractScalar(string content, string key)
     {
