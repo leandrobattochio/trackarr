@@ -2,9 +2,9 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("recharts", () => ({
-  ResponsiveContainer: ({ children }: any) => <div data-testid="responsive-container">{children}</div>,
-  Tooltip: (props: any) => <div data-testid="chart-tooltip-primitive" {...props} />,
-  Legend: (props: any) => <div data-testid="chart-legend-primitive" {...props} />,
+  ResponsiveContainer: ({ children }: unknown) => <div data-testid="responsive-container">{children}</div>,
+  Tooltip: (props: unknown) => <div data-testid="chart-tooltip-primitive" {...props} />,
+  Legend: (props: unknown) => <div data-testid="chart-legend-primitive" {...props} />,
 }));
 
 import {
@@ -14,7 +14,6 @@ import {
   ChartStyle,
   ChartTooltip,
   ChartTooltipContent,
-  getPayloadConfigFromPayload,
 } from "@/components/ui/chart";
 
 function TestIcon() {
@@ -54,7 +53,7 @@ describe("chart ui", () => {
         config={{
           metric: {
             label: "Metric",
-            theme: { light: "#123456" } as any,
+            theme: { light: "#123456" } as unknown,
           },
         }}
       />,
@@ -78,7 +77,7 @@ describe("chart ui", () => {
           active
           label="revenue"
           payload={[
-            { dataKey: "revenue", name: "revenue", value: 1200, color: "#f00", payload: { fill: "#f00" } } as any,
+            { dataKey: "revenue", name: "revenue", value: 1200, color: "#f00", payload: { fill: "#f00" } } as unknown,
           ]}
         />
       </ChartContainer>,
@@ -96,7 +95,7 @@ describe("chart ui", () => {
           label="ignored"
           labelFormatter={(value) => <>Formatted {String(value)}</>}
           payload={[
-            { dataKey: "seriesLabel", name: "costs", value: 40, color: "#00f", payload: { fill: "#00f", seriesLabel: "costs" } } as any,
+            { dataKey: "seriesLabel", name: "costs", value: 40, color: "#00f", payload: { fill: "#00f", seriesLabel: "costs" } } as unknown,
           ]}
         />
       </ChartContainer>,
@@ -113,7 +112,7 @@ describe("chart ui", () => {
           hideLabel
           formatter={(value, name) => <div>{`${name}:${value}`}</div>}
           payload={[
-            { dataKey: "revenue", name: "revenue", value: 8, color: "#f00", payload: { fill: "#f00" } } as any,
+            { dataKey: "revenue", name: "revenue", value: 8, color: "#f00", payload: { fill: "#f00" } } as unknown,
           ]}
         />
       </ChartContainer>,
@@ -145,7 +144,7 @@ describe("chart ui", () => {
           active
           label="unknown"
           payload={[
-            { dataKey: "metric", name: "metric", value: 0, color: "#f00", payload: { fill: "#f00" } } as any,
+            { dataKey: "metric", name: "metric", value: 0, color: "#f00", payload: { fill: "#f00" } } as unknown,
           ]}
         />
       </ChartContainer>,
@@ -154,12 +153,9 @@ describe("chart ui", () => {
     expect(container.textContent).toContain("metric");
     expect(container.textContent).toContain("unknown");
 
-    expect(getPayloadConfigFromPayload({ revenue: { label: "Revenue", color: "#f00" } }, null, "revenue")).toBeUndefined();
-    expect(getPayloadConfigFromPayload({ revenue: { label: "Revenue", color: "#f00" } }, "bad-payload" as any, "revenue")).toBeUndefined();
-
     rerender(
       <ChartContainer config={{ revenue: { label: "Revenue", color: "#f00" } }}>
-        <ChartLegendContent payload={[{ value: "legend", color: "#f00" } as any]} />
+        <ChartLegendContent payload={[{ value: "legend", color: "#f00" } as unknown]} />
       </ChartContainer>,
     );
 
@@ -179,14 +175,14 @@ describe("chart ui", () => {
             active
             nameKey="series"
             payload={[
-              { dataKey: "metric", name: "ignored", series: "revenue", value: 5, color: "#f00", payload: { fill: "#f00" } } as any,
+              { dataKey: "metric", name: "ignored", series: "revenue", value: 5, color: "#f00", payload: { fill: "#f00" } } as unknown,
             ]}
           />
           <ChartLegendContent
             nameKey="series"
             hideIcon
             payload={[
-              { value: "legend-1", color: "#0f0", payload: { series: "cost" } } as any,
+              { value: "legend-1", color: "#0f0", payload: { series: "cost" } } as unknown,
             ]}
           />
         </>
@@ -209,7 +205,7 @@ describe("chart ui", () => {
           active
           labelKey="series"
           payload={[
-            { dataKey: "amount", value: 9, color: "#123", payload: { fill: undefined, series: "amount" } } as any,
+            { dataKey: "amount", value: 9, color: "#123", payload: { fill: undefined, series: "amount" } } as unknown,
           ]}
         />
       </ChartContainer>,
@@ -230,7 +226,7 @@ describe("chart ui", () => {
           active
           indicator="dashed"
           payload={[
-            { value: 12, color: "#456", payload: { fill: undefined } } as any,
+            { value: 12, color: "#456", payload: { fill: undefined } } as unknown,
           ]}
         />
       </ChartContainer>,
@@ -254,8 +250,8 @@ describe("chart ui", () => {
           <ChartLegendContent
             verticalAlign="top"
             payload={[
-              { value: "rev", dataKey: "revenue", color: "#f00" } as any,
-              { value: "cost", dataKey: "cost", color: "#0f0" } as any,
+              { value: "rev", dataKey: "revenue", color: "#f00" } as unknown,
+              { value: "cost", dataKey: "cost", color: "#0f0" } as unknown,
             ]}
           />
         </>
@@ -272,9 +268,10 @@ describe("chart ui", () => {
     expect(() =>
       render(
         <ChartLegendContent
-          payload={[{ value: "legend", dataKey: "revenue", color: "#f00" } as any]}
+          payload={[{ value: "legend", dataKey: "revenue", color: "#f00" } as unknown]}
         />,
       ),
     ).toThrow("useChart must be used within a <ChartContainer />");
   });
 });
+

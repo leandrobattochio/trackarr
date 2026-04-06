@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import ManagePluginsPage, { tryGetPluginId } from "@/features/plugins/ManagePluginsPage";
+import ManagePluginsPage from "@/features/plugins/ManagePluginsPage";
+import { tryGetPluginId } from "@/features/plugins/plugin-id";
 import { NEW_PLUGIN_TEMPLATE } from "@/features/plugins/plugin-template";
 import {
   useCreatePluginDefinition,
@@ -279,8 +280,8 @@ describe("ManagePluginsPage", () => {
     expect(createMutation.mutate).toHaveBeenCalledWith(
       NEW_PLUGIN_TEMPLATE,
       expect.objectContaining({
-        onSuccess: expect.any(Function),
-        onError: expect.any(Function),
+        onSuccess: expect.unknown(Function),
+        onError: expect.unknown(Function),
       }),
     );
     expect(toast.success).toHaveBeenCalledWith("Plugin created.");
@@ -295,8 +296,8 @@ describe("ManagePluginsPage", () => {
     expect(updateMutation.mutate).toHaveBeenCalledWith(
       { pluginId: "custom-plugin", yaml: "pluginId: custom-plugin\nupdated: true" },
       expect.objectContaining({
-        onSuccess: expect.any(Function),
-        onError: expect.any(Function),
+        onSuccess: expect.unknown(Function),
+        onError: expect.unknown(Function),
       }),
     );
 
@@ -371,8 +372,8 @@ describe("ManagePluginsPage", () => {
     expect(updateMutation.mutate).toHaveBeenCalledWith(
       { pluginId: "alpha-plugin", yaml: "pluginId: alpha-plugin\nbroken: true" },
       expect.objectContaining({
-        onSuccess: expect.any(Function),
-        onError: expect.any(Function),
+        onSuccess: expect.unknown(Function),
+        onError: expect.unknown(Function),
       }),
     );
     expect(screen.getByText("save failed")).toBeInTheDocument();
@@ -406,3 +407,4 @@ describe("ManagePluginsPage", () => {
     expect(screen.getAllByTestId("icon-loader").length).toBeGreaterThan(0);
   });
 });
+
