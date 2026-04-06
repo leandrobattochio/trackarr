@@ -1,0 +1,104 @@
+name: Full Stack E2E
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  full-stack-e2e:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_CLI_HOME: ${{ github.workspace }}/backend/.dotnet
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+        working-directory: ${{ github.workspace }}/frontend
+
+      - run: dotnet restore "${{ github.workspace }}/backend/TrackerStats.sln"
+
+      - name: Run backend Testcontainers end-to-end tests
+        run: >
+          dotnet test "${{ github.workspace }}/backend/tests/TrackerStats.Api.EndToEndTests/TrackerStats.Api.EndToEndTests.csproj"
+          --configuration Release
+          --no-restore
+
+      - name: Start backend API
+        shell: bash
+        env:
+          ConnectionStrings__DefaultConnection: Data Source=${{ github.workspace }}/backend/.e2e/trackerstats.db
+          ConnectionStrings__HangfireConnection: Data Source=${{ github.workspace }}/backend/.e2e/hangfire.db
+          Plugins__Directory: ${{ github.workspace }}/backend/plugins
+        run: |
+          mkdir -p backend/.e2e
+          dotnet run --project backend/src/TrackerStats.Api/TrackerStats.Api.csproj --configuration Release --no-restore --urls http://127.0.0.1:5000 > backend/.e2e/backend.log 2>&1 &
+          echo $! > backend/.e2e/backend.pid
+
+      - name: Start frontend app
+        shell: bash
+        run: |
+          cd "${{ github.workspace }}/frontend"
+          mkdir -p .e2e
+          yarn dev --host 127.0.0.1 --port 8080 > .e2e/frontend.log 2>&1 &
+          echo $! > .e2e/frontend.pid
+
+      - name: Wait for app startup
+        shell: bash
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:5000/api/plugins > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8080 > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://127.0.0.1:5000/api/plugins > /dev/null
+          curl -fsS http://127.0.0.1:8080 > /dev/null
+
+      - name: Run Cypress browser end-to-end tests
+        run: yarn e2e
+        working-directory: ${{ github.workspace }}/frontend
+
+      - name: Stop local app processes
+        if: always()
+        shell: bash
+        run: |
+          if [ -f backend/.e2e/backend.pid ]; then
+            kill "$(cat backend/.e2e/backend.pid)" || true
+          fi
+
+          if [ -f frontend/.e2e/frontend.pid ]; then
+            kill "$(cat frontend/.e2e/frontend.pid)" || true
+          fi
+
+      - name: Upload E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-stack-e2e-artifacts
+          path: |
+            backend/.e2e/backend.log
+            frontend/.e2e/frontend.log
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+          if-no-files-found: warn

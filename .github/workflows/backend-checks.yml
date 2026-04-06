@@ -1,0 +1,68 @@
+name: Backend Checks
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - run: dotnet restore backend/src/TrackerStats.Api/TrackerStats.Api.csproj
+      - run: dotnet build backend/src/TrackerStats.Api/TrackerStats.Api.csproj --configuration Release --no-restore
+
+  backend-test:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_CLI_HOME: ${{ github.workspace }}/backend/.dotnet
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - run: dotnet restore "${{ github.workspace }}/backend/TrackerStats.sln"
+
+      - name: Install reportgenerator
+        shell: bash
+        run: |
+          if [ ! -f "${{ github.workspace }}/backend/.tools/reportgenerator" ]; then
+            dotnet tool install --tool-path "${{ github.workspace }}/backend/.tools" dotnet-reportgenerator-globaltool
+          fi
+
+      - name: Run backend tests with coverage
+        run: >
+          dotnet test "${{ github.workspace }}/backend/TrackerStats.sln"
+          --configuration Release
+          --no-restore
+          --collect:"XPlat Code Coverage"
+          --settings "${{ github.workspace }}/backend/coverage.runsettings"
+          --results-directory "${{ github.workspace }}/backend/TestResults"
+          --logger "trx;LogFileName=tests.trx"
+
+      - name: Generate HTML coverage report
+        run: >
+          "${{ github.workspace }}/backend/.tools/reportgenerator"
+          -reports:"${{ github.workspace }}/backend/TestResults/**/coverage.cobertura.xml"
+          -targetdir:"${{ github.workspace }}/backend/CoverageReport"
+          -filefilters:"-**/obj/**/*.cs;-**/Data/AppDbContext.cs"
+          -reporttypes:"Html;Cobertura"
+
+      - name: Upload coverage report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: |
+            backend/CoverageReport
+            backend/TestResults
+          if-no-files-found: error

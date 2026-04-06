@@ -1,0 +1,108 @@
+name: Frontend Checks
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+
+  frontend-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+      - run: yarn lint
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+      - run: yarn test:coverage
+
+      - name: Upload frontend coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: |
+            frontend/coverage
+          if-no-files-found: error
+
+  frontend-audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+      - name: Audit moderate and above
+        shell: bash
+        run: |
+          audit_output=$(yarn audit --json || true)
+          echo "$audit_output"
+
+          summary=$(echo "$audit_output" | grep '"type":"auditSummary"' | tail -n 1)
+          if [ -z "$summary" ]; then
+            echo "Missing yarn audit summary"
+            exit 1
+          fi
+
+          moderate=$(echo "$summary" | sed -E 's/.*"moderate":([0-9]+).*/\1/')
+          high=$(echo "$summary" | sed -E 's/.*"high":([0-9]+).*/\1/')
+          critical=$(echo "$summary" | sed -E 's/.*"critical":([0-9]+).*/\1/')
+
+          if [ "$moderate" -gt 0 ] || [ "$high" -gt 0 ] || [ "$critical" -gt 0 ]; then
+            echo "Audit failed: moderate=$moderate high=$high critical=$critical"
+            exit 1
+          fi

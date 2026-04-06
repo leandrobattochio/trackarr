@@ -1,0 +1,42 @@
+name: GitHub Release
+
+on:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  github-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build release notes
+        id: notes
+        shell: bash
+        run: |
+          current_tag="${GITHUB_REF_NAME}"
+          previous_tag=$(git tag --sort=-creatordate | grep -Fxv "$current_tag" | head -n 1 || true)
+
+          {
+            echo "body<<EOF"
+            echo "Container image: \`ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/trackarr:${current_tag}\`"
+            echo
+
+            if [ -n "$previous_tag" ]; then
+              echo "Compare changes: https://github.com/${GITHUB_REPOSITORY}/compare/${previous_tag}...${current_tag}"
+            else
+              echo "Compare changes: first tagged release"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: ${{ steps.notes.outputs.body }}
