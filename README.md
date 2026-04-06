@@ -129,6 +129,29 @@ There is no database fallback or override layer for plugin templates.
 - Yarn
 - .NET SDK 10
 
+### Local development config
+
+`appsettings.Development.json` is intentionally untracked. If you want local development defaults, create `backend/src/TrackerStats.Api/appsettings.Development.json` on your machine with your own values.
+
+Example:
+
+```json
+{
+  "Plugins": {
+    "Directory": "../../plugins"
+  },
+  "ConnectionStrings": {
+    "PostgresConnection": "Host=127.0.0.1;Port=5432;Database=trackarr;Username=trackarr;Password=trackarr"
+  }
+}
+```
+
+Notes:
+
+- Keep this file local only. Do not commit machine-specific or secret values.
+- Use environment variables instead when you want settings that also work in CI or Docker.
+- If `ConnectionStrings__PostgresConnection` is not set, the app falls back to SQLite for the main application database.
+
 ### 1. Run the backend
 
 ```powershell

@@ -277,7 +277,7 @@ public class PluginsController(
         if (!string.IsNullOrWhiteSpace(configuredDirectory))
             return ResolvePath(configuredDirectory);
 
-        return Path.GetFullPath(GetBasePath());
+        throw new InvalidOperationException("Plugins directory is not configured. Set 'Plugins:Directory'.");
     }
 
     private string ResolvePath(string path) =>

@@ -647,13 +647,10 @@ public class PluginsControllerTests
     }
 
     [Fact]
-    public async Task Create_should_write_plugin_yaml_to_app_base_directory_when_plugins_directory_is_not_configured()
+    public async Task Create_should_throw_when_plugins_directory_is_not_configured()
     {
         using var fixture = new PluginsFixture(usePluginsDirectory: false);
         var controller = fixture.CreateController();
-        var pluginPath = Path.Combine(AppContext.BaseDirectory, "base-plugin.yaml");
-        if (File.Exists(pluginPath))
-            File.Delete(pluginPath);
         var yaml = """
             pluginId: base-plugin
             displayName: Base Plugin
@@ -670,18 +667,9 @@ public class PluginsControllerTests
             """;
         TestHttp.SetYamlBody(controller, yaml);
 
-        try
-        {
-            var result = await controller.Create(CancellationToken.None);
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => controller.Create(CancellationToken.None));
 
-            result.ShouldBeOfType<CreatedAtActionResult>();
-            File.Exists(pluginPath).ShouldBeTrue();
-        }
-        finally
-        {
-            if (File.Exists(pluginPath))
-                File.Delete(pluginPath);
-        }
+        ex.Message.ShouldBe("Plugins directory is not configured. Set 'Plugins:Directory'.");
     }
 
     [Fact]

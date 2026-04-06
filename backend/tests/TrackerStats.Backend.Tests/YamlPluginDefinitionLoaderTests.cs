@@ -15,46 +15,14 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
     }
 
     [Fact]
-    public void LoadDefinitions_should_load_from_app_base_directory_when_plugins_directory_is_not_configured()
+    public void LoadDefinitions_should_throw_when_plugins_directory_is_not_configured()
     {
-        var pluginsDirectory = AppContext.BaseDirectory;
-        var path = Path.Combine(pluginsDirectory, "base-plugin.yaml");
-        var originalContent = File.Exists(path) ? File.ReadAllText(path) : null;
-        var hadOriginal = File.Exists(path);
-        File.WriteAllText(path, """
-            pluginId: base-plugin
-            displayName: Base Plugin
-            fields: []
-            steps:
-              - name: profile
-                method: GET
-                url: /
-                responseType: html
-            dashboard:
-              metrics:
-                - stat: ratio
-                  label: Ratio
-            """);
         var configuration = new ConfigurationBuilder().Build();
         var loader = new YamlPluginDefinitionLoader(configuration, SettingsService);
 
-        try
-        {
-            var definitions = loader.LoadDefinitions();
+        var ex = Should.Throw<InvalidOperationException>(() => loader.LoadDefinitions());
 
-            definitions.ShouldContain(definition => definition.PluginId == "base-plugin" && definition.IsValid);
-        }
-        finally
-        {
-            if (hadOriginal)
-            {
-                File.WriteAllText(path, originalContent!);
-            }
-            else if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
+        ex.Message.ShouldBe("Plugins directory is not configured. Set 'Plugins:Directory'.");
     }
 
     [Fact]
