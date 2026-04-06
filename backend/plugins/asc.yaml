@@ -1,0 +1,75 @@
+pluginId: asc
+displayName: Amigos-Share Club
+
+fields:
+  - name: cookie
+    label: Cookie
+    type: text
+    required: true
+    sensitive: true
+
+http:
+  headers:
+    Accept: application/json
+    Cookie: "{{cookie}}"
+
+authFailure:
+  htmlPatterns:
+    - "Login"
+    - "login.php"
+    - "name=\"password\""
+    - "type=\"password\""
+
+steps:
+  - name: profile
+    method: GET
+    url: ""
+    responseType: html
+    extract:
+      ratio:
+        regex: "Ratio:\\s*<b>\\s*<font[^>]*>\\s*<b>(?<value>[\\d\\.,]+)</b>"
+        transform: decimal
+      seedBonus:
+        regex: "ASC\\s+B[oô]nus:\\s*<b>(?<value>[\\d\\.,]+)</b>"
+        transform: decimal
+      uploadedBytes:
+        regex: "fa-upload[^>]*></i>\\s*(?<value>[\\d\\.,]+\\s*[KMGTPE]?B)"
+        transform: byteSize
+      downloadedBytes:
+        regex: "fa-download[^>]*></i>\\s*(?<value>[\\d\\.,]+\\s*[KMGTPE]?B)"
+        transform: byteSize
+      seedingTorrents:
+        regex: "action=enviando\"[^>]*>.*?</i>\\s*Enviando\\s*-\\s*\\(\\s*(?<value>\\d+)\\s*\\)"
+        transform: integer
+      leechingTorrents:
+        regex: "action=baixando\"[^>]*>.*?</i>\\s*Baixando\\s*-\\s*\\(\\s*(?<value>\\d+)\\s*\\)"
+        transform: integer
+
+mapping:
+  ratio: "steps.profile.ratio"
+  uploadedBytes: "steps.profile.uploadedBytes"
+  downloadedBytes: "steps.profile.downloadedBytes"
+  seedBonus: "steps.profile.seedBonus"
+  requiredRatio: "fields.required_ratio"
+  seedingTorrents: "steps.profile.seedingTorrents"
+  leechingTorrents: "steps.profile.leechingTorrents"
+  activeTorrents: "steps.profile.seedingTorrents + steps.profile.leechingTorrents"
+
+dashboard:
+  byteUnitSystem: decimal
+  metrics:
+    - stat: uploadedBytes
+      label: Uploaded
+      format: bytes
+      icon: arrow-up
+      tone: success
+    - stat: downloadedBytes
+      label: Downloaded
+      format: bytes
+      icon: arrow-down
+      tone: primary
+    - stat: seedBonus
+      label: ASC Bonus
+      format: text
+      icon: coins
+      tone: warning

@@ -40,10 +40,15 @@ internal static class NumericParser
         var multiplier = parts[1].ToUpperInvariant() switch
         {
             "B" => 1m,
+            "KB" => 1000m,
             "KIB" => 1024m,
+            "MB" => 1000m * 1000m,
             "MIB" => 1024m * 1024m,
+            "GB" => 1000m * 1000m * 1000m,
             "GIB" => 1024m * 1024m * 1024m,
+            "TB" => 1000m * 1000m * 1000m * 1000m,
             "TIB" => 1024m * 1024m * 1024m * 1024m,
+            "PB" => 1000m * 1000m * 1000m * 1000m * 1000m,
             "PIB" => 1024m * 1024m * 1024m * 1024m * 1024m,
             _ => throw new InvalidOperationException($"Unsupported byte unit '{parts[1]}'.")
         };
