@@ -27,6 +27,7 @@ frontend/coverage/
 frontend/cypress/screenshots/
 frontend/cypress/videos/
 tasks/
+scripts/ralph/
 
 # Logs
 logs
