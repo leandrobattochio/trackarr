@@ -142,7 +142,7 @@ describe("AddIntegrationDialog", () => {
 
     expect(cronInput).toHaveAttribute("placeholder", "0 * * * *");
     expect(ratioInput).toHaveAttribute("type", "number");
-    expect(ratioInput).toHaveAttribute("step", "unknown");
+    expect(ratioInput).toHaveAttribute("step", "any");
     expect(usernameInput).toHaveAttribute("type", "text");
     expect(passwordInput).toHaveAttribute("type", "password");
     expect(plainPasswordInput).toHaveAttribute("type", "password");
@@ -171,8 +171,8 @@ describe("AddIntegrationDialog", () => {
         }),
       },
       expect.objectContaining({
-        onSuccess: expect.unknown(Function),
-        onError: expect.unknown(Function),
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
       }),
     );
     expect(toastSuccess).toHaveBeenCalledWith("Seedpool integration added");
@@ -200,4 +200,5 @@ describe("AddIntegrationDialog", () => {
     expect(screen.getByTestId("icon-loader")).toBeInTheDocument();
   });
 });
+
 

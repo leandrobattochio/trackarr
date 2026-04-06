@@ -166,8 +166,8 @@ describe("EditIntegrationDialog", () => {
         },
       },
       expect.objectContaining({
-        onSuccess: expect.unknown(Function),
-        onError: expect.unknown(Function),
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
       }),
     );
     expect(toastSuccess).toHaveBeenCalledWith("Seedpool updated");
@@ -203,4 +203,5 @@ describe("EditIntegrationDialog", () => {
     expect(screen.queryByText("Custom Fields")).not.toBeInTheDocument();
   });
 });
+
 

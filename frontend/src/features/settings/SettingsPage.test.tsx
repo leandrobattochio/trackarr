@@ -134,8 +134,8 @@ describe("SettingsPage", () => {
     expect(mutateSpy).toHaveBeenCalledWith(
       "TrackArr/2.0",
       expect.objectContaining({
-        onSuccess: expect.unknown(Function),
-        onError: expect.unknown(Function),
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
       }),
     );
     expect(toastSuccess).toHaveBeenCalledWith("Settings saved.");
@@ -147,4 +147,5 @@ describe("SettingsPage", () => {
     expect(toastError).toHaveBeenCalledWith("Save failed: write failed");
   });
 });
+
 

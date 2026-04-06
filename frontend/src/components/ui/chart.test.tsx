@@ -160,6 +160,14 @@ describe("chart ui", () => {
     );
 
     expect(container.textContent).not.toContain("Revenue");
+
+    rerender(
+      <ChartContainer config={{ revenue: { label: "Revenue", color: "#f00" } }}>
+        <ChartLegendContent payload={["invalid-item"] as unknown as React.ComponentProps<typeof ChartLegendContent>["payload"]} />
+      </ChartContainer>,
+    );
+
+    expect(container).toBeInTheDocument();
   });
 
   it("resolves config keys from payload fields and nested payload fields", () => {

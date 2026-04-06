@@ -280,8 +280,8 @@ describe("ManagePluginsPage", () => {
     expect(createMutation.mutate).toHaveBeenCalledWith(
       NEW_PLUGIN_TEMPLATE,
       expect.objectContaining({
-        onSuccess: expect.unknown(Function),
-        onError: expect.unknown(Function),
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
       }),
     );
     expect(toast.success).toHaveBeenCalledWith("Plugin created.");
@@ -296,8 +296,8 @@ describe("ManagePluginsPage", () => {
     expect(updateMutation.mutate).toHaveBeenCalledWith(
       { pluginId: "custom-plugin", yaml: "pluginId: custom-plugin\nupdated: true" },
       expect.objectContaining({
-        onSuccess: expect.unknown(Function),
-        onError: expect.unknown(Function),
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
       }),
     );
 
@@ -372,8 +372,8 @@ describe("ManagePluginsPage", () => {
     expect(updateMutation.mutate).toHaveBeenCalledWith(
       { pluginId: "alpha-plugin", yaml: "pluginId: alpha-plugin\nbroken: true" },
       expect.objectContaining({
-        onSuccess: expect.unknown(Function),
-        onError: expect.unknown(Function),
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
       }),
     );
     expect(screen.getByText("save failed")).toBeInTheDocument();
@@ -407,4 +407,5 @@ describe("ManagePluginsPage", () => {
     expect(screen.getAllByTestId("icon-loader").length).toBeGreaterThan(0);
   });
 });
+
 

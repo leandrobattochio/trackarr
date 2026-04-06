@@ -77,10 +77,11 @@ describe("useTrackerCardActions", () => {
     const { result } = renderHook(() => useTrackerCardActions(tracker));
     result.current.handleDelete();
 
-    expect(deleteMutate).toHaveBeenCalledWith("tracker-1", expect.unknown(Object));
+    expect(deleteMutate).toHaveBeenCalledWith("tracker-1", expect.any(Object));
     expect(successToast).toHaveBeenCalledWith("Seedpool removed");
     expect(errorToast).toHaveBeenCalledWith("Delete failed: forbidden");
     expect(result.current.actionsDisabled).toBe(false);
   });
 });
+
 
