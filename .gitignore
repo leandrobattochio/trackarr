@@ -21,6 +21,11 @@ backend/.dotnet/
 backend/.tools/
 backend/TestResults/
 backend/CoverageReport/
+backend/.e2e/
+frontend/.e2e/
+frontend/coverage/
+frontend/cypress/screenshots/
+frontend/cypress/videos/
 tasks/
 
 # Logs
