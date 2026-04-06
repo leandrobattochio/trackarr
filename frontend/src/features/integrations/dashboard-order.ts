@@ -23,7 +23,12 @@ function writeStoredCardOrder(order: string[]) {
   if (typeof window === "undefined")
     return;
 
-  window.localStorage.setItem(DASHBOARD_CARD_ORDER_STORAGE_KEY, JSON.stringify(order));
+  try {
+    window.localStorage.setItem(DASHBOARD_CARD_ORDER_STORAGE_KEY, JSON.stringify(order));
+  } catch (error) {
+    console.warn(`Failed to persist dashboard card order for ${DASHBOARD_CARD_ORDER_STORAGE_KEY}.`, error);
+    return;
+  }
 }
 
 export function normalizeDashboardCardOrder(integrations: TrackerIntegration[], order: string[]) {
