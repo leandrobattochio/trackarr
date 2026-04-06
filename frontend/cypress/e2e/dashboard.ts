@@ -97,7 +97,7 @@ When("I drag the {string} card onto the {string} card", (sourceTitle: string, ta
       throw new Error(`Expected to find source card for ${sourceTitle}.`);
 
     const sourceCardId = sourceCard.getAttribute("data-tracker-id");
-    expect(sourceCardId, `data-tracker-id for ${sourceTitle}`).to.be.ok;
+    expect(Boolean(sourceCardId), `data-tracker-id for ${sourceTitle}`).to.equal(true);
 
     if (!sourceCardId)
       throw new Error(`Expected source card ${sourceTitle} to have a data-tracker-id attribute.`);
