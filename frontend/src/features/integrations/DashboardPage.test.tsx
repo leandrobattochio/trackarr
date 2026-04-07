@@ -74,7 +74,7 @@ vi.mock("@/shared/hooks/use-page-title", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, "aria-label": ariaLabel, "data-testid": testId, "aria-pressed": ariaPressed, disabled }: unknown) => (
+  Button: ({ children, onClick, "aria-label": ariaLabel, "data-testid": testId, "aria-pressed": ariaPressed, disabled, className }: unknown) => (
     <button
       type="button"
       onClick={onClick}
@@ -82,6 +82,7 @@ vi.mock("@/components/ui/button", () => ({
       data-testid={testId}
       aria-pressed={ariaPressed}
       disabled={disabled}
+      className={className}
     >
       {children}
     </button>
@@ -270,7 +271,10 @@ describe("DashboardPage", () => {
     expect(card).not.toHaveAttribute("data-drag-locked");
 
     const grid = screen.getByTestId("dashboard-cards-grid");
-    expect(grid.className).toContain("ring-1");
+    expect(grid.className).toContain("ring-2");
+
+    const lockBtn = screen.getByTestId("drag-lock-toggle");
+    expect(lockBtn.className).toContain("border-destructive/60");
 
     const fakeDataTransfer = {
       effectAllowed: "",

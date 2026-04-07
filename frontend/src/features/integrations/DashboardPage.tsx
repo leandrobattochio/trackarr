@@ -58,6 +58,7 @@ const DashboardPage = () => {
                     aria-label={isDragLocked ? "Unlock card reordering" : "Lock card reordering"}
                     aria-pressed={!isDragLocked}
                     data-testid="drag-lock-toggle"
+                    className={!isDragLocked ? "border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive" : ""}
                   >
                     {isDragLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
                   </Button>
@@ -96,7 +97,7 @@ const DashboardPage = () => {
               <div
                 className={[
                   "grid gap-4 md:grid-cols-2 xl:grid-cols-3 rounded-xl transition-[box-shadow,padding] duration-200",
-                  !isDragLocked ? "ring-1 ring-primary/35 p-3" : "",
+                  !isDragLocked ? "ring-2 ring-destructive/60 shadow-[0_0_18px_-4px_hsl(var(--destructive)/0.45)] p-3" : "",
                 ].join(" ")}
                 data-testid="dashboard-cards-grid"
               >
