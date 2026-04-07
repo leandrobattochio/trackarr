@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 
 const pageTitleSpy = vi.fn();
 const mapIntegrationSpy = vi.fn();
-const moveCardSpy = vi.fn();
 const dragStartSpy = vi.fn();
 const dragOverSpy = vi.fn();
 const dropSpy = vi.fn();
@@ -28,14 +27,14 @@ const orderState = {
   handleCardDragOver: (event: unknown, id: string) => dragOverSpy(event, id),
   handleCardDrop: (targetId: string, sourceId?: string) => dropSpy(targetId, sourceId),
   handleCardDragEnd: () => dragEndSpy(),
-  moveCard: (id: string, direction: -1 | 1) => moveCardSpy(id, direction),
 };
 
 vi.mock("lucide-react", () => ({
-  ArrowDown: () => <svg data-testid="icon-down" />,
-  ArrowUp: () => <svg data-testid="icon-up" />,
-  Loader2: () => <svg data-testid="icon-loader" />,
   AlertCircle: () => <svg data-testid="icon-alert-circle" />,
+  GripVertical: () => <svg data-testid="icon-grip-vertical" />,
+  Lock: () => <svg data-testid="icon-lock" />,
+  Loader2: () => <svg data-testid="icon-loader" />,
+  Unlock: () => <svg data-testid="icon-unlock" />,
 }));
 
 vi.mock("@/layouts/DashboardLayout", () => ({
@@ -43,10 +42,9 @@ vi.mock("@/layouts/DashboardLayout", () => ({
 }));
 
 vi.mock("@/features/integrations/components/TrackerCard", () => ({
-  TrackerCard: ({ tracker, reorderControls }: unknown) => (
+  TrackerCard: ({ tracker }: unknown) => (
     <div data-testid="tracker-card-inner">
       <span>{tracker.name}</span>
-      {reorderControls}
     </div>
   ),
 }));
@@ -77,11 +75,27 @@ vi.mock("@/shared/hooks/use-page-title", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, onMouseDown, disabled, ...props }: unknown) => (
-    <button type="button" onClick={onClick} onMouseDown={onMouseDown} disabled={disabled} {...props}>
+  Button: ({ children, onClick, "aria-label": ariaLabel, "data-testid": testId, "aria-pressed": ariaPressed, disabled }: unknown) => (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      data-testid={testId}
+      aria-pressed={ariaPressed}
+      disabled={disabled}
+    >
       {children}
     </button>
   ),
+}));
+
+vi.mock("@/components/ui/tooltip", () => ({
+  Tooltip: ({ children }: unknown) => <>{children}</>,
+  TooltipContent: ({ children, "data-testid": testId }: unknown) => (
+    <div data-testid={testId ?? "tooltip-content"}>{children}</div>
+  ),
+  TooltipProvider: ({ children }: unknown) => <>{children}</>,
+  TooltipTrigger: ({ children }: unknown) => <>{children}</>,
 }));
 
 import DashboardPage from "@/features/integrations/DashboardPage";
@@ -120,7 +134,117 @@ describe("DashboardPage", () => {
     expect(screen.getByText("add-dialog:")).toBeInTheDocument();
   });
 
-  it("renders ordered cards and handles drag/drop and move controls", () => {
+  it("renders drag lock toggle defaulting to locked state with tooltip", () => {
+    integrationsQuery.data = [];
+    integrationsQuery.isLoading = false;
+    integrationsQuery.error = null;
+    orderState.orderedIntegrations = [];
+
+    render(<DashboardPage />);
+
+    const lockBtn = screen.getByTestId("drag-lock-toggle");
+    expect(lockBtn).toBeInTheDocument();
+    expect(lockBtn).toHaveAttribute("aria-label", "Unlock card reordering");
+    expect(lockBtn).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId("icon-lock")).toBeInTheDocument();
+    expect(screen.getByTestId("drag-lock-tooltip")).toHaveTextContent("Unlock to reorder cards");
+  });
+
+  it("toggles drag lock state and updates icon and tooltip on click", () => {
+    integrationsQuery.data = [];
+    integrationsQuery.isLoading = false;
+    integrationsQuery.error = null;
+    orderState.orderedIntegrations = [];
+
+    render(<DashboardPage />);
+
+    const lockBtn = screen.getByTestId("drag-lock-toggle");
+
+    expect(screen.getByTestId("icon-lock")).toBeInTheDocument();
+    expect(screen.getByTestId("drag-lock-tooltip")).toHaveTextContent("Unlock to reorder cards");
+
+    fireEvent.click(lockBtn);
+
+    expect(screen.queryByTestId("icon-lock")).not.toBeInTheDocument();
+    expect(screen.getByTestId("icon-unlock")).toBeInTheDocument();
+    expect(lockBtn).toHaveAttribute("aria-label", "Lock card reordering");
+    expect(lockBtn).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("drag-lock-tooltip")).toHaveTextContent("Lock card order");
+
+    fireEvent.click(lockBtn);
+
+    expect(screen.getByTestId("icon-lock")).toBeInTheDocument();
+    expect(lockBtn).toHaveAttribute("aria-label", "Unlock card reordering");
+    expect(lockBtn).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId("drag-lock-tooltip")).toHaveTextContent("Unlock to reorder cards");
+  });
+
+  it("shows edit-mode banner only when unlocked and integrations exist", () => {
+    integrationsQuery.data = [{ id: "int-1", pluginId: "p1" }];
+    integrationsQuery.error = null;
+    integrationsQuery.isLoading = false;
+    pluginsQuery.data = [{ pluginId: "p1" }];
+    pluginsQuery.isLoading = false;
+    mapIntegrationSpy.mockImplementation((raw: unknown) => ({ id: raw.id, pluginId: raw.pluginId, name: "First" }));
+    orderState.orderedIntegrations = [{ id: "int-1", pluginId: "p1", name: "First" }];
+    orderState.draggedCardId = null;
+    orderState.dropTargetCardId = null;
+
+    render(<DashboardPage />);
+
+    expect(screen.queryByTestId("edit-mode-banner")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("drag-lock-toggle"));
+
+    expect(screen.getByTestId("edit-mode-banner")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-grip-vertical")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("drag-lock-toggle"));
+
+    expect(screen.queryByTestId("edit-mode-banner")).not.toBeInTheDocument();
+  });
+
+  it("does not call drag handlers and omits draggable attribute when locked", () => {
+    dragStartSpy.mockClear();
+    dragOverSpy.mockClear();
+    dropSpy.mockClear();
+    dragEndSpy.mockClear();
+
+    integrationsQuery.data = [{ id: "int-1", pluginId: "p1" }];
+    integrationsQuery.error = null;
+    integrationsQuery.isLoading = false;
+    pluginsQuery.data = [{ pluginId: "p1" }];
+    pluginsQuery.isLoading = false;
+    mapIntegrationSpy.mockImplementation((raw: unknown) => ({ id: raw.id, pluginId: raw.pluginId, name: "First" }));
+    orderState.orderedIntegrations = [{ id: "int-1", pluginId: "p1", name: "First" }];
+    orderState.draggedCardId = null;
+    orderState.dropTargetCardId = null;
+
+    render(<DashboardPage />);
+
+    const card = screen.getByTestId("tracker-card");
+    expect(card).not.toHaveAttribute("draggable", "true");
+    expect(card).toHaveAttribute("data-drag-locked");
+    expect(card.className).not.toContain("tracker-card-editing");
+
+    const fakeDataTransfer = { effectAllowed: "", dropEffect: "", setData: vi.fn(), getData: vi.fn(() => "int-1") };
+    fireEvent.dragStart(card, { dataTransfer: fakeDataTransfer });
+    fireEvent.dragOver(card, { dataTransfer: fakeDataTransfer });
+    fireEvent.drop(card, { dataTransfer: fakeDataTransfer });
+    fireEvent.dragEnd(card);
+
+    expect(dragStartSpy).not.toHaveBeenCalled();
+    expect(dragOverSpy).not.toHaveBeenCalled();
+    expect(dropSpy).not.toHaveBeenCalled();
+    expect(dragEndSpy).not.toHaveBeenCalled();
+  });
+
+  it("renders ordered cards and handles drag/drop events when unlocked", () => {
+    dragStartSpy.mockClear();
+    dragOverSpy.mockClear();
+    dropSpy.mockClear();
+    dragEndSpy.mockClear();
+
     integrationsQuery.data = [{ id: "int-1", pluginId: "p1" }, { id: "int-2", pluginId: "p2" }];
     integrationsQuery.error = null;
     integrationsQuery.isLoading = false;
@@ -145,10 +269,14 @@ describe("DashboardPage", () => {
     expect(screen.getByTestId("dashboard-cards-grid")).toBeInTheDocument();
     expect(screen.getAllByTestId("tracker-card")).toHaveLength(2);
     expect(screen.getByText("add-dialog:p1,p2")).toBeInTheDocument();
-    expect(screen.getByLabelText("Move First Tracker up")).toBeDisabled();
-    expect(screen.getByLabelText("Move Second Tracker down")).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId("drag-lock-toggle"));
 
     const card = screen.getAllByTestId("tracker-card")[0];
+    expect(card).toHaveAttribute("draggable", "true");
+    expect(card).not.toHaveAttribute("data-drag-locked");
+    expect(card.className).toContain("tracker-card-editing");
+
     const fakeDataTransfer = {
       effectAllowed: "",
       dropEffect: "",
@@ -161,18 +289,10 @@ describe("DashboardPage", () => {
     fireEvent.drop(card, { dataTransfer: fakeDataTransfer });
     fireEvent.dragEnd(card);
 
-    fireEvent.mouseDown(screen.getByLabelText("Move Second Tracker up"));
-    fireEvent.mouseDown(screen.getByLabelText("Move First Tracker down"));
-    fireEvent.click(screen.getByLabelText("Move Second Tracker up"));
-    fireEvent.click(screen.getByLabelText("Move First Tracker down"));
-
     expect(fakeDataTransfer.setData).toHaveBeenCalledWith("text/plain", "int-1");
     expect(dragStartSpy).toHaveBeenCalledWith("int-1");
     expect(dragOverSpy).toHaveBeenCalled();
     expect(dropSpy).toHaveBeenCalledWith("int-1", "int-1");
     expect(dragEndSpy).toHaveBeenCalled();
-    expect(moveCardSpy).toHaveBeenCalledWith("int-2", -1);
-    expect(moveCardSpy).toHaveBeenCalledWith("int-1", 1);
   });
 });
-

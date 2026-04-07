@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { ArrowDown, ArrowUp, Loader2, AlertCircle } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertCircle, GripVertical, Lock, Loader2, Unlock } from "lucide-react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { TrackerCard } from "@/features/integrations/components/TrackerCard";
 import { StatsOverview } from "@/features/integrations/components/StatsOverview";
@@ -9,6 +9,7 @@ import { useIntegrations, usePlugins } from "@/features/integrations/hooks";
 import { mapIntegration } from "@/features/integrations/types";
 import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const DashboardPage = () => {
   usePageTitle("TrackArr | Dashboard");
@@ -30,8 +31,9 @@ const DashboardPage = () => {
     handleCardDragOver,
     handleCardDrop,
     handleCardDragEnd,
-    moveCard,
   } = useDashboardCardOrder(integrations);
+
+  const [isDragLocked, setIsDragLocked] = useState(true);
 
   const isLoading = intLoading || pluginsLoading;
 
@@ -43,7 +45,28 @@ const DashboardPage = () => {
             <h1 className="font-display text-2xl font-bold">Dashboard</h1>
             <p className="text-sm text-muted-foreground">Monitor your private tracker ratios</p>
           </div>
-          <AddIntegrationDialog addedPluginIds={addedPluginIds} />
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsDragLocked((prev) => !prev)}
+                    aria-label={isDragLocked ? "Unlock card reordering" : "Lock card reordering"}
+                    aria-pressed={!isDragLocked}
+                    data-testid="drag-lock-toggle"
+                  >
+                    {isDragLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent data-testid="drag-lock-tooltip">
+                  {isDragLocked ? "Unlock to reorder cards" : "Lock card order"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <AddIntegrationDialog addedPluginIds={addedPluginIds} />
+          </div>
         </div>
 
         {isLoading && (
@@ -63,85 +86,63 @@ const DashboardPage = () => {
           <>
             <StatsOverview integrations={integrations} />
 
+            {!isDragLocked && integrations.length > 0 && (
+              <div
+                className="flex items-center gap-2.5 rounded-lg border border-primary/25 bg-primary/10 px-4 py-2.5 text-sm text-primary/80"
+                data-testid="edit-mode-banner"
+              >
+                <GripVertical className="h-4 w-4 shrink-0" />
+                <span>Edit mode — drag cards to reorder, then lock to save the layout</span>
+              </div>
+            )}
+
             {integrations.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
                 No integrations yet. Add a tracker to get started.
               </p>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="dashboard-cards-grid">
-                {orderedIntegrations.map((tracker, index) => (
+                {orderedIntegrations.map((tracker) => (
                   <div
                     key={tracker.id}
-                    draggable
+                    draggable={!isDragLocked}
                     data-testid="tracker-card"
                     data-tracker-id={tracker.id}
                     data-plugin-id={tracker.pluginId}
+                    data-drag-locked={isDragLocked || undefined}
                     onDragStart={(event) => {
+                      if (isDragLocked) return;
                       event.dataTransfer.effectAllowed = "move";
                       event.dataTransfer.setData("text/plain", tracker.id);
                       handleCardDragStart(tracker.id);
                     }}
-                    onDragOver={(event) => handleCardDragOver(event, tracker.id)}
+                    onDragOver={(event) => {
+                      if (isDragLocked) return;
+                      handleCardDragOver(event, tracker.id);
+                    }}
                     onDrop={(event) => {
+                      if (isDragLocked) return;
                       event.preventDefault();
                       handleCardDrop(tracker.id, event.dataTransfer.getData("text/plain"));
                     }}
-                    onDragEnd={handleCardDragEnd}
+                    onDragEnd={() => {
+                      if (isDragLocked) return;
+                      handleCardDragEnd();
+                    }}
                     className={[
                       "group relative transition-transform duration-200 ease-out",
-                      draggedCardId === tracker.id
+                      !isDragLocked ? "tracker-card-editing" : "",
+                      !isDragLocked && draggedCardId === tracker.id
                         ? "tracker-card-dragging z-20 cursor-grabbing"
-                        : "cursor-grab",
-                      dropTargetCardId === tracker.id
+                        : !isDragLocked
+                          ? "cursor-grab"
+                          : "cursor-default",
+                      !isDragLocked && dropTargetCardId === tracker.id
                         ? "tracker-card-drop-target"
                         : "",
                     ].join(" ")}
                   >
-                    <TrackerCard
-                      tracker={tracker}
-                      reorderControls={(
-                        <div className="flex items-center gap-1" data-testid="tracker-card-reorder-controls">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            aria-label={`Move ${tracker.name} up`}
-                            data-testid="tracker-card-move-up"
-                            disabled={index === 0}
-                            onMouseDown={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                            }}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              moveCard(tracker.id, -1);
-                            }}
-                          >
-                            <ArrowUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            aria-label={`Move ${tracker.name} down`}
-                            data-testid="tracker-card-move-down"
-                            disabled={index === orderedIntegrations.length - 1}
-                            onMouseDown={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                            }}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              moveCard(tracker.id, 1);
-                            }}
-                          >
-                            <ArrowDown className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    />
+                    <TrackerCard tracker={tracker} />
                   </div>
                 ))}
               </div>

@@ -1,10 +1,8 @@
 import {
   AlertTriangle,
   ExternalLink,
-  GripVertical,
   RefreshCw,
 } from "lucide-react";
-import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricTooltip } from "@/features/integrations/components/shared/MetricTooltip";
@@ -16,7 +14,6 @@ interface TrackerCardShellProps {
   tracker: TrackerIntegration;
   metrics: ReactNode;
   ratio: ReactNode;
-  reorderControls?: ReactNode;
 }
 
 function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" {
@@ -25,7 +22,7 @@ function getStatusBadgeVariant(status: string): "default" | "secondary" | "destr
   return "destructive";
 }
 
-export function TrackerCardShell({ tracker, metrics, ratio, reorderControls }: TrackerCardShellProps) {
+export function TrackerCardShell({ tracker, metrics, ratio }: TrackerCardShellProps) {
   const { actionsDisabled, handleDelete, handleSync, isDeleting, isSyncing } = useTrackerCardActions(tracker);
   const needsConfigurationFix = !tracker.configurationValid;
   const isBelowRequiredRatio =
@@ -44,14 +41,6 @@ export function TrackerCardShell({ tracker, metrics, ratio, reorderControls }: T
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border/60 bg-muted/20 text-muted-foreground"
-              aria-label={`Drag to reorder ${tracker.name}`}
-              title="Drag to reorder"
-            >
-              <GripVertical className="h-4 w-4" />
-            </div>
-            {reorderControls}
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 font-display text-sm font-bold text-primary">
               {tracker.name.substring(0, 2).toUpperCase()}
             </div>

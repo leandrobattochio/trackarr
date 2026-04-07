@@ -80,6 +80,40 @@ Then("the dashboard cards should be ordered as {string}", (expectedOrder: string
     });
 });
 
+When("I unlock card reordering", () => {
+  cy.get('[data-testid="drag-lock-toggle"]').click();
+  cy.get('[data-testid="drag-lock-toggle"]').should("have.attr", "aria-label", "Lock card reordering");
+});
+
+When("I lock card reordering", () => {
+  cy.get('[data-testid="drag-lock-toggle"]').click();
+  cy.get('[data-testid="drag-lock-toggle"]').should("have.attr", "aria-label", "Unlock card reordering");
+});
+
+Then("the edit mode banner should be visible", () => {
+  cy.get('[data-testid="edit-mode-banner"]').should("be.visible");
+});
+
+Then("the edit mode banner should not be visible", () => {
+  cy.get('[data-testid="edit-mode-banner"]').should("not.exist");
+});
+
+Then("the drag lock toggle should be visible and locked", () => {
+  cy.get('[data-testid="drag-lock-toggle"]').should("be.visible");
+  cy.get('[data-testid="drag-lock-toggle"]').should("have.attr", "aria-label", "Unlock card reordering");
+  cy.get('[data-testid="drag-lock-toggle"]').should("have.attr", "aria-pressed", "false");
+});
+
+function dispatchDragSequence(sourceCard: HTMLElement, targetCard: HTMLElement, sourceCardId: string, win: Window) {
+  const dataTransfer = new win.DataTransfer();
+  dataTransfer.setData("text/plain", sourceCardId);
+
+  sourceCard.dispatchEvent(new win.DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer }));
+  targetCard.dispatchEvent(new win.DragEvent("dragover", { bubbles: true, cancelable: true, dataTransfer }));
+  targetCard.dispatchEvent(new win.DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer }));
+  sourceCard.dispatchEvent(new win.DragEvent("dragend", { bubbles: true, cancelable: true, dataTransfer }));
+}
+
 When("I drag the {string} card onto the {string} card", (sourceTitle: string, targetTitle: string) => {
   cy.contains('[data-testid="tracker-card"]', sourceTitle)
     .should("exist")
@@ -103,30 +137,38 @@ When("I drag the {string} card onto the {string} card", (sourceTitle: string, ta
           if (!targetCard)
             throw new Error(`Expected to find target card for ${targetTitle}.`);
 
-          cy.window().then((window) => {
-            const dataTransfer = new window.DataTransfer();
-            dataTransfer.setData("text/plain", sourceCardId);
+          cy.window().then((win) => {
+            dispatchDragSequence(sourceCard, targetCard, sourceCardId, win);
+          });
+        });
+    });
+});
 
-            sourceCard.dispatchEvent(new window.DragEvent("dragstart", {
-              bubbles: true,
-              cancelable: true,
-              dataTransfer,
-            }));
-            targetCard.dispatchEvent(new window.DragEvent("dragover", {
-              bubbles: true,
-              cancelable: true,
-              dataTransfer,
-            }));
-            targetCard.dispatchEvent(new window.DragEvent("drop", {
-              bubbles: true,
-              cancelable: true,
-              dataTransfer,
-            }));
-            sourceCard.dispatchEvent(new window.DragEvent("dragend", {
-              bubbles: true,
-              cancelable: true,
-              dataTransfer,
-            }));
+When("I try to drag the {string} card onto the {string} card while locked", (sourceTitle: string, targetTitle: string) => {
+  cy.get('[data-testid="drag-lock-toggle"]').should("have.attr", "aria-label", "Unlock card reordering");
+
+  cy.contains('[data-testid="tracker-card"]', sourceTitle)
+    .should("exist")
+    .then(($sourceCard) => {
+      const sourceCard = $sourceCard[0];
+
+      if (!sourceCard)
+        throw new Error(`Expected to find source card for ${sourceTitle}.`);
+
+      const sourceCardId = sourceCard.getAttribute("data-tracker-id");
+      if (!sourceCardId)
+        throw new Error(`Expected source card ${sourceTitle} to have a data-tracker-id attribute.`);
+
+      cy.contains('[data-testid="tracker-card"]', targetTitle)
+        .should("exist")
+        .then(($targetCard) => {
+          const targetCard = $targetCard[0];
+
+          if (!targetCard)
+            throw new Error(`Expected to find target card for ${targetTitle}.`);
+
+          cy.window().then((win) => {
+            dispatchDragSequence(sourceCard, targetCard, sourceCardId, win);
           });
         });
     });

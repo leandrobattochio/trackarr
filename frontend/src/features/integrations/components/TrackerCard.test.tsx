@@ -2,10 +2,9 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/features/integrations/plugins", () => ({
-  PluginTrackerCard: ({ tracker, reorderControls }: unknown) => (
+  PluginTrackerCard: ({ tracker }: unknown) => (
     <div data-testid="plugin-tracker-card">
       <span>{tracker.name}</span>
-      {reorderControls}
     </div>
   ),
 }));
@@ -44,17 +43,10 @@ function buildTracker(): TrackerIntegration {
 }
 
 describe("TrackerCard", () => {
-  it("forwards tracker and reorder controls to plugin card", () => {
-    render(
-      <TrackerCard
-        tracker={buildTracker()}
-        reorderControls={<span>reorder</span>}
-      />,
-    );
+  it("forwards tracker to plugin card", () => {
+    render(<TrackerCard tracker={buildTracker()} />);
 
     expect(screen.getByTestId("plugin-tracker-card")).toBeInTheDocument();
     expect(screen.getByText("Seedpool")).toBeInTheDocument();
-    expect(screen.getByText("reorder")).toBeInTheDocument();
   });
 });
-

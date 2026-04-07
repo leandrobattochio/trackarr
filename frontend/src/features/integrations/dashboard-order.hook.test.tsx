@@ -108,13 +108,6 @@ describe("useDashboardCardOrder", () => {
       result.current.handleCardDrop("beta", undefined);
     });
 
-    // Move boundaries and unknown ids.
-    act(() => {
-      result.current.moveCard("beta", -1);
-      result.current.moveCard("beta", 1);
-      result.current.moveCard("missing", 1);
-    });
-
     act(() => {
       result.current.handleCardDragEnd();
     });
@@ -163,7 +156,7 @@ describe("useDashboardCardOrder", () => {
     );
 
     act(() => {
-      result.current.moveCard("alpha", 1);
+      result.current.handleCardDrop("beta", "alpha");
     });
 
     return waitFor(() => {

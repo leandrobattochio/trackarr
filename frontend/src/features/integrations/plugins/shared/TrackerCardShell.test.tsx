@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("lucide-react", () => ({
   AlertTriangle: () => <svg data-testid="icon-alert-triangle" />,
   ExternalLink: () => <svg data-testid="icon-external-link" />,
-  GripVertical: () => <svg data-testid="icon-grip" />,
   RefreshCw: () => <svg data-testid="icon-refresh" />,
 }));
 
@@ -86,14 +85,12 @@ describe("TrackerCardShell", () => {
         tracker={buildTracker()}
         ratio={<div>ratio-slot</div>}
         metrics={<div>metrics-slot</div>}
-        reorderControls={<span>reorder-controls</span>}
       />,
     );
 
     expect(screen.getByText("Seedpool")).toBeInTheDocument();
     expect(screen.getByText("ratio-slot")).toBeInTheDocument();
     expect(screen.getByText("metrics-slot")).toBeInTheDocument();
-    expect(screen.getByText("reorder-controls")).toBeInTheDocument();
     expect(screen.getByTestId("badge")).toHaveAttribute("data-variant", "default");
     expect(screen.getByLabelText("Open Seedpool")).toHaveAttribute("href", "https://seedpool.org");
 

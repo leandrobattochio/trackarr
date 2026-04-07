@@ -7,11 +7,10 @@ vi.mock("lucide-react", () => ({
 }));
 
 vi.mock("@/features/integrations/plugins/shared/TrackerCardShell", () => ({
-  TrackerCardShell: ({ ratio, metrics, reorderControls }: unknown) => (
+  TrackerCardShell: ({ ratio, metrics }: unknown) => (
     <div data-testid="tracker-card-shell">
       <div data-testid="ratio-slot">{ratio}</div>
       <div data-testid="metrics-slot">{metrics}</div>
-      <div>{reorderControls}</div>
     </div>
   ),
 }));
@@ -55,18 +54,12 @@ const baseTracker: TrackerIntegration = {
 
 describe("MissingPluginTrackerCard", () => {
   it("renders fallback message with default missing plugin text", () => {
-    render(
-      <MissingPluginTrackerCard
-        tracker={baseTracker}
-        reorderControls={<span>reorder-controls</span>}
-      />,
-    );
+    render(<MissingPluginTrackerCard tracker={baseTracker} />);
 
     expect(screen.getByTestId("tracker-card-shell")).toBeInTheDocument();
     expect(screen.getByTestId("ratio-threshold-card")).toHaveTextContent("ratio:0.8-required:1");
     expect(screen.getByText("Plugin definition unavailable")).toBeInTheDocument();
     expect(screen.getByText("Plugin 'missing-plugin' was not found.")).toBeInTheDocument();
-    expect(screen.getByText("reorder-controls")).toBeInTheDocument();
   });
 
   it("renders explicit configuration error when available", () => {
@@ -79,4 +72,3 @@ describe("MissingPluginTrackerCard", () => {
     expect(screen.getByText("Plugin dashboard metrics removed")).toBeInTheDocument();
   });
 });
-

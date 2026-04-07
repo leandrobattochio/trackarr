@@ -134,22 +134,6 @@ export function useDashboardCardOrder(integrations: TrackerIntegration[]) {
     setDropTargetCardId(null);
   }
 
-  function moveCard(cardId: string, direction: -1 | 1) {
-    setCardOrder((currentOrder) => {
-      const normalizedOrder = normalizeDashboardCardOrder(integrations, currentOrder);
-      const currentIndex = normalizedOrder.indexOf(cardId);
-      const targetIndex = currentIndex + direction;
-
-      if (currentIndex === -1 || targetIndex < 0 || targetIndex >= normalizedOrder.length)
-        return normalizedOrder;
-
-      const nextOrder = [...normalizedOrder];
-      const [movedCardId] = nextOrder.splice(currentIndex, 1);
-      nextOrder.splice(targetIndex, 0, movedCardId);
-      return nextOrder;
-    });
-  }
-
   return {
     orderedIntegrations,
     draggedCardId,
@@ -158,6 +142,5 @@ export function useDashboardCardOrder(integrations: TrackerIntegration[]) {
     handleCardDragOver,
     handleCardDrop,
     handleCardDragEnd,
-    moveCard,
   };
 }
