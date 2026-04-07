@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AlertCircle, GripVertical, Lock, Loader2, Unlock } from "lucide-react";
+import { AlertCircle, Lock, Loader2, Unlock } from "lucide-react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { TrackerCard } from "@/features/integrations/components/TrackerCard";
 import { StatsOverview } from "@/features/integrations/components/StatsOverview";
@@ -43,7 +43,9 @@ const DashboardPage = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold">Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Monitor your private tracker ratios</p>
+            <p className="text-sm text-muted-foreground" data-testid="dashboard-subtitle">
+              {isDragLocked ? "Monitor your private tracker ratios" : "Edit mode — drag cards to reorder"}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <TooltipProvider>
@@ -86,22 +88,18 @@ const DashboardPage = () => {
           <>
             <StatsOverview integrations={integrations} />
 
-            {!isDragLocked && integrations.length > 0 && (
-              <div
-                className="flex items-center gap-2.5 rounded-lg border border-primary/25 bg-primary/10 px-4 py-2.5 text-sm text-primary/80"
-                data-testid="edit-mode-banner"
-              >
-                <GripVertical className="h-4 w-4 shrink-0" />
-                <span>Edit mode — drag cards to reorder, then lock to save the layout</span>
-              </div>
-            )}
-
             {integrations.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
                 No integrations yet. Add a tracker to get started.
               </p>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="dashboard-cards-grid">
+              <div
+                className={[
+                  "grid gap-4 md:grid-cols-2 xl:grid-cols-3 rounded-xl transition-[box-shadow,padding] duration-200",
+                  !isDragLocked ? "ring-1 ring-primary/35 p-3" : "",
+                ].join(" ")}
+                data-testid="dashboard-cards-grid"
+              >
                 {orderedIntegrations.map((tracker) => (
                   <div
                     key={tracker.id}
@@ -131,7 +129,6 @@ const DashboardPage = () => {
                     }}
                     className={[
                       "group relative transition-transform duration-200 ease-out",
-                      !isDragLocked ? "tracker-card-editing" : "",
                       !isDragLocked && draggedCardId === tracker.id
                         ? "tracker-card-dragging z-20 cursor-grabbing"
                         : !isDragLocked

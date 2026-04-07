@@ -31,7 +31,6 @@ const orderState = {
 
 vi.mock("lucide-react", () => ({
   AlertCircle: () => <svg data-testid="icon-alert-circle" />,
-  GripVertical: () => <svg data-testid="icon-grip-vertical" />,
   Lock: () => <svg data-testid="icon-lock" />,
   Loader2: () => <svg data-testid="icon-loader" />,
   Unlock: () => <svg data-testid="icon-unlock" />,
@@ -179,29 +178,24 @@ describe("DashboardPage", () => {
     expect(screen.getByTestId("drag-lock-tooltip")).toHaveTextContent("Unlock to reorder cards");
   });
 
-  it("shows edit-mode banner only when unlocked and integrations exist", () => {
-    integrationsQuery.data = [{ id: "int-1", pluginId: "p1" }];
-    integrationsQuery.error = null;
+  it("updates subtitle text to reflect edit mode without layout shift", () => {
+    integrationsQuery.data = [];
     integrationsQuery.isLoading = false;
-    pluginsQuery.data = [{ pluginId: "p1" }];
-    pluginsQuery.isLoading = false;
-    mapIntegrationSpy.mockImplementation((raw: unknown) => ({ id: raw.id, pluginId: raw.pluginId, name: "First" }));
-    orderState.orderedIntegrations = [{ id: "int-1", pluginId: "p1", name: "First" }];
-    orderState.draggedCardId = null;
-    orderState.dropTargetCardId = null;
+    integrationsQuery.error = null;
+    orderState.orderedIntegrations = [];
 
     render(<DashboardPage />);
 
-    expect(screen.queryByTestId("edit-mode-banner")).not.toBeInTheDocument();
+    const subtitle = screen.getByTestId("dashboard-subtitle");
+    expect(subtitle).toHaveTextContent("Monitor your private tracker ratios");
 
     fireEvent.click(screen.getByTestId("drag-lock-toggle"));
 
-    expect(screen.getByTestId("edit-mode-banner")).toBeInTheDocument();
-    expect(screen.getByTestId("icon-grip-vertical")).toBeInTheDocument();
+    expect(subtitle).toHaveTextContent("Edit mode — drag cards to reorder");
 
     fireEvent.click(screen.getByTestId("drag-lock-toggle"));
 
-    expect(screen.queryByTestId("edit-mode-banner")).not.toBeInTheDocument();
+    expect(subtitle).toHaveTextContent("Monitor your private tracker ratios");
   });
 
   it("does not call drag handlers and omits draggable attribute when locked", () => {
@@ -225,7 +219,6 @@ describe("DashboardPage", () => {
     const card = screen.getByTestId("tracker-card");
     expect(card).not.toHaveAttribute("draggable", "true");
     expect(card).toHaveAttribute("data-drag-locked");
-    expect(card.className).not.toContain("tracker-card-editing");
 
     const fakeDataTransfer = { effectAllowed: "", dropEffect: "", setData: vi.fn(), getData: vi.fn(() => "int-1") };
     fireEvent.dragStart(card, { dataTransfer: fakeDataTransfer });
@@ -275,7 +268,9 @@ describe("DashboardPage", () => {
     const card = screen.getAllByTestId("tracker-card")[0];
     expect(card).toHaveAttribute("draggable", "true");
     expect(card).not.toHaveAttribute("data-drag-locked");
-    expect(card.className).toContain("tracker-card-editing");
+
+    const grid = screen.getByTestId("dashboard-cards-grid");
+    expect(grid.className).toContain("ring-1");
 
     const fakeDataTransfer = {
       effectAllowed: "",

@@ -31,17 +31,16 @@ Feature: Dashboard integrations
     And I have multiple integrations on the dashboard
     When I open the dashboard
     Then the drag lock toggle should be visible and locked
-    And the edit mode banner should not be visible
 
-  Scenario: Edit mode banner appears when unlocked and disappears when locked
+  Scenario: Subtitle reflects edit mode when unlocked and reverts when locked
     Given I reset existing integrations
     And I have multiple integrations on the dashboard
     When I open the dashboard
-    Then the edit mode banner should not be visible
+    Then the dashboard subtitle should read "Monitor your private tracker ratios"
     When I unlock card reordering
-    Then the edit mode banner should be visible
+    Then the dashboard subtitle should read "Edit mode — drag cards to reorder"
     When I lock card reordering
-    Then the edit mode banner should not be visible
+    Then the dashboard subtitle should read "Monitor your private tracker ratios"
 
   Scenario: Cards cannot be reordered when locked
     Given I reset existing integrations

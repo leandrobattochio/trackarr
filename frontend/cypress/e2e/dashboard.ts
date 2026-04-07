@@ -90,12 +90,8 @@ When("I lock card reordering", () => {
   cy.get('[data-testid="drag-lock-toggle"]').should("have.attr", "aria-label", "Unlock card reordering");
 });
 
-Then("the edit mode banner should be visible", () => {
-  cy.get('[data-testid="edit-mode-banner"]').should("be.visible");
-});
-
-Then("the edit mode banner should not be visible", () => {
-  cy.get('[data-testid="edit-mode-banner"]').should("not.exist");
+Then("the dashboard subtitle should read {string}", (expectedText: string) => {
+  cy.get('[data-testid="dashboard-subtitle"]').should("have.text", expectedText);
 });
 
 Then("the drag lock toggle should be visible and locked", () => {

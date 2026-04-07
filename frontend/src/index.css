@@ -102,10 +102,6 @@
       hsl(var(--card));
   }
 
-  .tracker-card-editing > * {
-    border-color: hsl(var(--primary) / 0.35);
-    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.15), 0 0 14px -4px hsl(var(--primary) / 0.1);
-  }
 }
 
 @layer base {
