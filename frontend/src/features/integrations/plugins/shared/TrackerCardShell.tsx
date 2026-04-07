@@ -66,10 +66,10 @@ export function TrackerCardShell({ tracker, metrics, ratio, reorderControls }: T
                   >
                     <button
                       type="button"
-                      className="group inline-flex cursor-default items-center justify-center rounded-full border border-warning/30 bg-warning/10 p-1 text-warning transition-all duration-200 hover:border-warning/50 hover:bg-warning/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      className="inline-flex cursor-default items-center justify-center rounded-full border border-warning/30 bg-warning/10 p-1 text-warning focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       aria-label="Ratio warning details"
                     >
-                      <AlertTriangle className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-y-0.5" />
+                      <AlertTriangle className="h-3.5 w-3.5" />
                     </button>
                   </MetricTooltip>
                 )}

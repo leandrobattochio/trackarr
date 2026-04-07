@@ -57,10 +57,10 @@ function FooterStatusChip({
     >
       <button
         type="button"
-        className="group inline-flex cursor-default items-center gap-1.5 rounded-full border border-border/50 bg-muted/35 px-2.5 py-1 transition-all duration-200 hover:border-border/80 hover:bg-background/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="inline-flex cursor-default items-center gap-1.5 rounded-full border border-border/50 bg-muted/35 px-2.5 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         aria-label={label}
       >
-        <Icon className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 ${iconClassName}`} aria-hidden="true" />
+        <Icon className={`h-3.5 w-3.5 shrink-0 ${iconClassName}`} aria-hidden="true" />
         <span className="font-medium text-foreground">{value ?? "--"}</span>
         <span className="text-muted-foreground">{label.toLowerCase()}</span>
       </button>

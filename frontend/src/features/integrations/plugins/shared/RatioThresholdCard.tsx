@@ -71,10 +71,10 @@ export function RatioThresholdCard({ ratio, requiredRatio }: RatioThresholdCardP
             >
               <button
                 type="button"
-                className={`group inline-flex cursor-default rounded-full border border-transparent px-3 py-1 transition-all duration-200 hover:border-border/70 hover:bg-background/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${ratio !== null ? getRatioColor(ratio) : "text-muted-foreground"}`}
+                className={`inline-flex cursor-default rounded-full border border-transparent px-3 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${ratio !== null ? getRatioColor(ratio) : "text-muted-foreground"}`}
                 aria-label="Current ratio details"
               >
-                <span className="font-display text-4xl font-bold transition-transform duration-200 group-hover:-translate-y-0.5">
+                <span className="font-display text-4xl font-bold">
                   {ratio !== null ? animatedRatio.toFixed(2) : "--"}
                 </span>
               </button>

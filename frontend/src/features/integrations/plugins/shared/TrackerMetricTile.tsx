@@ -27,10 +27,10 @@ export function TrackerMetricTile({ label, icon: Icon, iconClassName, value }: T
         >
           <button
             type="button"
-            className="group inline-flex cursor-default rounded-full border border-transparent p-1.5 transition-all duration-200 hover:border-border/80 hover:bg-background/70 hover:shadow-[0_0_0_1px_hsl(var(--border)/0.35),0_10px_30px_hsl(var(--background)/0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="inline-flex cursor-default rounded-full border border-transparent p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label={label}
           >
-            <Icon className={`h-5 w-5 shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 ${iconClassName}`} aria-hidden="true" />
+            <Icon className={`h-5 w-5 shrink-0 ${iconClassName}`} aria-hidden="true" />
             <span className="sr-only">{label}</span>
           </button>
         </MetricTooltip>
