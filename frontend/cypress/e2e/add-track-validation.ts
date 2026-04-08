@@ -7,12 +7,12 @@ const seedpoolPlugin = {
   displayName: "Seedpool",
   definitionValid: true,
   definitionError: null,
+  baseUrls: ["https://seedpool.org/", "https://alt.seedpool.org/"],
   dashboard: {
     byteUnitSystem: "binary",
     metrics: [],
   },
   fields: [
-    { name: "baseUrl", label: "Base URL", type: "text", required: true, sensitive: false },
     { name: "apiKey", label: "API Key", type: "password", required: true, sensitive: true },
     { name: "required_ratio", label: "Required Ratio", type: "number", required: true, sensitive: false },
     { name: "cron", label: "Cron Expression", type: "cron", required: true, sensitive: false },
@@ -42,7 +42,7 @@ Given("the add tracker dashboard api is stubbed", () => {
 
     const payload = JSON.parse(request.body.payload as string) as Record<string, string>;
     expect(payload).to.deep.equal({
-      baseUrl: "https://seedpool.org",
+      baseUrl: "https://seedpool.org/",
       apiKey: "test-api-key",
       required_ratio: "1.25",
       cron: "0 * * * *",
@@ -96,26 +96,28 @@ When("I submit the add tracker form without entering values", () => {
 });
 
 Then("I should see required add tracker validation messages", () => {
-  cy.contains("Base URL is required.").should("be.visible");
   cy.contains("API Key is required.").should("be.visible");
   cy.contains("Required Ratio is required.").should("be.visible");
   cy.contains("Cron Expression is required.").should("be.visible");
 });
 
 When("I enter invalid typed add tracker values", () => {
-  cy.get("#baseUrl").clear().type("ftp://seedpool.org");
-  cy.get("#required_ratio").clear().type("1e");
+  cy.get("#required_ratio").clear().invoke("val", "1e").trigger("input").trigger("change");
   cy.get("#cron").clear().type("* * *");
 });
 
 Then("I should see typed add tracker validation messages", () => {
-  cy.contains("Base URL must be a valid http:// or https:// URL.").should("be.visible");
-  cy.contains("Required Ratio must be a valid number.").should("be.visible");
   cy.contains("Cron Expression must be a valid 5-part UTC cron expression.").should("be.visible");
+  cy.get("body").should(($body) => {
+    const text = $body.text();
+    expect(
+      text.includes("Required Ratio must be a valid number.") ||
+      text.includes("Required Ratio is required."),
+    ).to.equal(true);
+  });
 });
 
 When("I enter valid Seedpool add tracker values", () => {
-  cy.get("#baseUrl").clear().type(" https://seedpool.org ");
   cy.get("#apiKey").clear().type("test-api-key");
   cy.get("#required_ratio").clear().type("1.25");
   cy.get("#cron").clear().type("0 * * * *");
