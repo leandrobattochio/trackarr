@@ -54,6 +54,37 @@ public sealed class IntegrationConfigurationValidator(ITrackerPluginRegistry reg
             }
         }
 
+        foreach (var field in plugin.Fields.Where(field => string.Equals(field.Type, "cron", StringComparison.OrdinalIgnoreCase)))
+        {
+            var rawValue = payload.GetValueOrDefault(field.Name);
+            if (string.IsNullOrWhiteSpace(rawValue))
+                continue;
+
+            if (!IsValidCronExpression(rawValue))
+            {
+                return new IntegrationConfigurationValidationResult(
+                    false,
+                    $"Field '{field.Name}' must be a valid 5-part UTC cron expression.",
+                    plugin);
+            }
+        }
+
+        foreach (var field in plugin.Fields.Where(field => string.Equals(field.Name, "baseUrl", StringComparison.OrdinalIgnoreCase)))
+        {
+            var rawValue = payload.GetValueOrDefault(field.Name);
+            if (string.IsNullOrWhiteSpace(rawValue))
+                continue;
+
+            if (!Uri.TryCreate(rawValue, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                return new IntegrationConfigurationValidationResult(
+                    false,
+                    $"Field '{field.Name}' must be a valid http:// or https:// URL.",
+                    plugin);
+            }
+        }
+
         try
         {
             var configuredPlugin = registry.CreateById(pluginId, new PluginConfiguration(payload))
@@ -68,6 +99,16 @@ public sealed class IntegrationConfigurationValidator(ITrackerPluginRegistry reg
         }
 
         return new IntegrationConfigurationValidationResult(true, null, plugin);
+    }
+
+    private static bool IsValidCronExpression(string value)
+    {
+        var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return parts.Length == 5 &&
+               parts.All(part => part.All(character =>
+                   char.IsDigit(character) ||
+                   character is '*' or '/' or ',' or '-'));
     }
 }
 

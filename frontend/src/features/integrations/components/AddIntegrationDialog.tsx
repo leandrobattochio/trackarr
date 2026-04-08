@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import { useState, type FormEvent } from "react";
 import { Plus, Check, ChevronLeft, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,13 @@ import {
 } from "@/components/ui/dialog";
 import { usePlugins, useCreateIntegration } from "@/features/integrations/hooks";
 import type { ApiPlugin, ApiPluginField } from "@/features/integrations/types";
+import {
+  getAllFields,
+  normalizeFieldValue,
+  normalizeIntegrationFieldValues,
+  validateFieldValue,
+  validateIntegrationFields,
+} from "@/features/integrations/components/add-integration-validation";
 import { useDebounce } from "@/shared/hooks/use-debounce";
 import { toast } from "sonner";
 
@@ -42,6 +49,8 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
   const [open, setOpen] = useState(false);
   const [selectedPlugin, setSelectedPlugin] = useState<ApiPlugin | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const debouncedSearch = useDebounce(search, 250);
@@ -59,11 +68,15 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
   function handleSelectPlugin(plugin: ApiPlugin) {
     setSelectedPlugin(plugin);
     setFieldValues(Object.fromEntries(getAllFields(plugin).map((f) => [f.name, ""])));
+    setFieldErrors({});
+    setSubmitError(null);
   }
 
   function handleBack() {
     setSelectedPlugin(null);
     setFieldValues({});
+    setFieldErrors({});
+    setSubmitError(null);
   }
 
   function handleSubmit(e: FormEvent) {
@@ -71,16 +84,30 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
     /* c8 ignore next */
     if (!selectedPlugin) return;
 
+    const normalizedFieldValues = normalizeIntegrationFieldValues(selectedPlugin, fieldValues);
+    const nextFieldErrors = validateIntegrationFields(selectedPlugin, normalizedFieldValues);
+    setFieldValues(normalizedFieldValues);
+    setFieldErrors(nextFieldErrors);
+    setSubmitError(null);
+
+    if (Object.keys(nextFieldErrors).length > 0)
+      return;
+
     createIntegration(
-      { pluginId: selectedPlugin.pluginId, payload: JSON.stringify(fieldValues) },
+      { pluginId: selectedPlugin.pluginId, payload: JSON.stringify(normalizedFieldValues) },
       {
         onSuccess: () => {
           toast.success(`${selectedPlugin.displayName} integration added`);
           setOpen(false);
           setSelectedPlugin(null);
           setFieldValues({});
+          setFieldErrors({});
+          setSubmitError(null);
         },
-        onError: (err) => toast.error(err.message),
+        onError: (err) => {
+          setSubmitError(err.message);
+          toast.error(err.message);
+        },
       },
     );
   }
@@ -90,6 +117,8 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
     if (!value) {
       setSelectedPlugin(null);
       setFieldValues({});
+      setFieldErrors({});
+      setSubmitError(null);
       setSearch("");
     }
   }
@@ -169,18 +198,49 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
               <DialogDescription>Enter your credentials to connect this tracker.</DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            <form onSubmit={handleSubmit} className="space-y-4 pt-2" noValidate>
+              {submitError && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert">
+                  {submitError}
+                </div>
+              )}
               <FieldSection
                 title="Connection"
                 fields={selectedPlugin.fields}
                 fieldValues={fieldValues}
-                onChange={setFieldValues}
+                fieldErrors={fieldErrors}
+                onChange={(field, value) => {
+                  setSubmitError(null);
+                  setFieldValues((prev) => ({ ...prev, [field.name]: value }));
+                  setFieldErrors((prev) => {
+                    const nextError = validateFieldValue(field, normalizeFieldValue(field, value));
+                    if (!nextError) {
+                      const { [field.name]: _removed, ...rest } = prev;
+                      return rest;
+                    }
+
+                    return { ...prev, [field.name]: nextError };
+                  });
+                }}
               />
               <FieldSection
                 title="Custom Fields"
                 fields={selectedPlugin.customFields}
                 fieldValues={fieldValues}
-                onChange={setFieldValues}
+                fieldErrors={fieldErrors}
+                onChange={(field, value) => {
+                  setSubmitError(null);
+                  setFieldValues((prev) => ({ ...prev, [field.name]: value }));
+                  setFieldErrors((prev) => {
+                    const nextError = validateFieldValue(field, normalizeFieldValue(field, value));
+                    if (!nextError) {
+                      const { [field.name]: _removed, ...rest } = prev;
+                      return rest;
+                    }
+
+                    return { ...prev, [field.name]: nextError };
+                  });
+                }}
               />
 
               <Button type="submit" className="w-full" disabled={isCreating}>
@@ -195,18 +255,15 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
   );
 }
 
-function getAllFields(plugin: ApiPlugin) {
-  return [...plugin.fields, ...plugin.customFields];
-}
-
 interface FieldSectionProps {
   title: string;
   fields: ApiPluginField[];
   fieldValues: Record<string, string>;
-  onChange: Dispatch<SetStateAction<Record<string, string>>>;
+  fieldErrors: Record<string, string>;
+  onChange: (field: ApiPluginField, value: string) => void;
 }
 
-function FieldSection({ title, fields, fieldValues, onChange }: FieldSectionProps) {
+function FieldSection({ title, fields, fieldValues, fieldErrors, onChange }: FieldSectionProps) {
   if (fields.length === 0) return null;
 
   return (
@@ -221,16 +278,21 @@ function FieldSection({ title, fields, fieldValues, onChange }: FieldSectionProp
           <Input
             id={field.name}
             type={getInputType(field.type, field.sensitive)}
-            required={field.required}
             /* c8 ignore next */
             value={fieldValues[field.name] ?? ""}
             placeholder={getFieldPlaceholder(field.type)}
             autoComplete="off"
             step={field.type === "number" ? "any" : undefined}
-            onChange={(e) =>
-              onChange((prev) => ({ ...prev, [field.name]: e.target.value }))
-            }
+            aria-invalid={fieldErrors[field.name] ? "true" : "false"}
+            aria-describedby={fieldErrors[field.name] ? `${field.name}-error` : undefined}
+            onChange={(e) => onChange(field, e.target.value)}
+            className={fieldErrors[field.name] ? "border-destructive focus-visible:ring-destructive" : undefined}
           />
+          {fieldErrors[field.name] && (
+            <p id={`${field.name}-error`} className="text-xs text-destructive">
+              {fieldErrors[field.name]}
+            </p>
+          )}
           {getFieldHelpText(field.type) && (
             <p className="text-xs text-muted-foreground">{getFieldHelpText(field.type)}</p>
           )}

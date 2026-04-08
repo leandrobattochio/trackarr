@@ -80,6 +80,19 @@ public class IntegrationsControllerTests
     }
 
     [Fact]
+    public async Task Create_should_return_bad_request_when_payload_is_missing()
+    {
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin"));
+        var controller = CreateController(registry: registry);
+
+        var result = await controller.Create(new CreateIntegrationRequest("plugin", ""), CancellationToken.None);
+
+        var badRequest = result.ShouldBeOfType<BadRequestObjectResult>();
+        TestHttp.ToJson(badRequest.Value).GetProperty("error").GetString().ShouldBe("Payload is required.");
+    }
+
+    [Fact]
     public async Task Create_should_return_bad_request_when_configuration_is_invalid()
     {
         var registry = new FakeTrackerPluginRegistry();
@@ -169,6 +182,27 @@ public class IntegrationsControllerTests
 
         var badRequest = result.ShouldBeOfType<BadRequestObjectResult>();
         TestHttp.ToJson(badRequest.Value).GetProperty("error").GetString().ShouldBe("Plugin 'plugin' not found.");
+    }
+
+    [Fact]
+    public async Task Update_should_return_bad_request_when_payload_is_missing()
+    {
+        var integrationId = Guid.NewGuid();
+        var repository = new InMemoryIntegrationRepository();
+        repository.Seed(new Integration
+        {
+            Id = integrationId,
+            PluginId = "plugin",
+            Payload = """{"required_ratio":"1.0"}"""
+        });
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin"));
+        var controller = CreateController(repository: repository, registry: registry);
+
+        var result = await controller.Update(integrationId, new UpdateIntegrationRequest("plugin", ""), CancellationToken.None);
+
+        var badRequest = result.ShouldBeOfType<BadRequestObjectResult>();
+        TestHttp.ToJson(badRequest.Value).GetProperty("error").GetString().ShouldBe("Payload is required.");
     }
 
     [Fact]
@@ -387,6 +421,8 @@ public class IntegrationsControllerTests
             new FakeTrackerPluginHttpClientFactory(),
             validator,
             new ListLogger<IntegrationSyncService>());
+        var createValidator = new CreateIntegrationRequestValidator(registry, validator);
+        var updateValidator = new UpdateIntegrationRequestValidator(registry, validator);
 
         return new IntegrationsController(
             repository,
@@ -395,7 +431,9 @@ public class IntegrationsControllerTests
             new FakeTrackerPluginHttpClientFactory(),
             validator,
             syncService,
-            scheduler.Scheduler);
+            scheduler.Scheduler,
+            createValidator,
+            updateValidator);
     }
 
     private static FakeSchedulerBundle CreateScheduler()

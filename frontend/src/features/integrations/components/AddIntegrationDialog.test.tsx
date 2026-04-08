@@ -76,8 +76,9 @@ const plugin = {
   pluginId: "seedpool",
   displayName: "Seedpool",
   fields: [
+    { name: "baseUrl", label: "Base URL", type: "text", required: true, sensitive: false },
     { name: "cron", label: "Cron", type: "cron", required: true, sensitive: false },
-    { name: "requiredRatio", label: "Required Ratio", type: "number", required: false, sensitive: false },
+    { name: "required_ratio", label: "Required Ratio", type: "number", required: true, sensitive: false },
     { name: "username", label: "Username", type: "text", required: true, sensitive: false },
     { name: "password", label: "Password", type: "password", required: true, sensitive: true },
     { name: "plainPassword", label: "Plain Password", type: "password", required: false, sensitive: false },
@@ -88,6 +89,32 @@ const plugin = {
 };
 
 describe("AddIntegrationDialog", () => {
+  it("validates required and typed fields before submit", () => {
+    pluginsState.data = [plugin];
+    pluginsState.isLoading = false;
+    createMutation.isPending = false;
+    createMutation.mutate.mockReset();
+
+    render(<AddIntegrationDialog addedPluginIds={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: /Seedpool/i }));
+
+    const form = screen.getByRole("button", { name: /Connect/i }).closest("form") as HTMLFormElement;
+    fireEvent.submit(form);
+
+    expect(createMutation.mutate).not.toHaveBeenCalled();
+    expect(screen.getByText("Base URL is required.")).toBeInTheDocument();
+    expect(screen.getByText("Required Ratio is required.")).toBeInTheDocument();
+    expect(screen.getByText("Cron is required.")).toBeInTheDocument();
+    expect(screen.getByText("Username is required.")).toBeInTheDocument();
+    expect(screen.getByText("Password is required.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Base URL/i), { target: { value: "ftp://seedpool.org" } });
+    fireEvent.change(screen.getByLabelText(/Cron/i), { target: { value: "* * *" } });
+
+    expect(screen.getByText("Base URL must be a valid http:// or https:// URL.")).toBeInTheDocument();
+    expect(screen.getByText("Cron must be a valid 5-part UTC cron expression.")).toBeInTheDocument();
+  });
+
   it("renders loading and empty search states", () => {
     pluginsState.data = [];
     pluginsState.isLoading = true;
@@ -100,6 +127,22 @@ describe("AddIntegrationDialog", () => {
 
     fireEvent.change(screen.getByPlaceholderText(/Search trackers/i), { target: { value: "none" } });
     expect(screen.getByText('No trackers match "none"')).toBeInTheDocument();
+  });
+
+  it("shows validation errors for invalid custom fields", () => {
+    pluginsState.data = [
+      {
+        ...plugin,
+        customFields: [{ name: "customCron", label: "Custom Cron", type: "cron", required: true, sensitive: false }],
+      },
+    ];
+    pluginsState.isLoading = false;
+
+    render(<AddIntegrationDialog addedPluginIds={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: /Seedpool/i }));
+    fireEvent.change(screen.getByLabelText(/Custom Cron/i), { target: { value: "* * *" } });
+
+    expect(screen.getByText("Custom Cron must be a valid 5-part UTC cron expression.")).toBeInTheDocument();
   });
 
   it("filters plugins, marks added plugin, and handles back navigation", () => {
@@ -127,12 +170,14 @@ describe("AddIntegrationDialog", () => {
   it("submits integration create success and error flows, then resets on close", () => {
     pluginsState.data = [plugin];
     createMutation.isPending = false;
+    createMutation.mutate.mockReset();
     createMutation.mutate.mockImplementationOnce((_dto: unknown, options: unknown) => options.onSuccess());
     createMutation.mutate.mockImplementationOnce((_dto: unknown, options: unknown) => options.onError(new Error("create failed")));
 
     render(<AddIntegrationDialog addedPluginIds={[]} />);
     fireEvent.click(screen.getByRole("button", { name: /Seedpool/i }));
 
+    const baseUrlInput = screen.getByLabelText(/Base URL/i);
     const cronInput = screen.getByLabelText(/Cron/i);
     const ratioInput = screen.getByLabelText(/Required Ratio/i);
     const usernameInput = screen.getByLabelText(/Username/i);
@@ -140,6 +185,7 @@ describe("AddIntegrationDialog", () => {
     const plainPasswordInput = screen.getByLabelText(/Plain Password/i);
     const passkeyInput = screen.getByLabelText(/Passkey/i);
 
+    expect(baseUrlInput).toHaveAttribute("type", "text");
     expect(cronInput).toHaveAttribute("placeholder", "0 * * * *");
     expect(ratioInput).toHaveAttribute("type", "number");
     expect(ratioInput).toHaveAttribute("step", "any");
@@ -149,6 +195,7 @@ describe("AddIntegrationDialog", () => {
     expect(passkeyInput).toHaveAttribute("type", "password");
     expect(screen.getByText("Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.")).toBeInTheDocument();
 
+    fireEvent.change(baseUrlInput, { target: { value: " https://seedpool.org " } });
     fireEvent.change(cronInput, { target: { value: "0 * * * *" } });
     fireEvent.change(ratioInput, { target: { value: "1.5" } });
     fireEvent.change(usernameInput, { target: { value: "seed-user" } });
@@ -162,8 +209,9 @@ describe("AddIntegrationDialog", () => {
       {
         pluginId: "seedpool",
         payload: JSON.stringify({
+          baseUrl: "https://seedpool.org",
           cron: "0 * * * *",
-          requiredRatio: "1.5",
+          required_ratio: "1.5",
           username: "seed-user",
           password: "secret",
           plainPassword: "plain-secret",
@@ -178,7 +226,13 @@ describe("AddIntegrationDialog", () => {
     expect(toastSuccess).toHaveBeenCalledWith("Seedpool integration added");
 
     fireEvent.click(screen.getByRole("button", { name: /Seedpool/i }));
+    fireEvent.change(screen.getByLabelText(/Base URL/i), { target: { value: "https://seedpool.org" } });
+    fireEvent.change(screen.getByLabelText(/Cron/i), { target: { value: "0 * * * *" } });
+    fireEvent.change(screen.getByLabelText(/Required Ratio/i), { target: { value: "1.5" } });
+    fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: "seed-user" } });
+    fireEvent.change(screen.getByLabelText("Password*"), { target: { value: "secret" } });
     fireEvent.submit(screen.getByRole("button", { name: /Connect/i }).closest("form") as HTMLFormElement);
+    expect(screen.getByRole("alert")).toHaveTextContent("create failed");
     expect(toastError).toHaveBeenCalledWith("create failed");
 
     fireEvent.click(screen.getByTestId("icon-back").closest("button") as HTMLButtonElement);

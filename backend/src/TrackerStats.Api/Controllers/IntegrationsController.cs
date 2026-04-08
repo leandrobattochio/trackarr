@@ -1,4 +1,5 @@
 using System.Text.Json;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using TrackerStats.Domain.Entities;
 using TrackerStats.Domain.Plugins;
@@ -16,7 +17,9 @@ public class IntegrationsController(
     ITrackerPluginHttpClientFactory httpClientFactory,
     IntegrationConfigurationValidator configurationValidator,
     IntegrationSyncService syncService,
-    IntegrationRecurringJobScheduler recurringJobScheduler)
+    IntegrationRecurringJobScheduler recurringJobScheduler,
+    IValidator<CreateIntegrationRequest> createValidator,
+    IValidator<UpdateIntegrationRequest> updateValidator)
     : ControllerBase
 {
     private static readonly JsonSerializerOptions _jsonOpts = new() { PropertyNameCaseInsensitive = true };
@@ -99,10 +102,11 @@ public class IntegrationsController(
         if (!string.Equals(integration.PluginId, request.PluginId, StringComparison.Ordinal))
             return BadRequest(new { error = "PluginId cannot be changed for an existing integration." });
 
-        var plugin = registry.GetById(request.PluginId);
-        if (plugin is null)
-            return BadRequest(new { error = $"Plugin '{request.PluginId}' not found." });
+        var validationError = await ValidateRequestAsync(updateValidator, request, ct);
+        if (validationError is not null)
+            return validationError;
 
+        var plugin = registry.GetById(request.PluginId)!;
         var mergedPayload = MergeSensitiveFields(plugin, integration.Payload, request.Payload);
         var validation = configurationValidator.Validate(request.PluginId, mergedPayload);
         if (!validation.IsValid)
@@ -120,9 +124,9 @@ public class IntegrationsController(
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateIntegrationRequest request, CancellationToken ct)
     {
-        var plugin = registry.GetById(request.PluginId);
-        if (plugin is null)
-            return BadRequest(new { error = $"Plugin '{request.PluginId}' not found." });
+        var validationError = await ValidateRequestAsync(createValidator, request, ct);
+        if (validationError is not null)
+            return validationError;
 
         var validation = configurationValidator.Validate(request.PluginId, request.Payload);
         if (!validation.IsValid)
@@ -145,6 +149,21 @@ public class IntegrationsController(
     // ---------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------
+
+    private static async Task<BadRequestObjectResult?> ValidateRequestAsync<TRequest>(
+        IValidator<TRequest> validator,
+        TRequest request,
+        CancellationToken ct)
+    {
+        var result = await validator.ValidateAsync(request, ct);
+        if (result.IsValid)
+            return null;
+
+        return new BadRequestObjectResult(new
+        {
+            error = string.Join(" ", result.Errors.Select(error => error.ErrorMessage).Distinct())
+        });
+    }
 
     private object ToResponse(Integration i, DateTime? nextAutomaticSyncAt, IntegrationConfigurationValidationResult validation)
     {

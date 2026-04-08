@@ -66,6 +66,40 @@ public class IntegrationConfigurationValidatorTests
     }
 
     [Fact]
+    public void Validate_should_fail_when_cron_field_is_invalid()
+    {
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin",
+        [
+            new PluginField("required_ratio", "Required Ratio", "number", true, false),
+            new PluginField("cron", "Cron", "cron", true, false)
+        ]));
+        var sut = new IntegrationConfigurationValidator(registry);
+
+        var result = sut.Validate("plugin", """{"required_ratio":"1.0","cron":"* * *"}""");
+
+        result.IsValid.ShouldBeFalse();
+        result.Error.ShouldBe("Field 'cron' must be a valid 5-part UTC cron expression.");
+    }
+
+    [Fact]
+    public void Validate_should_fail_when_base_url_is_not_http_or_https()
+    {
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin",
+        [
+            new PluginField("baseUrl", "Base URL", "text", true, false),
+            new PluginField("required_ratio", "Required Ratio", "number", true, false)
+        ]));
+        var sut = new IntegrationConfigurationValidator(registry);
+
+        var result = sut.Validate("plugin", """{"baseUrl":"ftp://tracker.test","required_ratio":"1.0"}""");
+
+        result.IsValid.ShouldBeFalse();
+        result.Error.ShouldBe("Field 'baseUrl' must be a valid http:// or https:// URL.");
+    }
+
+    [Fact]
     public void Validate_should_fail_when_plugin_configuration_rejects_http_client_setup()
     {
         var registry = new FakeTrackerPluginRegistry();
