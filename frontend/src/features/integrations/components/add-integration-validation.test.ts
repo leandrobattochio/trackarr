@@ -46,12 +46,31 @@ describe("add integration validation", () => {
     });
   });
 
+  it("preserves existing values and falls back to an empty base url when none are configured", () => {
+    expect(getInitialFieldValues({ ...plugin, baseUrls: [] }, { baseUrl: "https://custom.example/", username: "alice" })).toEqual({
+      baseUrl: "https://custom.example/",
+      required_ratio: "",
+      cron: "",
+      username: "alice",
+      passkey: "",
+    });
+
+    expect(getInitialFieldValues({ ...plugin, baseUrls: [] })).toEqual({
+      baseUrl: "",
+      required_ratio: "",
+      cron: "",
+      username: "",
+      passkey: "",
+    });
+  });
+
   it("validates required base url, number, and cron rules", () => {
     expect(validateBaseUrlValue(plugin, "")).toBe("Base URL is required.");
     expect(validateBaseUrlValue(plugin, "https://unknown.example/")).toBe("Base URL must match one of the plugin's configured URLs.");
     expect(validateBaseUrlValue(plugin, "https://seedpool.org/")).toBeNull();
     expect(validateFieldValue(plugin.fields[0], "abc")).toBe("Required Ratio must be a valid number.");
     expect(validateFieldValue(plugin.fields[1], "* * *")).toBe("Cron must be a valid 5-part UTC cron expression.");
+    expect(validateFieldValue(plugin.fields[1], "0 * * ? *")).toBe("Cron must be a valid 5-part UTC cron expression.");
     expect(validateFieldValue(plugin.fields[2], "  alice  ")).toBeNull();
     expect(validateFieldValue(plugin.customFields[0], "")).toBeNull();
   });
@@ -64,6 +83,15 @@ describe("add integration validation", () => {
       username: "",
     })).toEqual({
       baseUrl: "Base URL must match one of the plugin's configured URLs.",
+      username: "Username is required.",
+    });
+  });
+
+  it("treats missing entries as empty strings during integration validation", () => {
+    expect(validateIntegrationFields(plugin, {})).toEqual({
+      baseUrl: "Base URL is required.",
+      required_ratio: "Required Ratio is required.",
+      cron: "Cron is required.",
       username: "Username is required.",
     });
   });
@@ -85,6 +113,18 @@ describe("add integration validation", () => {
       required_ratio: "1.25",
       cron: "0 * * * *",
       username: " alice ",
+      passkey: "",
+    });
+  });
+
+  it("falls back to an empty base url while normalizing missing values", () => {
+    expect(normalizeIntegrationFieldValues(plugin, {
+      required_ratio: " 2.5 ",
+    })).toEqual({
+      baseUrl: "",
+      required_ratio: "2.5",
+      cron: "",
+      username: "",
       passkey: "",
     });
   });

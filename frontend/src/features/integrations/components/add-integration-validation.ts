@@ -4,7 +4,7 @@ export type AddIntegrationErrors = Record<string, string>;
 export const BASE_URL_FIELD_NAME = "baseUrl";
 
 const DECIMAL_PATTERN = /^[+-]?(?:\d+\.?\d*|\.\d+)$/;
-const CRON_PART_PATTERN = /^[\d/*,\-]+$/;
+const CRON_PART_PATTERN = /^[\d/*,-]+$/;
 
 export function getAllFields(plugin: ApiPlugin) {
   return [...plugin.fields, ...plugin.customFields];

@@ -1,9 +1,6 @@
-import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import { Info, Loader2, Pencil } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -14,31 +11,15 @@ import {
 } from "@/components/ui/dialog";
 import { MetricTooltip } from "@/features/integrations/components/shared/MetricTooltip";
 import { usePlugins, useUpdateIntegration } from "@/features/integrations/hooks";
-import type { ApiPlugin, ApiPluginField, TrackerIntegration } from "@/features/integrations/types";
-import { BASE_URL_FIELD_NAME, getInitialFieldValues } from "@/features/integrations/components/add-integration-validation";
+import type { ApiPlugin, TrackerIntegration } from "@/features/integrations/types";
+import { getAllFields, getInitialFieldValues } from "@/features/integrations/components/add-integration-validation";
+import { IntegrationConfigurationForm } from "@/features/integrations/components/shared/integration-dialog/IntegrationConfigurationForm";
+import { createEditIntegrationFormStrategy } from "@/features/integrations/components/shared/integration-dialog/integrationFormStrategies";
 import { toast } from "sonner";
 
 interface EditIntegrationDialogProps {
   tracker: TrackerIntegration;
   disabled?: boolean;
-}
-
-const SENSITIVE_MASK = "*****";
-
-function getFieldHelpText(field: ApiPluginField): string | null {
-  return field.description?.trim() || null;
-}
-
-function getFieldPlaceholder(type: string): string | undefined {
-  if (type === "cron") return "0 * * * *";
-  if (type === "number") return "1.00";
-  return undefined;
-}
-
-function getInputType(type: string, sensitive: boolean): string {
-  if (sensitive || type === "password") return "password";
-  if (type === "number") return "number";
-  return "text";
 }
 
 function buildInitialFieldValues(plugin: ApiPlugin | undefined, payload: Record<string, string>) {
@@ -63,6 +44,11 @@ export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegra
   const { mutate: updateIntegration, isPending: isUpdating } = useUpdateIntegration();
 
   const plugin = plugins.find((item) => item.pluginId === tracker.pluginId);
+  const formStrategy = createEditIntegrationFormStrategy({
+    trackerId: tracker.id,
+    fieldValues,
+    setFieldValues,
+  });
 
   useEffect(() => {
     if (open) {
@@ -124,26 +110,7 @@ export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegra
 
         {plugin ? (
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-            <BaseUrlField
-              trackerId={tracker.id}
-              baseUrls={plugin.baseUrls}
-              value={fieldValues[BASE_URL_FIELD_NAME] ?? ""}
-              onChange={setFieldValues}
-            />
-            <FieldSection
-              title="Connection"
-              trackerId={tracker.id}
-              fields={plugin.fields}
-              fieldValues={fieldValues}
-              onChange={setFieldValues}
-            />
-            <FieldSection
-              title="Custom Fields"
-              trackerId={tracker.id}
-              fields={plugin.customFields}
-              fieldValues={fieldValues}
-              onChange={setFieldValues}
-            />
+            <IntegrationConfigurationForm plugin={plugin} strategy={formStrategy} />
 
             <Button type="submit" className="w-full" disabled={isUpdating}>
               {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -157,97 +124,5 @@ export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegra
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-function getAllFields(plugin: ApiPlugin) {
-  return [...plugin.fields, ...plugin.customFields];
-}
-
-interface FieldSectionProps {
-  title: string;
-  trackerId: string;
-  fields: ApiPluginField[];
-  fieldValues: Record<string, string>;
-  onChange: Dispatch<SetStateAction<Record<string, string>>>;
-}
-
-interface BaseUrlFieldProps {
-  trackerId: string;
-  baseUrls: string[];
-  value: string;
-  onChange: Dispatch<SetStateAction<Record<string, string>>>;
-}
-
-function BaseUrlField({ trackerId, baseUrls, value, onChange }: BaseUrlFieldProps) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={`${trackerId}-${BASE_URL_FIELD_NAME}`}>
-        Base URL
-        <span className="ml-1 text-destructive">*</span>
-      </Label>
-      <Select
-        value={value}
-        onValueChange={(nextValue) =>
-          onChange((prev) => ({ ...prev, [BASE_URL_FIELD_NAME]: nextValue }))
-        }
-      >
-        <SelectTrigger id={`${trackerId}-${BASE_URL_FIELD_NAME}`}>
-          <SelectValue placeholder="Select a base URL" />
-        </SelectTrigger>
-        <SelectContent>
-          {baseUrls.map((baseUrl) => (
-            <SelectItem key={baseUrl} value={baseUrl}>
-              {baseUrl}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
-function FieldSection({ title, trackerId, fields, fieldValues, onChange }: FieldSectionProps) {
-  if (fields.length === 0) return null;
-
-  return (
-    <div className="space-y-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
-      {fields.map((field) => (
-        <div key={field.name} className="space-y-1.5">
-          <Label htmlFor={`${trackerId}-${field.name}`}>
-            {field.label}
-            {field.required && <span className="ml-1 text-destructive">*</span>}
-          </Label>
-          <Input
-            id={`${trackerId}-${field.name}`}
-            type={getInputType(field.type, field.sensitive)}
-            required={field.required}
-            /* c8 ignore next */
-            value={fieldValues[field.name] ?? ""}
-            placeholder={field.sensitive ? SENSITIVE_MASK : getFieldPlaceholder(field.type)}
-            autoComplete="off"
-            step={field.type === "number" ? "any" : undefined}
-            onChange={(e) =>
-              onChange((prev) => ({ ...prev, [field.name]: e.target.value }))
-            }
-          />
-          {getFieldHelpText(field) && (
-            <FieldDescription description={getFieldHelpText(field)!} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function FieldDescription({ description }: { description: string }) {
-  return (
-    <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
-      <div className="flex items-start gap-2">
-        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-foreground/70" />
-        <p className="leading-relaxed">{description}</p>
-      </div>
-    </div>
   );
 }

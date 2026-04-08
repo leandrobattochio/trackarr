@@ -1,3 +1,4 @@
+import * as React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -36,20 +37,30 @@ vi.mock("@/features/integrations/components/shared/MetricTooltip", () => ({
 }));
 
 vi.mock("@/components/ui/select", () => {
-  const React = require("react");
-
   const SelectTrigger = () => null;
   const SelectContent = ({ children }: { children: unknown }) => <>{children}</>;
   const SelectValue = () => null;
   const SelectItem = ({ children }: { children: unknown }) => <>{children}</>;
 
+  function isElementWithChildren(
+    child: unknown,
+  ): child is React.ReactElement<{ children?: React.ReactNode }> {
+    return React.isValidElement<{ children?: React.ReactNode }>(child);
+  }
+
+  function isSelectItemElement(
+    child: unknown,
+  ): child is React.ReactElement<{ value: string; children?: React.ReactNode }> {
+    return React.isValidElement<{ value: string; children?: React.ReactNode }>(child);
+  }
+
   function collectItems(children: unknown): Array<{ value: string; label: string }> {
     const items: Array<{ value: string; label: string }> = [];
 
-    React.Children.forEach(children, (child: any) => {
-      if (!React.isValidElement(child)) return;
+    React.Children.forEach(children, (child) => {
+      if (!isElementWithChildren(child)) return;
 
-      if (child.type === SelectItem) {
+      if (child.type === SelectItem && isSelectItemElement(child)) {
         items.push({ value: child.props.value, label: String(child.props.children) });
         return;
       }
@@ -62,7 +73,7 @@ vi.mock("@/components/ui/select", () => {
 
   function findTrigger(children: unknown): Record<string, unknown> | null {
     for (const child of React.Children.toArray(children)) {
-      if (!React.isValidElement(child)) continue;
+      if (!isElementWithChildren(child)) continue;
       if (child.type === SelectTrigger) return child.props;
 
       const nested = findTrigger(child.props?.children);
@@ -203,10 +214,12 @@ describe("EditIntegrationDialog", () => {
 
     expect(baseUrlInput).toHaveValue("https://seedpool.org/");
     expect(cronInput).toHaveValue("0 * * * *");
+    expect(cronInput).toBeRequired();
     expect(apiKeyInput).toHaveValue("");
     expect(plainPasswordInput).toHaveAttribute("type", "password");
     expect(plainPasswordInput).toHaveValue("secret2");
     expect(passwordInput).toHaveValue("");
+    expect(passwordInput).toBeRequired();
     expect(passkeyInput).toHaveValue("");
     expect(passwordInput).toHaveAttribute("placeholder", "*****");
     expect(screen.getByText("Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.")).toBeInTheDocument();

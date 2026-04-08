@@ -1,9 +1,7 @@
 import { useState, type FormEvent } from "react";
-import { Plus, Check, ChevronLeft, Loader2, Search, Info } from "lucide-react";
+import { Plus, Check, ChevronLeft, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -13,9 +11,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { usePlugins, useCreateIntegration } from "@/features/integrations/hooks";
-import type { ApiPlugin, ApiPluginField } from "@/features/integrations/types";
+import type { ApiPlugin } from "@/features/integrations/types";
 import {
-  BASE_URL_FIELD_NAME,
+  type AddIntegrationErrors,
   getInitialFieldValues,
   normalizeFieldValue,
   normalizeIntegrationFieldValues,
@@ -23,6 +21,8 @@ import {
   validateFieldValue,
   validateIntegrationFields,
 } from "@/features/integrations/components/add-integration-validation";
+import { IntegrationConfigurationForm } from "@/features/integrations/components/shared/integration-dialog/IntegrationConfigurationForm";
+import { createAddIntegrationFormStrategy } from "@/features/integrations/components/shared/integration-dialog/integrationFormStrategies";
 import { useDebounce } from "@/shared/hooks/use-debounce";
 import { toast } from "sonner";
 
@@ -30,27 +30,11 @@ interface AddIntegrationDialogProps {
   addedPluginIds: string[];
 }
 
-function getFieldHelpText(field: ApiPluginField): string | null {
-  return field.description?.trim() || null;
-}
-
-function getFieldPlaceholder(type: string): string | undefined {
-  if (type === "cron") return "0 * * * *";
-  if (type === "number") return "1.00";
-  return undefined;
-}
-
-function getInputType(type: string, sensitive: boolean): string {
-  if (sensitive || type === "password") return "password";
-  if (type === "number") return "number";
-  return "text";
-}
-
 export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogProps) {
   const [open, setOpen] = useState(false);
   const [selectedPlugin, setSelectedPlugin] = useState<ApiPlugin | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<AddIntegrationErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
@@ -122,6 +106,20 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
       setSearch("");
     }
   }
+
+  const formStrategy = selectedPlugin
+    ? createAddIntegrationFormStrategy({
+        plugin: selectedPlugin,
+        fieldValues,
+        fieldErrors,
+        clearSubmitError: () => setSubmitError(null),
+        setFieldValues,
+        setFieldErrors,
+        validateBaseUrlValue,
+        validateFieldValue,
+        normalizeFieldValue,
+      })
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -211,62 +209,9 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
                     {submitError}
                   </div>
                 )}
-                <BaseUrlField
-                  plugin={selectedPlugin}
-                  value={fieldValues[BASE_URL_FIELD_NAME] ?? ""}
-                  error={fieldErrors[BASE_URL_FIELD_NAME]}
-                  onChange={(value) => {
-                    setSubmitError(null);
-                    setFieldValues((prev) => ({ ...prev, [BASE_URL_FIELD_NAME]: value }));
-                    setFieldErrors((prev) => {
-                      const nextError = validateBaseUrlValue(selectedPlugin, value);
-                      if (!nextError) {
-                        const { [BASE_URL_FIELD_NAME]: _removed, ...rest } = prev;
-                        return rest;
-                      }
-
-                      return { ...prev, [BASE_URL_FIELD_NAME]: nextError };
-                    });
-                  }}
-                />
-                <FieldSection
-                  title="Connection"
-                  fields={selectedPlugin.fields}
-                  fieldValues={fieldValues}
-                  fieldErrors={fieldErrors}
-                  onChange={(field, value) => {
-                    setSubmitError(null);
-                    setFieldValues((prev) => ({ ...prev, [field.name]: value }));
-                    setFieldErrors((prev) => {
-                      const nextError = validateFieldValue(field, normalizeFieldValue(field, value));
-                      if (!nextError) {
-                        const { [field.name]: _removed, ...rest } = prev;
-                        return rest;
-                      }
-
-                      return { ...prev, [field.name]: nextError };
-                    });
-                  }}
-                />
-                <FieldSection
-                  title="Custom Fields"
-                  fields={selectedPlugin.customFields}
-                  fieldValues={fieldValues}
-                  fieldErrors={fieldErrors}
-                  onChange={(field, value) => {
-                    setSubmitError(null);
-                    setFieldValues((prev) => ({ ...prev, [field.name]: value }));
-                    setFieldErrors((prev) => {
-                      const nextError = validateFieldValue(field, normalizeFieldValue(field, value));
-                      if (!nextError) {
-                        const { [field.name]: _removed, ...rest } = prev;
-                        return rest;
-                      }
-
-                      return { ...prev, [field.name]: nextError };
-                    });
-                  }}
-                />
+                {formStrategy && (
+                  <IntegrationConfigurationForm plugin={selectedPlugin} strategy={formStrategy} />
+                )}
               </div>
 
               <div className="border-t border-border/50 pt-4">
@@ -280,101 +225,5 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-interface FieldSectionProps {
-  title: string;
-  fields: ApiPluginField[];
-  fieldValues: Record<string, string>;
-  fieldErrors: Record<string, string>;
-  onChange: (field: ApiPluginField, value: string) => void;
-}
-
-interface BaseUrlFieldProps {
-  plugin: ApiPlugin;
-  value: string;
-  error?: string;
-  onChange: (value: string) => void;
-}
-
-function BaseUrlField({ plugin, value, error, onChange }: BaseUrlFieldProps) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={BASE_URL_FIELD_NAME}>
-        Base URL
-        <span className="ml-1 text-destructive">*</span>
-      </Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger
-          id={BASE_URL_FIELD_NAME}
-          aria-invalid={error ? "true" : "false"}
-          aria-describedby={error ? `${BASE_URL_FIELD_NAME}-error` : undefined}
-          className={error ? "border-destructive focus-visible:ring-destructive" : undefined}
-        >
-          <SelectValue placeholder="Select a base URL" />
-        </SelectTrigger>
-        <SelectContent>
-          {plugin.baseUrls.map((baseUrl) => (
-            <SelectItem key={baseUrl} value={baseUrl}>
-              {baseUrl}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {error && (
-        <p id={`${BASE_URL_FIELD_NAME}-error`} className="text-xs text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function FieldSection({ title, fields, fieldValues, fieldErrors, onChange }: FieldSectionProps) {
-  if (fields.length === 0) return null;
-
-  return (
-    <div className="space-y-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
-      {fields.map((field) => (
-        <div key={field.name} className="space-y-1.5">
-          <Label htmlFor={field.name}>
-            {field.label}
-            {field.required && <span className="ml-1 text-destructive">*</span>}
-          </Label>
-          <Input
-            id={field.name}
-            type={getInputType(field.type, field.sensitive)}
-            /* c8 ignore next */
-            value={fieldValues[field.name] ?? ""}
-            placeholder={getFieldPlaceholder(field.type)}
-            autoComplete="off"
-            step={field.type === "number" ? "any" : undefined}
-            aria-invalid={fieldErrors[field.name] ? "true" : "false"}
-            aria-describedby={fieldErrors[field.name] ? `${field.name}-error` : undefined}
-            onChange={(e) => onChange(field, e.target.value)}
-            className={fieldErrors[field.name] ? "border-destructive focus-visible:ring-destructive" : undefined}
-          />
-          {fieldErrors[field.name] && (
-            <p id={`${field.name}-error`} className="text-xs text-destructive">
-              {fieldErrors[field.name]}
-            </p>
-          )}
-          {getFieldHelpText(field) && <FieldDescription description={getFieldHelpText(field)!} />}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function FieldDescription({ description }: { description: string }) {
-  return (
-    <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
-      <div className="flex items-start gap-2">
-        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-foreground/70" />
-        <p className="leading-relaxed">{description}</p>
-      </div>
-    </div>
   );
 }
