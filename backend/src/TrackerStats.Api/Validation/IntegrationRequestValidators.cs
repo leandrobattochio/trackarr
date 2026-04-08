@@ -1,6 +1,5 @@
 using FluentValidation;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using TrackerStats.Domain.Plugins;
 using TrackerStats.Infrastructure.Services;
 
@@ -106,13 +105,6 @@ public sealed class UpdateIntegrationRequestValidator : AbstractValidator<Update
 
 internal static class IntegrationRequestValidationHelpers
 {
-    private static readonly Regex Ipv4HostPattern = new(
-        @"^(?:25[0-5]|2[0-4]\d|1?\d?\d)(?:\.(?:25[0-5]|2[0-4]\d|1?\d?\d)){3}$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly Regex DnsHostPattern = new(
-        @"^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-
     public static Dictionary<string, string?> ParsePayload(string payload)
     {
         try
@@ -127,21 +119,15 @@ internal static class IntegrationRequestValidationHelpers
 
     public static bool IsValidTrackerUrl(string value)
     {
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri))
+        if (string.IsNullOrWhiteSpace(value))
             return false;
 
-        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+        if (value.StartsWith(" ", StringComparison.Ordinal) || value.EndsWith(" ", StringComparison.Ordinal))
             return false;
 
-        if (uri.Host.EndsWith(".", StringComparison.Ordinal))
+        if (!value.StartsWith("http", StringComparison.InvariantCultureIgnoreCase))
             return false;
 
-        if (string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (uri.Host.StartsWith("[", StringComparison.Ordinal) && uri.Host.EndsWith("]", StringComparison.Ordinal))
-            return true;
-
-        return Ipv4HostPattern.IsMatch(uri.Host) || DnsHostPattern.IsMatch(uri.Host);
+        return Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.IsWellFormedOriginalString();
     }
 }

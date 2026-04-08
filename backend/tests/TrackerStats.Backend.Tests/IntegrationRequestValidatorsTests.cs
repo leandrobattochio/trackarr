@@ -66,14 +66,14 @@ public class IntegrationRequestValidatorsTests
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
 
         var result = await validator.ValidateAsync(
-            new CreateIntegrationRequest("plugin", """{"baseUrl":"http://www","required_ratio":"1.0","cron":"0 * * * *"}"""));
+            new CreateIntegrationRequest("plugin", """{"baseUrl":" http://my.local/url","required_ratio":"1.0","cron":"0 * * * *"}"""));
 
         result.IsValid.ShouldBeFalse();
         result.Errors.ShouldHaveSingleItem().ErrorMessage.ShouldBe("Field 'baseUrl' must be a valid http:// or https:// URL.");
     }
 
     [Fact]
-    public async Task Create_validator_should_fail_when_base_url_host_has_trailing_dot()
+    public async Task Create_validator_should_fail_when_base_url_has_trailing_space()
     {
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
@@ -85,7 +85,7 @@ public class IntegrationRequestValidatorsTests
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
 
         var result = await validator.ValidateAsync(
-            new CreateIntegrationRequest("plugin", """{"baseUrl":"http://www.","required_ratio":"1.0","cron":"0 * * * *"}"""));
+            new CreateIntegrationRequest("plugin", """{"baseUrl":"http://my.local/url ","required_ratio":"1.0","cron":"0 * * * *"}"""));
 
         result.IsValid.ShouldBeFalse();
         result.Errors.ShouldHaveSingleItem().ErrorMessage.ShouldBe("Field 'baseUrl' must be a valid http:// or https:// URL.");
@@ -128,7 +128,7 @@ public class IntegrationRequestValidatorsTests
     }
 
     [Fact]
-    public async Task Create_validator_should_allow_ipv4_url()
+    public async Task Create_validator_should_allow_normal_http_url()
     {
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
@@ -140,7 +140,7 @@ public class IntegrationRequestValidatorsTests
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
 
         var result = await validator.ValidateAsync(
-            new CreateIntegrationRequest("plugin", """{"baseUrl":"http://127.0.0.1:8080","required_ratio":"1.0","cron":"0 * * * *"}"""));
+            new CreateIntegrationRequest("plugin", """{"baseUrl":"http://my.local/url","required_ratio":"1.0","cron":"0 * * * *"}"""));
 
         result.IsValid.ShouldBeTrue();
     }

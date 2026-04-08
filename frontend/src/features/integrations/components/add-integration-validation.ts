@@ -4,8 +4,6 @@ export type AddIntegrationErrors = Record<string, string>;
 
 const DECIMAL_PATTERN = /^[+-]?(?:\d+\.?\d*|\.\d+)$/;
 const CRON_PART_PATTERN = /^[\d/*,\-]+$/;
-const IPV4_HOST_PATTERN = /^(?:25[0-5]|2[0-4]\d|1?\d?\d)(?:\.(?:25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
-const DNS_HOST_PATTERN = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
 
 export function getAllFields(plugin: ApiPlugin) {
   return [...plugin.fields, ...plugin.customFields];
@@ -13,6 +11,7 @@ export function getAllFields(plugin: ApiPlugin) {
 
 export function validateFieldValue(field: ApiPluginField, value: string): string | null {
   const trimmedValue = value.trim();
+  const validationValue = stringEquals(field.name, "baseUrl") ? value : trimmedValue;
 
   if (field.required && trimmedValue.length === 0)
     return `${field.label} is required.`;
@@ -20,13 +19,13 @@ export function validateFieldValue(field: ApiPluginField, value: string): string
   if (trimmedValue.length === 0)
     return null;
 
-  if (stringEquals(field.name, "baseUrl") && !isValidHttpUrl(trimmedValue))
+  if (stringEquals(field.name, "baseUrl") && !isValidHttpUrl(validationValue))
     return `${field.label} must be a valid http:// or https:// URL.`;
 
-  if (stringEquals(field.type, "number") && !DECIMAL_PATTERN.test(trimmedValue))
+  if (stringEquals(field.type, "number") && !DECIMAL_PATTERN.test(validationValue))
     return `${field.label} must be a valid number.`;
 
-  if (stringEquals(field.type, "cron") && !isValidCronExpression(trimmedValue))
+  if (stringEquals(field.type, "cron") && !isValidCronExpression(validationValue))
     return `${field.label} must be a valid 5-part UTC cron expression.`;
 
   return null;
@@ -65,12 +64,12 @@ export function normalizeIntegrationFieldValues(
 }
 
 function isValidHttpUrl(value: string): boolean {
+  if (value.trim() !== value)
+    return false;
+
   try {
     const url = new URL(value);
-    if (url.protocol !== "http:" && url.protocol !== "https:")
-      return false;
-
-    return isValidHost(url.hostname) && !url.hostname.endsWith(".");
+    return /^https?:/i.test(value) && (url.protocol === "http:" || url.protocol === "https:");
   } catch {
     return false;
   }
@@ -84,14 +83,4 @@ function isValidCronExpression(value: string): boolean {
 
 function stringEquals(left: string, right: string): boolean {
   return left.toLowerCase() === right.toLowerCase();
-}
-
-function isValidHost(hostname: string): boolean {
-  if (hostname === "localhost")
-    return true;
-
-  if (hostname.startsWith("[") && hostname.endsWith("]"))
-    return true;
-
-  return IPV4_HOST_PATTERN.test(hostname) || DNS_HOST_PATTERN.test(hostname);
 }

@@ -38,10 +38,9 @@ describe("add integration validation", () => {
   it("validates required, url, number, and cron field rules", () => {
     expect(validateFieldValue(plugin.fields[0], "")).toBe("Base URL is required.");
     expect(validateFieldValue(plugin.fields[0], "ftp://tracker.test")).toBe("Base URL must be a valid http:// or https:// URL.");
-    expect(validateFieldValue(plugin.fields[0], "http://www")).toBe("Base URL must be a valid http:// or https:// URL.");
-    expect(validateFieldValue(plugin.fields[0], "http://www.")).toBe("Base URL must be a valid http:// or https:// URL.");
-    expect(validateFieldValue(plugin.fields[0], "http://localhost:8080")).toBeNull();
-    expect(validateFieldValue(plugin.fields[0], "http://127.0.0.1:8080")).toBeNull();
+    expect(validateFieldValue(plugin.fields[0], " http://my.local/url")).toBe("Base URL must be a valid http:// or https:// URL.");
+    expect(validateFieldValue(plugin.fields[0], "http://my.local/url ")).toBe("Base URL must be a valid http:// or https:// URL.");
+    expect(validateFieldValue(plugin.fields[0], "http://my.local/url")).toBeNull();
     expect(validateFieldValue(plugin.fields[1], "abc")).toBe("Required Ratio must be a valid number.");
     expect(validateFieldValue(plugin.fields[2], "* * *")).toBe("Cron must be a valid 5-part UTC cron expression.");
     expect(validateFieldValue(plugin.fields[3], "  alice  ")).toBeNull();
