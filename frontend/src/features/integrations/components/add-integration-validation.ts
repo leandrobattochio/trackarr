@@ -4,6 +4,8 @@ export type AddIntegrationErrors = Record<string, string>;
 
 const DECIMAL_PATTERN = /^[+-]?(?:\d+\.?\d*|\.\d+)$/;
 const CRON_PART_PATTERN = /^[\d/*,\-]+$/;
+const IPV4_HOST_PATTERN = /^(?:25[0-5]|2[0-4]\d|1?\d?\d)(?:\.(?:25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+const DNS_HOST_PATTERN = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
 
 export function getAllFields(plugin: ApiPlugin) {
   return [...plugin.fields, ...plugin.customFields];
@@ -68,7 +70,7 @@ function isValidHttpUrl(value: string): boolean {
     if (url.protocol !== "http:" && url.protocol !== "https:")
       return false;
 
-    return isValidHost(url.hostname);
+    return isValidHost(url.hostname) && !url.hostname.endsWith(".");
   } catch {
     return false;
   }
@@ -88,12 +90,8 @@ function isValidHost(hostname: string): boolean {
   if (hostname === "localhost")
     return true;
 
-  if (hostname.includes(":"))
+  if (hostname.startsWith("[") && hostname.endsWith("]"))
     return true;
 
-  const ipv4Pattern = /^(?:\d{1,3}\.){3}\d{1,3}$/;
-  if (ipv4Pattern.test(hostname))
-    return hostname.split(".").every((part) => Number(part) >= 0 && Number(part) <= 255);
-
-  return hostname.includes(".");
+  return IPV4_HOST_PATTERN.test(hostname) || DNS_HOST_PATTERN.test(hostname);
 }

@@ -73,6 +73,25 @@ public class IntegrationRequestValidatorsTests
     }
 
     [Fact]
+    public async Task Create_validator_should_fail_when_base_url_host_has_trailing_dot()
+    {
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin",
+        [
+            new PluginField("baseUrl", "Base URL", "text", true, false),
+            new PluginField("required_ratio", "Required Ratio", "number", true, false),
+            new PluginField("cron", "Cron", "cron", true, false)
+        ]));
+        var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
+
+        var result = await validator.ValidateAsync(
+            new CreateIntegrationRequest("plugin", """{"baseUrl":"http://www.","required_ratio":"1.0","cron":"0 * * * *"}"""));
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldHaveSingleItem().ErrorMessage.ShouldBe("Field 'baseUrl' must be a valid http:// or https:// URL.");
+    }
+
+    [Fact]
     public async Task Create_validator_should_succeed_for_valid_request()
     {
         var registry = new FakeTrackerPluginRegistry();
@@ -104,6 +123,24 @@ public class IntegrationRequestValidatorsTests
 
         var result = await validator.ValidateAsync(
             new CreateIntegrationRequest("plugin", """{"baseUrl":"http://localhost:8080","required_ratio":"1.0","cron":"0 * * * *"}"""));
+
+        result.IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Create_validator_should_allow_ipv4_url()
+    {
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin",
+        [
+            new PluginField("baseUrl", "Base URL", "text", true, false),
+            new PluginField("required_ratio", "Required Ratio", "number", true, false),
+            new PluginField("cron", "Cron", "cron", true, false)
+        ]));
+        var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
+
+        var result = await validator.ValidateAsync(
+            new CreateIntegrationRequest("plugin", """{"baseUrl":"http://127.0.0.1:8080","required_ratio":"1.0","cron":"0 * * * *"}"""));
 
         result.IsValid.ShouldBeTrue();
     }
