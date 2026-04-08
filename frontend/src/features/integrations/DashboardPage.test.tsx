@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, createEvent, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+afterEach(cleanup);
 
 const pageTitleSpy = vi.fn();
 const mapIntegrationSpy = vi.fn();
@@ -23,9 +25,10 @@ const orderState = {
   orderedIntegrations: [] as unknown[],
   draggedCardId: null as string | null,
   dropTargetCardId: null as string | null,
+  dropTargetSide: null as string | null,
   handleCardDragStart: (id: string) => dragStartSpy(id),
-  handleCardDragOver: (event: unknown, id: string) => dragOverSpy(event, id),
-  handleCardDrop: (targetId: string, sourceId?: string) => dropSpy(targetId, sourceId),
+  handleCardDragOver: (event: unknown, id: string, side: unknown) => dragOverSpy(event, id, side),
+  handleCardDrop: (targetId: string, sourceId?: string, side?: unknown) => dropSpy(targetId, sourceId, side),
   handleCardDragEnd: () => dragEndSpy(),
 };
 
@@ -233,7 +236,56 @@ describe("DashboardPage", () => {
     expect(dragEndSpy).not.toHaveBeenCalled();
   });
 
-  it("renders ordered cards and handles drag/drop events when unlocked", () => {
+  it("renders ordered cards and shows drop indicator classes when unlocked", () => {
+    integrationsQuery.data = [{ id: "int-1", pluginId: "p1" }, { id: "int-2", pluginId: "p2" }];
+    integrationsQuery.error = null;
+    integrationsQuery.isLoading = false;
+    pluginsQuery.data = [{ pluginId: "p1" }, { pluginId: "p2" }];
+    pluginsQuery.isLoading = false;
+
+    mapIntegrationSpy.mockImplementation((raw: unknown) => ({
+      id: raw.id,
+      pluginId: raw.pluginId,
+      name: raw.id === "int-1" ? "First Tracker" : "Second Tracker",
+    }));
+
+    orderState.orderedIntegrations = [
+      { id: "int-1", pluginId: "p1", name: "First Tracker" },
+      { id: "int-2", pluginId: "p2", name: "Second Tracker" },
+    ];
+    orderState.draggedCardId = "int-1";
+    orderState.dropTargetCardId = "int-2";
+    orderState.dropTargetSide = "before";
+
+    const { rerender } = render(<DashboardPage />);
+
+    expect(screen.getByTestId("dashboard-cards-grid")).toBeInTheDocument();
+    expect(screen.getAllByTestId("tracker-card")).toHaveLength(2);
+    expect(screen.getByText("add-dialog:p1,p2")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("drag-lock-toggle"));
+
+    const card = screen.getAllByTestId("tracker-card")[0];
+    expect(card).toHaveAttribute("draggable", "true");
+    expect(card).not.toHaveAttribute("data-drag-locked");
+
+    const grid = screen.getByTestId("dashboard-cards-grid");
+    expect(grid.className).toContain("ring-2");
+
+    const lockBtn = screen.getByTestId("drag-lock-toggle");
+    expect(lockBtn.className).toContain("border-destructive/60");
+
+    const cards = screen.getAllByTestId("tracker-card");
+    expect(cards[1].className).toContain("tracker-card-drop-before");
+    expect(cards[1].className).not.toContain("tracker-card-drop-after");
+
+    orderState.dropTargetSide = "after";
+    rerender(<DashboardPage />);
+    expect(screen.getAllByTestId("tracker-card")[1].className).toContain("tracker-card-drop-after");
+    expect(screen.getAllByTestId("tracker-card")[1].className).not.toContain("tracker-card-drop-before");
+  });
+
+  it("handles drag/drop events when unlocked", () => {
     dragStartSpy.mockClear();
     dragOverSpy.mockClear();
     dropSpy.mockClear();
@@ -255,43 +307,56 @@ describe("DashboardPage", () => {
       { id: "int-1", pluginId: "p1", name: "First Tracker" },
       { id: "int-2", pluginId: "p2", name: "Second Tracker" },
     ];
-    orderState.draggedCardId = "int-1";
-    orderState.dropTargetCardId = "int-2";
+    orderState.draggedCardId = null;
+    orderState.dropTargetCardId = null;
+    orderState.dropTargetSide = null;
 
     render(<DashboardPage />);
-
-    expect(screen.getByTestId("dashboard-cards-grid")).toBeInTheDocument();
-    expect(screen.getAllByTestId("tracker-card")).toHaveLength(2);
-    expect(screen.getByText("add-dialog:p1,p2")).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("drag-lock-toggle"));
 
     const card = screen.getAllByTestId("tracker-card")[0];
-    expect(card).toHaveAttribute("draggable", "true");
-    expect(card).not.toHaveAttribute("data-drag-locked");
 
-    const grid = screen.getByTestId("dashboard-cards-grid");
-    expect(grid.className).toContain("ring-2");
-
-    const lockBtn = screen.getByTestId("drag-lock-toggle");
-    expect(lockBtn.className).toContain("border-destructive/60");
-
+    // JSDOM doesn't expose DataTransfer as a global and doesn't wire event.dataTransfer from
+    // DragEvent init options. Use createEvent + Object.defineProperty to attach our fake.
     const fakeDataTransfer = {
       effectAllowed: "",
-      dropEffect: "",
       setData: vi.fn(),
       getData: vi.fn(() => "int-1"),
     };
 
-    fireEvent.dragStart(card, { dataTransfer: fakeDataTransfer });
-    fireEvent.dragOver(card, { dataTransfer: fakeDataTransfer });
-    fireEvent.drop(card, { dataTransfer: fakeDataTransfer });
+    const withDT = (event: Event) => {
+      Object.defineProperty(event, "dataTransfer", { value: fakeDataTransfer, configurable: true });
+      return event;
+    };
+
+    fireEvent(card, withDT(createEvent.dragStart(card)));
+
+    // JSDOM getBoundingClientRect returns all zeros: rect.left=0, rect.width=0.
+    // clientX=0 → 0 < 0+0/2=0 → false → side="after"
+    fireEvent(card, withDT(createEvent.dragOver(card)));
+    fireEvent(card, withDT(createEvent.drop(card)));
+
+    // Patch the prototype chain so event.currentTarget.getBoundingClientRect() returns a wide rect.
+    // midpoint = 0 + 200/2 = 100. clientX=0 → 0 < 100 → true → side="before"
+    const wideRect = { left: 0, top: 0, right: 200, bottom: 100, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    const origElGetBCR = Element.prototype.getBoundingClientRect;
+    const origHTMLGetBCR = HTMLElement.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = () => wideRect;
+    HTMLElement.prototype.getBoundingClientRect = () => wideRect;
+    fireEvent(card, withDT(createEvent.dragOver(card)));
+    fireEvent(card, withDT(createEvent.drop(card)));
+    Element.prototype.getBoundingClientRect = origElGetBCR;
+    HTMLElement.prototype.getBoundingClientRect = origHTMLGetBCR;
+
     fireEvent.dragEnd(card);
 
     expect(fakeDataTransfer.setData).toHaveBeenCalledWith("text/plain", "int-1");
     expect(dragStartSpy).toHaveBeenCalledWith("int-1");
-    expect(dragOverSpy).toHaveBeenCalled();
-    expect(dropSpy).toHaveBeenCalledWith("int-1", "int-1");
+    expect(dragOverSpy).toHaveBeenCalledWith(expect.anything(), "int-1", "after");
+    expect(dragOverSpy).toHaveBeenCalledWith(expect.anything(), "int-1", "before");
+    expect(dropSpy).toHaveBeenCalledWith("int-1", "int-1", "after");
+    expect(dropSpy).toHaveBeenCalledWith("int-1", "int-1", "before");
     expect(dragEndSpy).toHaveBeenCalled();
   });
 });

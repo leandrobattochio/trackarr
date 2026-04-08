@@ -39,12 +39,20 @@ describe("dashboard card ordering helpers", () => {
     expect(normalizeDashboardCardOrder(integrations, ["beta", "missing"])).toEqual(["beta", "alpha", "gamma"]);
   });
 
-  it("moves the dragged card after the drop target", () => {
-    expect(reorderDashboardCardOrder(["alpha", "beta", "gamma"], "alpha", "gamma")).toEqual(["beta", "gamma", "alpha"]);
+  it("inserts dragged card before the drop target", () => {
+    expect(reorderDashboardCardOrder(["alpha", "beta", "gamma"], "gamma", "alpha", "before")).toEqual(["gamma", "alpha", "beta"]);
   });
 
-  it("moves a card onto a target to its left", () => {
-    expect(reorderDashboardCardOrder(["alpha", "beta", "gamma"], "gamma", "alpha")).toEqual(["gamma", "alpha", "beta"]);
+  it("inserts dragged card after the drop target", () => {
+    expect(reorderDashboardCardOrder(["alpha", "beta", "gamma"], "alpha", "gamma", "after")).toEqual(["beta", "gamma", "alpha"]);
+  });
+
+  it("inserts card after an adjacent target correctly", () => {
+    expect(reorderDashboardCardOrder(["alpha", "beta", "gamma"], "alpha", "beta", "after")).toEqual(["beta", "alpha", "gamma"]);
+  });
+
+  it("inserts card before an adjacent target correctly", () => {
+    expect(reorderDashboardCardOrder(["alpha", "beta", "gamma"], "gamma", "beta", "before")).toEqual(["alpha", "gamma", "beta"]);
   });
 
   it("deduplicates stored order and appends missing ids in current integration order", () => {
@@ -60,8 +68,8 @@ describe("dashboard card ordering helpers", () => {
   it("returns original order when dragged and target ids are invalid or equal", () => {
     const order = ["alpha", "beta", "gamma"];
 
-    expect(reorderDashboardCardOrder(order, "alpha", "alpha")).toEqual(order);
-    expect(reorderDashboardCardOrder(order, "missing", "alpha")).toEqual(order);
-    expect(reorderDashboardCardOrder(order, "alpha", "missing")).toEqual(order);
+    expect(reorderDashboardCardOrder(order, "alpha", "alpha", "before")).toEqual(order);
+    expect(reorderDashboardCardOrder(order, "missing", "alpha", "before")).toEqual(order);
+    expect(reorderDashboardCardOrder(order, "alpha", "missing", "after")).toEqual(order);
   });
 });

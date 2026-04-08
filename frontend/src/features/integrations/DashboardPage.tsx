@@ -27,6 +27,7 @@ const DashboardPage = () => {
     orderedIntegrations,
     draggedCardId,
     dropTargetCardId,
+    dropTargetSide,
     handleCardDragStart,
     handleCardDragOver,
     handleCardDrop,
@@ -117,12 +118,16 @@ const DashboardPage = () => {
                     }}
                     onDragOver={(event) => {
                       if (isDragLocked) return;
-                      handleCardDragOver(event, tracker.id);
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      const side = event.clientX < rect.left + rect.width / 2 ? "before" : "after";
+                      handleCardDragOver(event, tracker.id, side);
                     }}
                     onDrop={(event) => {
                       if (isDragLocked) return;
                       event.preventDefault();
-                      handleCardDrop(tracker.id, event.dataTransfer.getData("text/plain"));
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      const side = event.clientX < rect.left + rect.width / 2 ? "before" : "after";
+                      handleCardDrop(tracker.id, event.dataTransfer.getData("text/plain"), side);
                     }}
                     onDragEnd={() => {
                       if (isDragLocked) return;
@@ -135,8 +140,11 @@ const DashboardPage = () => {
                         : !isDragLocked
                           ? "cursor-grab"
                           : "cursor-default",
-                      !isDragLocked && dropTargetCardId === tracker.id
-                        ? "tracker-card-drop-target"
+                      !isDragLocked && dropTargetCardId === tracker.id && dropTargetSide === "before"
+                        ? "tracker-card-drop-before"
+                        : "",
+                      !isDragLocked && dropTargetCardId === tracker.id && dropTargetSide === "after"
+                        ? "tracker-card-drop-after"
                         : "",
                     ].join(" ")}
                   >

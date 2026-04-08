@@ -3,6 +3,8 @@ import type { TrackerIntegration } from "@/features/integrations/types";
 
 export const DASHBOARD_CARD_ORDER_STORAGE_KEY = "trackarr.dashboard.card-order";
 
+export type DropSide = "before" | "after";
+
 function readStoredCardOrder() {
   /* c8 ignore next 2 */
   if (typeof window === "undefined")
@@ -49,7 +51,7 @@ export function normalizeDashboardCardOrder(integrations: TrackerIntegration[], 
   return [...dedupedOrder, ...missingIds];
 }
 
-export function reorderDashboardCardOrder(order: string[], draggedId: string, targetId: string) {
+export function reorderDashboardCardOrder(order: string[], draggedId: string, targetId: string, side: DropSide) {
   if (draggedId === targetId)
     return order;
 
@@ -60,7 +62,9 @@ export function reorderDashboardCardOrder(order: string[], draggedId: string, ta
     return order;
 
   const nextOrder = order.filter((id) => id !== draggedId);
-  nextOrder.splice(targetIndex, 0, draggedId);
+  const newTargetIndex = nextOrder.indexOf(targetId);
+  const insertIndex = side === "before" ? newTargetIndex : newTargetIndex + 1;
+  nextOrder.splice(insertIndex, 0, draggedId);
   return nextOrder;
 }
 
@@ -71,7 +75,7 @@ function areOrdersEqual(left: string[], right: string[]) {
 export function useDashboardCardOrder(integrations: TrackerIntegration[]) {
   const [cardOrder, setCardOrder] = useState<string[]>(() => readStoredCardOrder());
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
-  const [dropTargetCardId, setDropTargetCardId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; side: DropSide } | null>(null);
 
   useEffect(() => {
     if (integrations.length === 0)
@@ -103,18 +107,18 @@ export function useDashboardCardOrder(integrations: TrackerIntegration[]) {
 
   function handleCardDragStart(cardId: string) {
     setDraggedCardId(cardId);
-    setDropTargetCardId(null);
+    setDropTarget(null);
   }
 
-  function handleCardDragOver(event: DragEvent<HTMLDivElement>, targetCardId: string) {
+  function handleCardDragOver(event: DragEvent<HTMLDivElement>, targetCardId: string, side: DropSide) {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
 
     if (draggedCardId && draggedCardId !== targetCardId)
-      setDropTargetCardId(targetCardId);
+      setDropTarget({ id: targetCardId, side });
   }
 
-  function handleCardDrop(targetCardId: string, sourceCardId?: string) {
+  function handleCardDrop(targetCardId: string, sourceCardId: string | undefined, side: DropSide) {
     const activeDraggedCardId = sourceCardId || draggedCardId;
 
     if (!activeDraggedCardId || activeDraggedCardId === targetCardId)
@@ -124,20 +128,22 @@ export function useDashboardCardOrder(integrations: TrackerIntegration[]) {
       normalizeDashboardCardOrder(integrations, currentOrder),
       activeDraggedCardId,
       targetCardId,
+      side,
     ));
     setDraggedCardId(null);
-    setDropTargetCardId(null);
+    setDropTarget(null);
   }
 
   function handleCardDragEnd() {
     setDraggedCardId(null);
-    setDropTargetCardId(null);
+    setDropTarget(null);
   }
 
   return {
     orderedIntegrations,
     draggedCardId,
-    dropTargetCardId,
+    dropTargetCardId: dropTarget?.id ?? null,
+    dropTargetSide: dropTarget?.side ?? null,
     handleCardDragStart,
     handleCardDragOver,
     handleCardDrop,

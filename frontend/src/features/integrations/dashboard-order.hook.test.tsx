@@ -76,7 +76,7 @@ describe("useDashboardCardOrder", () => {
     expect(result.current.orderedIntegrations.map((integration) => integration.id)).toEqual(["alpha", "beta"]);
   });
 
-  it("handles invalid stored JSON and drag/drop + move boundary branches", () => {
+  it("handles invalid stored JSON and drag/drop boundary branches", () => {
     window.localStorage.setItem(DASHBOARD_CARD_ORDER_STORAGE_KEY, "{broken");
 
     const { result } = renderHook(() =>
@@ -97,15 +97,15 @@ describe("useDashboardCardOrder", () => {
 
     act(() => {
       result.current.handleCardDragStart("alpha");
-      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "beta");
-      result.current.handleCardDrop("beta", "alpha");
+      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "beta", "after");
+      result.current.handleCardDrop("beta", "alpha", "after");
     });
     expect(result.current.orderedIntegrations.map((integration) => integration.id)).toEqual(["beta", "alpha", "gamma"]);
 
     // No-op drop cases.
     act(() => {
-      result.current.handleCardDrop("beta", "beta");
-      result.current.handleCardDrop("beta", undefined);
+      result.current.handleCardDrop("beta", "beta", "before");
+      result.current.handleCardDrop("beta", undefined, "before");
     });
 
     act(() => {
@@ -113,6 +113,7 @@ describe("useDashboardCardOrder", () => {
     });
     expect(result.current.draggedCardId).toBeNull();
     expect(result.current.dropTargetCardId).toBeNull();
+    expect(result.current.dropTargetSide).toBeNull();
   });
 
   it("does not set a drop target when drag-over has no active drag or same target", () => {
@@ -127,22 +128,29 @@ describe("useDashboardCardOrder", () => {
     const dataTransfer = { dropEffect: "" } as unknown as DataTransfer;
 
     act(() => {
-      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "alpha");
+      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "alpha", "before");
     });
     expect(result.current.dropTargetCardId).toBeNull();
+    expect(result.current.dropTargetSide).toBeNull();
 
     act(() => {
       result.current.handleCardDragStart("alpha");
     });
     act(() => {
-      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "alpha");
+      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "alpha", "before");
     });
     expect(result.current.dropTargetCardId).toBeNull();
 
     act(() => {
-      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "beta");
+      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "beta", "before");
     });
     expect(result.current.dropTargetCardId).toBe("beta");
+    expect(result.current.dropTargetSide).toBe("before");
+
+    act(() => {
+      result.current.handleCardDragOver({ preventDefault, dataTransfer } as unknown, "beta", "after");
+    });
+    expect(result.current.dropTargetSide).toBe("after");
   });
 
   it("swallows localStorage write errors without crashing", () => {
@@ -156,7 +164,7 @@ describe("useDashboardCardOrder", () => {
     );
 
     act(() => {
-      result.current.handleCardDrop("beta", "alpha");
+      result.current.handleCardDrop("beta", "alpha", "after");
     });
 
     return waitFor(() => {
@@ -168,4 +176,3 @@ describe("useDashboardCardOrder", () => {
     });
   });
 });
-
