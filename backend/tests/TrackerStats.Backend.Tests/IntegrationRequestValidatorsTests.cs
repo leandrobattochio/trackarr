@@ -47,10 +47,29 @@ public class IntegrationRequestValidatorsTests
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
 
         var result = await validator.ValidateAsync(
-            new CreateIntegrationRequest("plugin", """{"baseUrl":"ftp://tracker.test","required_ratio":"1.0","cron":"* * *"}"""));
+            new CreateIntegrationRequest("plugin", """{"baseUrl":"https://tracker.test","required_ratio":"1.0","cron":"* * *"}"""));
 
         result.IsValid.ShouldBeFalse();
         result.Errors.ShouldHaveSingleItem().ErrorMessage.ShouldBe("Field 'cron' must be a valid 5-part UTC cron expression.");
+    }
+
+    [Fact]
+    public async Task Create_validator_should_fail_when_base_url_host_is_incomplete()
+    {
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin",
+        [
+            new PluginField("baseUrl", "Base URL", "text", true, false),
+            new PluginField("required_ratio", "Required Ratio", "number", true, false),
+            new PluginField("cron", "Cron", "cron", true, false)
+        ]));
+        var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
+
+        var result = await validator.ValidateAsync(
+            new CreateIntegrationRequest("plugin", """{"baseUrl":"http://www","required_ratio":"1.0","cron":"0 * * * *"}"""));
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldHaveSingleItem().ErrorMessage.ShouldBe("Field 'baseUrl' must be a valid http:// or https:// URL.");
     }
 
     [Fact]
@@ -67,6 +86,24 @@ public class IntegrationRequestValidatorsTests
 
         var result = await validator.ValidateAsync(
             new CreateIntegrationRequest("plugin", """{"baseUrl":"https://tracker.test","required_ratio":"1.0","cron":"0 * * * *"}"""));
+
+        result.IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Create_validator_should_allow_localhost_url()
+    {
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin",
+        [
+            new PluginField("baseUrl", "Base URL", "text", true, false),
+            new PluginField("required_ratio", "Required Ratio", "number", true, false),
+            new PluginField("cron", "Cron", "cron", true, false)
+        ]));
+        var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
+
+        var result = await validator.ValidateAsync(
+            new CreateIntegrationRequest("plugin", """{"baseUrl":"http://localhost:8080","required_ratio":"1.0","cron":"0 * * * *"}"""));
 
         result.IsValid.ShouldBeTrue();
     }

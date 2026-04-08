@@ -65,7 +65,10 @@ export function normalizeIntegrationFieldValues(
 function isValidHttpUrl(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    if (url.protocol !== "http:" && url.protocol !== "https:")
+      return false;
+
+    return isValidHost(url.hostname);
   } catch {
     return false;
   }
@@ -79,4 +82,18 @@ function isValidCronExpression(value: string): boolean {
 
 function stringEquals(left: string, right: string): boolean {
   return left.toLowerCase() === right.toLowerCase();
+}
+
+function isValidHost(hostname: string): boolean {
+  if (hostname === "localhost")
+    return true;
+
+  if (hostname.includes(":"))
+    return true;
+
+  const ipv4Pattern = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+  if (ipv4Pattern.test(hostname))
+    return hostname.split(".").every((part) => Number(part) >= 0 && Number(part) <= 255);
+
+  return hostname.includes(".");
 }
