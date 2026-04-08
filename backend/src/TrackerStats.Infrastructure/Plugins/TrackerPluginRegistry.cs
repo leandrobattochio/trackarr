@@ -36,6 +36,7 @@ public class TrackerPluginRegistry(
                     plugin.PluginId,
                     plugin.DisplayName,
                     plugin.Dashboard,
+                    plugin.BaseUrls,
                     plugin.Fields);
             })
             .ToList();

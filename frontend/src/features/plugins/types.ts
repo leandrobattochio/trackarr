@@ -15,6 +15,7 @@ export interface ApiPluginListItem {
   definitionValid: boolean;
   definitionError: string | null;
   dashboard: ApiDashboardConfig | null;
+  baseUrls: string[];
   fields: ApiPluginFieldDefinition[];
   customFields: ApiPluginFieldDefinition[];
 }

@@ -19,6 +19,7 @@ namespace TrackerStats.Backend.Tests;
 internal sealed class FakeTrackerPlugin(
     string pluginId,
     IReadOnlyList<PluginField>? fields = null,
+    IReadOnlyList<string>? baseUrls = null,
     Action<HttpClient>? configureHttpClient = null,
     Func<HttpClient, CancellationToken, Task<TrackerFetchResult>>? fetch = null) : ITrackerPlugin
 {
@@ -37,6 +38,7 @@ internal sealed class FakeTrackerPlugin(
     };
 
     public AuthMode AuthMode => AuthMode.UsernamePassword;
+    public IReadOnlyList<string> BaseUrls { get; } = baseUrls ?? [];
     public IReadOnlyList<PluginField> Fields { get; } = fields ?? [];
 
     public void ConfigureHttpClient(HttpClient httpClient) => configureHttpClient?.Invoke(httpClient);
@@ -77,6 +79,7 @@ internal sealed class FakeTrackerPluginRegistry : ITrackerPluginRegistry
             plugin.PluginId,
             plugin.DisplayName,
             plugin.Dashboard,
+            plugin.BaseUrls,
             plugin.Fields)).ToList();
 }
 

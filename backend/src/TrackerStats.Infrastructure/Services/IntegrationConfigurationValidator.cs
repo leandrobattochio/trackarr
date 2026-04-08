@@ -69,18 +69,22 @@ public sealed class IntegrationConfigurationValidator(ITrackerPluginRegistry reg
             }
         }
 
-        foreach (var field in plugin.Fields.Where(field => string.Equals(field.Name, "baseUrl", StringComparison.OrdinalIgnoreCase)))
+        if (plugin.BaseUrls.Count > 0)
         {
-            var rawValue = payload.GetValueOrDefault(field.Name);
-            if (string.IsNullOrWhiteSpace(rawValue))
-                continue;
-
-            if (!Uri.TryCreate(rawValue, UriKind.Absolute, out var uri) ||
-                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            var baseUrl = payload.GetValueOrDefault("baseUrl");
+            if (string.IsNullOrWhiteSpace(baseUrl))
             {
                 return new IntegrationConfigurationValidationResult(
                     false,
-                    $"Field '{field.Name}' must be a valid http:// or https:// URL.",
+                    "Integration is missing required fields: baseUrl.",
+                    plugin);
+            }
+
+            if (!plugin.BaseUrls.Any(candidate => string.Equals(candidate, baseUrl, StringComparison.Ordinal)))
+            {
+                return new IntegrationConfigurationValidationResult(
+                    false,
+                    "Field 'baseUrl' must match one of the plugin's configured base URLs.",
                     plugin);
             }
         }

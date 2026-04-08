@@ -1,6 +1,9 @@
 pluginId: asc
 displayName: Amigos-Share Club
 
+baseUrls:
+  - https://cliente.amigos-share.club/
+
 fields:
   - name: cookie
     label: Cookie

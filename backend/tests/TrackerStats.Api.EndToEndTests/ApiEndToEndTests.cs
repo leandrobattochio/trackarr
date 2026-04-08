@@ -39,7 +39,7 @@ public sealed class ApiEndToEndTests : IClassFixture<ApiEndToEndFactory>
         using var client = _factory.CreateClient();
         var payload = JsonSerializer.Serialize(new Dictionary<string, string>
         {
-            ["baseUrl"] = "https://seedpool.org",
+            ["baseUrl"] = "https://seedpool.org/",
             ["apiKey"] = "integration-api-key",
             ["required_ratio"] = "1.50",
             ["cron"] = "0 * * * *"
@@ -66,7 +66,7 @@ public sealed class ApiEndToEndTests : IClassFixture<ApiEndToEndFactory>
         integrations.ShouldNotBeNull();
         var persisted = integrations.FirstOrDefault(integration => integration.Id == created.Id);
         persisted.ShouldNotBeNull();
-        persisted.Payload["baseUrl"].ShouldBe("https://seedpool.org");
+        persisted.Payload["baseUrl"].ShouldBe("https://seedpool.org/");
         persisted.Payload.ShouldNotContainKey("apiKey");
         persisted.ConfigurationValid.ShouldBeTrue();
     }

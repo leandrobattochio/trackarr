@@ -40,7 +40,6 @@ public class IntegrationRequestValidatorsTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("baseUrl", "Base URL", "text", true, false),
             new PluginField("required_ratio", "Required Ratio", "number", true, false),
             new PluginField("cron", "Cron", "cron", true, false)
         ]));
@@ -54,22 +53,22 @@ public class IntegrationRequestValidatorsTests
     }
 
     [Fact]
-    public async Task Create_validator_should_fail_when_base_url_host_is_incomplete()
+    public async Task Create_validator_should_fail_when_base_url_is_not_in_plugin_options()
     {
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("baseUrl", "Base URL", "text", true, false),
             new PluginField("required_ratio", "Required Ratio", "number", true, false),
             new PluginField("cron", "Cron", "cron", true, false)
-        ]));
+        ],
+        ["https://tracker.test/"]));
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
 
         var result = await validator.ValidateAsync(
-            new CreateIntegrationRequest("plugin", """{"baseUrl":" http://my.local/url","required_ratio":"1.0","cron":"0 * * * *"}"""));
+            new CreateIntegrationRequest("plugin", """{"baseUrl":"https://unknown.test/","required_ratio":"1.0","cron":"0 * * * *"}"""));
 
         result.IsValid.ShouldBeFalse();
-        result.Errors.ShouldHaveSingleItem().ErrorMessage.ShouldBe("Field 'baseUrl' must be a valid http:// or https:// URL.");
+        result.Errors.ShouldHaveSingleItem().ErrorMessage.ShouldBe("Field 'baseUrl' must match one of the plugin's configured base URLs.");
     }
 
     [Fact]
@@ -78,17 +77,17 @@ public class IntegrationRequestValidatorsTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("baseUrl", "Base URL", "text", true, false),
             new PluginField("required_ratio", "Required Ratio", "number", true, false),
             new PluginField("cron", "Cron", "cron", true, false)
-        ]));
+        ],
+        ["https://tracker.test/"]));
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
 
         var result = await validator.ValidateAsync(
-            new CreateIntegrationRequest("plugin", """{"baseUrl":"http://my.local/url ","required_ratio":"1.0","cron":"0 * * * *"}"""));
+            new CreateIntegrationRequest("plugin", """{"baseUrl":"https://tracker.test/ ","required_ratio":"1.0","cron":"0 * * * *"}"""));
 
         result.IsValid.ShouldBeFalse();
-        result.Errors.ShouldHaveSingleItem().ErrorMessage.ShouldBe("Field 'baseUrl' must be a valid http:// or https:// URL.");
+        result.Errors.ShouldHaveSingleItem().ErrorMessage.ShouldBe("Field 'baseUrl' must match one of the plugin's configured base URLs.");
     }
 
     [Fact]
@@ -97,32 +96,32 @@ public class IntegrationRequestValidatorsTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("baseUrl", "Base URL", "text", true, false),
             new PluginField("required_ratio", "Required Ratio", "number", true, false),
             new PluginField("cron", "Cron", "cron", true, false)
-        ]));
+        ],
+        ["https://tracker.test/"]));
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
 
         var result = await validator.ValidateAsync(
-            new CreateIntegrationRequest("plugin", """{"baseUrl":"https://tracker.test","required_ratio":"1.0","cron":"0 * * * *"}"""));
+            new CreateIntegrationRequest("plugin", """{"baseUrl":"https://tracker.test/","required_ratio":"1.0","cron":"0 * * * *"}"""));
 
         result.IsValid.ShouldBeTrue();
     }
 
     [Fact]
-    public async Task Create_validator_should_allow_localhost_url()
+    public async Task Create_validator_should_allow_configured_base_url()
     {
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("baseUrl", "Base URL", "text", true, false),
             new PluginField("required_ratio", "Required Ratio", "number", true, false),
             new PluginField("cron", "Cron", "cron", true, false)
-        ]));
+        ],
+        ["http://localhost:8080/"]));
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
 
         var result = await validator.ValidateAsync(
-            new CreateIntegrationRequest("plugin", """{"baseUrl":"http://localhost:8080","required_ratio":"1.0","cron":"0 * * * *"}"""));
+            new CreateIntegrationRequest("plugin", """{"baseUrl":"http://localhost:8080/","required_ratio":"1.0","cron":"0 * * * *"}"""));
 
         result.IsValid.ShouldBeTrue();
     }
@@ -133,10 +132,10 @@ public class IntegrationRequestValidatorsTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("baseUrl", "Base URL", "text", true, false),
             new PluginField("required_ratio", "Required Ratio", "number", true, false),
             new PluginField("cron", "Cron", "cron", true, false)
-        ]));
+        ],
+        ["http://my.local/url"]));
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
 
         var result = await validator.ValidateAsync(
@@ -151,7 +150,6 @@ public class IntegrationRequestValidatorsTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("baseUrl", "Base URL", "text", true, false),
             new PluginField("required_ratio", "Required Ratio", "number", true, false),
             new PluginField("cron", "Cron", "cron", true, false)
         ]));

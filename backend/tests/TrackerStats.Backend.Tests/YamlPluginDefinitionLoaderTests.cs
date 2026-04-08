@@ -47,6 +47,8 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
         File.WriteAllText(Path.Combine(pluginsDirectory, "broken-name.yaml"), """
             pluginId: broken-id
             displayName: Broken Plugin
+            baseUrls:
+              - https://tracker.test/
             fields:
               - name: baseUrl
                 label: Base URL
@@ -73,7 +75,7 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
     {
         var pluginsDirectory = Path.Combine(_rootDirectory, "plugins-fallback");
         Directory.CreateDirectory(pluginsDirectory);
-        File.WriteAllText(Path.Combine(pluginsDirectory, "fallback.yaml"), "pluginId:\ndisplayName:\nfields:\n  - name: baseUrl\n");
+        File.WriteAllText(Path.Combine(pluginsDirectory, "fallback.yaml"), "pluginId:\ndisplayName:\nbaseUrls:\n  - https://tracker.test/\nfields: []\n");
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -99,6 +101,8 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
         File.WriteAllText(Path.Combine(pluginsDirectory, "dev-plugin.yaml"), """
             pluginId: dev-plugin
             displayName: Development Plugin
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile

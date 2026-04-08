@@ -3,6 +3,7 @@ import { Plus, Check, ChevronLeft, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -14,9 +15,12 @@ import {
 import { usePlugins, useCreateIntegration } from "@/features/integrations/hooks";
 import type { ApiPlugin, ApiPluginField } from "@/features/integrations/types";
 import {
+  BASE_URL_FIELD_NAME,
   getAllFields,
+  getInitialFieldValues,
   normalizeFieldValue,
   normalizeIntegrationFieldValues,
+  validateBaseUrlValue,
   validateFieldValue,
   validateIntegrationFields,
 } from "@/features/integrations/components/add-integration-validation";
@@ -67,7 +71,7 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
 
   function handleSelectPlugin(plugin: ApiPlugin) {
     setSelectedPlugin(plugin);
-    setFieldValues(Object.fromEntries(getAllFields(plugin).map((f) => [f.name, ""])));
+    setFieldValues(getInitialFieldValues(plugin));
     setFieldErrors({});
     setSubmitError(null);
   }
@@ -204,6 +208,24 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
                   {submitError}
                 </div>
               )}
+              <BaseUrlField
+                plugin={selectedPlugin}
+                value={fieldValues[BASE_URL_FIELD_NAME] ?? ""}
+                error={fieldErrors[BASE_URL_FIELD_NAME]}
+                onChange={(value) => {
+                  setSubmitError(null);
+                  setFieldValues((prev) => ({ ...prev, [BASE_URL_FIELD_NAME]: value }));
+                  setFieldErrors((prev) => {
+                    const nextError = validateBaseUrlValue(selectedPlugin, value);
+                    if (!nextError) {
+                      const { [BASE_URL_FIELD_NAME]: _removed, ...rest } = prev;
+                      return rest;
+                    }
+
+                    return { ...prev, [BASE_URL_FIELD_NAME]: nextError };
+                  });
+                }}
+              />
               <FieldSection
                 title="Connection"
                 fields={selectedPlugin.fields}
@@ -261,6 +283,46 @@ interface FieldSectionProps {
   fieldValues: Record<string, string>;
   fieldErrors: Record<string, string>;
   onChange: (field: ApiPluginField, value: string) => void;
+}
+
+interface BaseUrlFieldProps {
+  plugin: ApiPlugin;
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+}
+
+function BaseUrlField({ plugin, value, error, onChange }: BaseUrlFieldProps) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={BASE_URL_FIELD_NAME}>
+        Base URL
+        <span className="ml-1 text-destructive">*</span>
+      </Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger
+          id={BASE_URL_FIELD_NAME}
+          aria-invalid={error ? "true" : "false"}
+          aria-describedby={error ? `${BASE_URL_FIELD_NAME}-error` : undefined}
+          className={error ? "border-destructive focus-visible:ring-destructive" : undefined}
+        >
+          <SelectValue placeholder="Select a base URL" />
+        </SelectTrigger>
+        <SelectContent>
+          {plugin.baseUrls.map((baseUrl) => (
+            <SelectItem key={baseUrl} value={baseUrl}>
+              {baseUrl}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {error && (
+        <p id={`${BASE_URL_FIELD_NAME}-error`} className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
 }
 
 function FieldSection({ title, fields, fieldValues, fieldErrors, onChange }: FieldSectionProps) {

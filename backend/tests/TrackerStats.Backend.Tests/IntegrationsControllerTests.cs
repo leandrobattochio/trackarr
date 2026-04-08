@@ -348,8 +348,7 @@ public class IntegrationsControllerTests
         [
             new PluginField("required_ratio", "Required Ratio", "number", true, false),
             new PluginField("username", "Username", "text", true, false),
-            new PluginField("secret", "Secret", "text", true, true),
-            new PluginField("baseUrl", "Base URL", "text", true, false)
+            new PluginField("secret", "Secret", "text", true, true)
         ]));
         var controller = CreateController(repository, registry, scheduler: scheduler);
 

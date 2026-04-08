@@ -61,6 +61,7 @@ export interface ApiPlugin {
   definitionValid: boolean;
   definitionError: string | null;
   dashboard: ApiDashboardConfig | null;
+  baseUrls: string[];
   fields: ApiPluginField[];
   customFields: ApiPluginField[];
 }

@@ -6,6 +6,7 @@ public interface ITrackerPlugin
     string DisplayName { get; }
     DashboardConfig Dashboard { get; }
     AuthMode AuthMode { get; }
+    IReadOnlyList<string> BaseUrls { get; }
     IReadOnlyList<PluginField> Fields { get; }
     void ConfigureHttpClient(HttpClient httpClient);
     Task<TrackerFetchResult> FetchStatsAsync(HttpClient httpClient, CancellationToken ct);

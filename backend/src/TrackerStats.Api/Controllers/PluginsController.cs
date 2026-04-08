@@ -32,6 +32,7 @@ public class PluginsController(
             displayName = plugin.DisplayName,
             definitionValid = plugin.IsValid,
             definitionError = plugin.Error,
+            baseUrls = plugin.Definition is null ? Enumerable.Empty<string>() : plugin.Definition.BaseUrls,
             dashboard = plugin.Definition is null
                 ? null
                 : new
@@ -171,7 +172,11 @@ public class PluginsController(
         if (definition.Fields is null)
             return "Plugin definition is missing required field 'fields'.";
 
+        definition.BaseUrls ??= [];
         definition.CustomFields ??= [];
+
+        if (definition.BaseUrls.Count == 0 || definition.BaseUrls.Any(string.IsNullOrWhiteSpace))
+            return "Plugin definition must define at least one valid 'baseUrls' entry.";
 
         if (definition.Steps is null || definition.Steps.Count == 0)
             return "Plugin definition is missing required field 'steps'.";

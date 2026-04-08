@@ -20,6 +20,7 @@ public sealed class YamlTrackerPlugin(
     public string DisplayName => Definition.DisplayName;
     public DashboardConfig Dashboard => Definition.Dashboard;
     public AuthMode AuthMode => ResolveAuthMode(Definition);
+    public IReadOnlyList<string> BaseUrls => Definition.BaseUrls;
 
     public IReadOnlyList<PluginField> Fields => PluginDefinitionDefaults.GetEffectiveFields(Definition)
         .Select(definitionField => new PluginField(

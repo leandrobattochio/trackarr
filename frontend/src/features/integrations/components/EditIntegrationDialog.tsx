@@ -3,6 +3,7 @@ import { Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,7 @@ import {
 import { MetricTooltip } from "@/features/integrations/components/shared/MetricTooltip";
 import { usePlugins, useUpdateIntegration } from "@/features/integrations/hooks";
 import type { ApiPlugin, ApiPluginField, TrackerIntegration } from "@/features/integrations/types";
+import { BASE_URL_FIELD_NAME, getInitialFieldValues } from "@/features/integrations/components/add-integration-validation";
 import { toast } from "sonner";
 
 interface EditIntegrationDialogProps {
@@ -44,11 +46,14 @@ function getInputType(type: string, sensitive: boolean): string {
 function buildInitialFieldValues(plugin: ApiPlugin | undefined, payload: Record<string, string>) {
   if (!plugin) return payload;
 
-  return Object.fromEntries(
-    getAllFields(plugin).map((field) => [
-      field.name,
-      field.sensitive ? "" : (payload[field.name] ?? ""),
-    ]),
+  return getInitialFieldValues(
+    plugin,
+    Object.fromEntries(
+      getAllFields(plugin).map((field) => [
+        field.name,
+        field.sensitive ? "" : (payload[field.name] ?? ""),
+      ]),
+    ),
   );
 }
 
@@ -121,6 +126,12 @@ export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegra
 
         {plugin ? (
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            <BaseUrlField
+              trackerId={tracker.id}
+              baseUrls={plugin.baseUrls}
+              value={fieldValues[BASE_URL_FIELD_NAME] ?? ""}
+              onChange={setFieldValues}
+            />
             <FieldSection
               title="Connection"
               trackerId={tracker.id}
@@ -161,6 +172,41 @@ interface FieldSectionProps {
   fields: ApiPluginField[];
   fieldValues: Record<string, string>;
   onChange: Dispatch<SetStateAction<Record<string, string>>>;
+}
+
+interface BaseUrlFieldProps {
+  trackerId: string;
+  baseUrls: string[];
+  value: string;
+  onChange: Dispatch<SetStateAction<Record<string, string>>>;
+}
+
+function BaseUrlField({ trackerId, baseUrls, value, onChange }: BaseUrlFieldProps) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={`${trackerId}-${BASE_URL_FIELD_NAME}`}>
+        Base URL
+        <span className="ml-1 text-destructive">*</span>
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(nextValue) =>
+          onChange((prev) => ({ ...prev, [BASE_URL_FIELD_NAME]: nextValue }))
+        }
+      >
+        <SelectTrigger id={`${trackerId}-${BASE_URL_FIELD_NAME}`}>
+          <SelectValue placeholder="Select a base URL" />
+        </SelectTrigger>
+        <SelectContent>
+          {baseUrls.map((baseUrl) => (
+            <SelectItem key={baseUrl} value={baseUrl}>
+              {baseUrl}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 
 function FieldSection({ title, trackerId, fields, fieldValues, onChange }: FieldSectionProps) {

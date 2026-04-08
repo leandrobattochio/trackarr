@@ -83,20 +83,20 @@ public class IntegrationConfigurationValidatorTests
     }
 
     [Fact]
-    public void Validate_should_fail_when_base_url_is_not_http_or_https()
+    public void Validate_should_fail_when_base_url_is_not_in_plugin_options()
     {
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("baseUrl", "Base URL", "text", true, false),
             new PluginField("required_ratio", "Required Ratio", "number", true, false)
-        ]));
+        ],
+        ["https://tracker.test/"]));
         var sut = new IntegrationConfigurationValidator(registry);
 
-        var result = sut.Validate("plugin", """{"baseUrl":"ftp://tracker.test","required_ratio":"1.0"}""");
+        var result = sut.Validate("plugin", """{"baseUrl":"https://other.test/","required_ratio":"1.0"}""");
 
         result.IsValid.ShouldBeFalse();
-        result.Error.ShouldBe("Field 'baseUrl' must be a valid http:// or https:// URL.");
+        result.Error.ShouldBe("Field 'baseUrl' must match one of the plugin's configured base URLs.");
     }
 
     [Fact]

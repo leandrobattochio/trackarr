@@ -37,6 +37,7 @@ describe("HelpPage", () => {
     expect(screen.getByText("Display")).toBeInTheDocument();
 
     expect(screen.getByText("pluginId")).toBeInTheDocument();
+    expect(screen.getByText("baseUrls")).toBeInTheDocument();
     expect(screen.getByText("customFields")).toBeInTheDocument();
     expect(screen.getByText("authFailure")).toBeInTheDocument();
     expect(screen.getByText("steps")).toBeInTheDocument();

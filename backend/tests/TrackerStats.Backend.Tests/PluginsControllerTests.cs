@@ -29,6 +29,8 @@ public class PluginsControllerTests
         var yaml = """
             pluginId: test-plugin
             displayName: Test Plugin
+            baseUrls:
+              - https://tracker.test/
             fields:
               - name: cookie
                 label: Cookie
@@ -63,6 +65,8 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: test-plugin
             displayName: Test Plugin
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile
@@ -89,6 +93,8 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: invalid-plugin
             displayName: Invalid Plugin
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile
@@ -155,6 +161,8 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: invalid-plugin
             displayName: Invalid
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile
@@ -193,6 +201,8 @@ public class PluginsControllerTests
         File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "seedpool.yaml"), """
             pluginId: seedpool
             displayName: Seedpool
+            baseUrls:
+              - https://seedpool.org/
             fields:
               - name: apiKey
                 label: API Key
@@ -217,7 +227,8 @@ public class PluginsControllerTests
         content.ContentType.ShouldBe("application/yaml");
         content.Content.ShouldNotBeNull();
         content.Content.ShouldContain("pluginId: seedpool");
-        content.Content.ShouldNotContain("baseUrl");
+        content.Content.ShouldContain("baseUrls:");
+        content.Content.ShouldNotContain("name: baseUrl");
         content.Content.ShouldNotContain("required_ratio");
         content.Content.ShouldNotContain("User-Agent");
     }
@@ -229,6 +240,8 @@ public class PluginsControllerTests
         var rawYaml = """
             pluginId: broken
             displayName: Broken
+            baseUrls:
+              - https://tracker.test/
             fields:
               - name: baseUrl
                 label: Base URL
@@ -250,6 +263,8 @@ public class PluginsControllerTests
         File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "valid.yaml"), """
             pluginId: valid
             displayName: Valid
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile
@@ -264,6 +279,8 @@ public class PluginsControllerTests
         File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "invalid.yaml"), """
             pluginId: invalid
             displayName: Invalid
+            baseUrls:
+              - https://tracker.test/
             fields:
               - name: baseUrl
                 label: Base URL
@@ -295,6 +312,8 @@ public class PluginsControllerTests
         File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "valid.yaml"), """
             pluginId: valid
             displayName: Valid
+            baseUrls:
+              - https://tracker.test/
             fields: []
             customFields:
               - name: token
@@ -320,6 +339,7 @@ public class PluginsControllerTests
         var ok = result.ShouldBeOfType<OkObjectResult>();
         var json = TestHttp.ToJson(ok.Value);
         json[0].GetProperty("customFields").GetArrayLength().ShouldBe(1);
+        json[0].GetProperty("baseUrls")[0].GetString().ShouldBe("https://tracker.test/");
         json[0].GetProperty("customFields")[0].GetProperty("name").GetString().ShouldBe("token");
     }
 
@@ -341,6 +361,8 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        baseUrls:
+          - https://tracker.test/
         fields: []
         steps: []
         dashboard:
@@ -353,6 +375,8 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        baseUrls:
+          - https://tracker.test/
         fields:
           - name: ""
             label: Label
@@ -371,6 +395,8 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        baseUrls:
+          - https://tracker.test/
         fields:
           - name: token
             label: ""
@@ -389,6 +415,8 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        baseUrls:
+          - https://tracker.test/
         fields:
           - name: token
             label: Token
@@ -407,6 +435,8 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        baseUrls:
+          - https://tracker.test/
         fields: []
         steps:
           - name: ""
@@ -422,6 +452,8 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        baseUrls:
+          - https://tracker.test/
         fields: []
         steps:
           - name: profile
@@ -437,6 +469,8 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        baseUrls:
+          - https://tracker.test/
         fields: []
         steps:
           - name: profile
@@ -452,6 +486,8 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        baseUrls:
+          - https://tracker.test/
         fields: []
         steps:
           - name: profile
@@ -467,6 +503,8 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        baseUrls:
+          - https://tracker.test/
         fields: []
         steps:
           - name: profile
@@ -482,6 +520,8 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        baseUrls:
+          - https://tracker.test/
         fields: []
         steps:
           - name: profile
@@ -497,6 +537,8 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        baseUrls:
+          - https://tracker.test/
         fields: []
         steps:
           - name: profile
@@ -512,6 +554,8 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        baseUrls:
+          - https://tracker.test/
         fields: []
         steps:
           - name: profile
@@ -545,6 +589,8 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: other-plugin
             displayName: Other Plugin
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile
@@ -587,6 +633,8 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: seedpool
             displayName: Seedpool
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile
@@ -612,6 +660,8 @@ public class PluginsControllerTests
         File.WriteAllText(existingPath, """
             pluginId: seedpool
             displayName: Seedpool
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile
@@ -627,6 +677,8 @@ public class PluginsControllerTests
         var updatedYaml = """
             pluginId: seedpool
             displayName: Updated Seedpool
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile
@@ -654,6 +706,8 @@ public class PluginsControllerTests
         var yaml = """
             pluginId: base-plugin
             displayName: Base Plugin
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile
@@ -681,6 +735,8 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: created-dir
             displayName: Created Dir
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile
@@ -708,6 +764,8 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: invalid
             displayName: Invalid
+            baseUrls:
+              - https://tracker.test/
             fields:
               - name: baseUrl
                 label: Base URL
@@ -740,6 +798,8 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: invalid
             displayName: Invalid
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile
@@ -765,6 +825,8 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: relative-plugin
             displayName: Relative Plugin
+            baseUrls:
+              - https://tracker.test/
             fields: []
             steps:
               - name: profile

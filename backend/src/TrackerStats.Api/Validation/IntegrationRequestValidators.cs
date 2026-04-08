@@ -32,18 +32,12 @@ public sealed class CreateIntegrationRequestValidator : AbstractValidator<Create
                     return;
                 }
 
+                var plugin = registry.GetById(request.PluginId)!;
                 var payload = IntegrationRequestValidationHelpers.ParsePayload(request.Payload);
-                var baseUrl = payload.GetValueOrDefault("baseUrl");
-                var baseUrlValidator = new InlineValidator<string?>();
-                baseUrlValidator.RuleFor(value => value)
-                    .Must(value => string.IsNullOrWhiteSpace(value) || IntegrationRequestValidationHelpers.IsValidTrackerUrl(value))
-                    .WithMessage("Field 'baseUrl' must be a valid http:// or https:// URL.");
 
-                var baseUrlResult = baseUrlValidator.Validate(baseUrl);
-                if (!baseUrlResult.IsValid)
+                if (!IntegrationRequestValidationHelpers.IsAllowedBaseUrl(plugin, payload.GetValueOrDefault("baseUrl")))
                 {
-                    foreach (var error in baseUrlResult.Errors)
-                        context.AddFailure(nameof(request.Payload), error.ErrorMessage);
+                    context.AddFailure(nameof(request.Payload), "Field 'baseUrl' must match one of the plugin's configured base URLs.");
                     return;
                 }
 
@@ -81,18 +75,12 @@ public sealed class UpdateIntegrationRequestValidator : AbstractValidator<Update
                     return;
                 }
 
+                var plugin = registry.GetById(request.PluginId)!;
                 var payload = IntegrationRequestValidationHelpers.ParsePayload(request.Payload);
-                var baseUrl = payload.GetValueOrDefault("baseUrl");
-                var baseUrlValidator = new InlineValidator<string?>();
-                baseUrlValidator.RuleFor(value => value)
-                    .Must(value => string.IsNullOrWhiteSpace(value) || IntegrationRequestValidationHelpers.IsValidTrackerUrl(value))
-                    .WithMessage("Field 'baseUrl' must be a valid http:// or https:// URL.");
 
-                var baseUrlResult = baseUrlValidator.Validate(baseUrl);
-                if (!baseUrlResult.IsValid)
+                if (!IntegrationRequestValidationHelpers.IsAllowedBaseUrl(plugin, payload.GetValueOrDefault("baseUrl")))
                 {
-                    foreach (var error in baseUrlResult.Errors)
-                        context.AddFailure(nameof(request.Payload), error.ErrorMessage);
+                    context.AddFailure(nameof(request.Payload), "Field 'baseUrl' must match one of the plugin's configured base URLs.");
                     return;
                 }
 
@@ -117,17 +105,14 @@ internal static class IntegrationRequestValidationHelpers
         }
     }
 
-    public static bool IsValidTrackerUrl(string value)
+    public static bool IsAllowedBaseUrl(ITrackerPlugin plugin, string? value)
     {
+        if (plugin.BaseUrls.Count == 0)
+            return true;
+
         if (string.IsNullOrWhiteSpace(value))
             return false;
 
-        if (value.StartsWith(" ", StringComparison.Ordinal) || value.EndsWith(" ", StringComparison.Ordinal))
-            return false;
-
-        if (!value.StartsWith("http", StringComparison.InvariantCultureIgnoreCase))
-            return false;
-
-        return Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.IsWellFormedOriginalString();
+        return plugin.BaseUrls.Any(baseUrl => string.Equals(baseUrl, value, StringComparison.Ordinal));
     }
 }

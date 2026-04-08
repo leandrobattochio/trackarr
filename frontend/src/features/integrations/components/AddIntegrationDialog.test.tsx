@@ -38,6 +38,71 @@ vi.mock("@/shared/hooks/use-debounce", () => ({
   useDebounce: (value: string) => value,
 }));
 
+vi.mock("@/components/ui/select", () => {
+  const React = require("react");
+
+  const SelectTrigger = () => null;
+  const SelectContent = ({ children }: { children: unknown }) => <>{children}</>;
+  const SelectValue = () => null;
+  const SelectItem = ({ children }: { children: unknown }) => <>{children}</>;
+
+  function collectItems(children: unknown): Array<{ value: string; label: string }> {
+    const items: Array<{ value: string; label: string }> = [];
+
+    React.Children.forEach(children, (child: any) => {
+      if (!React.isValidElement(child)) return;
+
+      if (child.type === SelectItem) {
+        items.push({ value: child.props.value, label: String(child.props.children) });
+        return;
+      }
+
+      items.push(...collectItems(child.props?.children));
+    });
+
+    return items;
+  }
+
+  function findTrigger(children: unknown): Record<string, unknown> | null {
+    for (const child of React.Children.toArray(children)) {
+      if (!React.isValidElement(child)) continue;
+      if (child.type === SelectTrigger) return child.props;
+
+      const nested = findTrigger(child.props?.children);
+      if (nested) return nested;
+    }
+
+    return null;
+  }
+
+  return {
+    Select: ({ value, onValueChange, children }: { value: string; onValueChange?: (value: string) => void; children: unknown }) => {
+      const trigger = findTrigger(children) ?? {};
+      const items = collectItems(children);
+
+      return (
+        <select
+          id={trigger.id as string | undefined}
+          aria-invalid={trigger["aria-invalid"] as string | undefined}
+          aria-describedby={trigger["aria-describedby"] as string | undefined}
+          value={value}
+          onChange={(event) => onValueChange?.(event.target.value)}
+        >
+          {items.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      );
+    },
+    SelectTrigger,
+    SelectContent,
+    SelectItem,
+    SelectValue,
+  };
+});
+
 vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, disabled, type = "button", ...props }: unknown) => (
     <button type={type} onClick={onClick} disabled={disabled} {...props}>
@@ -75,8 +140,8 @@ import { AddIntegrationDialog } from "@/features/integrations/components/AddInte
 const plugin = {
   pluginId: "seedpool",
   displayName: "Seedpool",
+  baseUrls: ["https://seedpool.org/", "https://alt.seedpool.org/"],
   fields: [
-    { name: "baseUrl", label: "Base URL", type: "text", required: true, sensitive: false },
     { name: "cron", label: "Cron", type: "cron", required: true, sensitive: false },
     { name: "required_ratio", label: "Required Ratio", type: "number", required: true, sensitive: false },
     { name: "username", label: "Username", type: "text", required: true, sensitive: false },
@@ -102,16 +167,16 @@ describe("AddIntegrationDialog", () => {
     fireEvent.submit(form);
 
     expect(createMutation.mutate).not.toHaveBeenCalled();
-    expect(screen.getByText("Base URL is required.")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Base URL/i)).toHaveValue("https://seedpool.org/");
     expect(screen.getByText("Required Ratio is required.")).toBeInTheDocument();
     expect(screen.getByText("Cron is required.")).toBeInTheDocument();
     expect(screen.getByText("Username is required.")).toBeInTheDocument();
     expect(screen.getByText("Password is required.")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/Base URL/i), { target: { value: "ftp://seedpool.org" } });
+    fireEvent.change(screen.getByLabelText(/Base URL/i), { target: { value: "https://alt.seedpool.org/" } });
     fireEvent.change(screen.getByLabelText(/Cron/i), { target: { value: "* * *" } });
 
-    expect(screen.getByText("Base URL must be a valid http:// or https:// URL.")).toBeInTheDocument();
+    expect(screen.queryByText("Base URL is required.")).not.toBeInTheDocument();
     expect(screen.getByText("Cron must be a valid 5-part UTC cron expression.")).toBeInTheDocument();
   });
 
@@ -185,7 +250,6 @@ describe("AddIntegrationDialog", () => {
     const plainPasswordInput = screen.getByLabelText(/Plain Password/i);
     const passkeyInput = screen.getByLabelText(/Passkey/i);
 
-    expect(baseUrlInput).toHaveAttribute("type", "text");
     expect(cronInput).toHaveAttribute("placeholder", "0 * * * *");
     expect(ratioInput).toHaveAttribute("type", "number");
     expect(ratioInput).toHaveAttribute("step", "any");
@@ -195,7 +259,9 @@ describe("AddIntegrationDialog", () => {
     expect(passkeyInput).toHaveAttribute("type", "password");
     expect(screen.getByText("Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.")).toBeInTheDocument();
 
-    fireEvent.change(baseUrlInput, { target: { value: " https://seedpool.org " } });
+    expect(baseUrlInput).toHaveValue("https://seedpool.org/");
+
+    fireEvent.change(baseUrlInput, { target: { value: "https://alt.seedpool.org/" } });
     fireEvent.change(cronInput, { target: { value: "0 * * * *" } });
     fireEvent.change(ratioInput, { target: { value: "1.5" } });
     fireEvent.change(usernameInput, { target: { value: "seed-user" } });
@@ -209,7 +275,7 @@ describe("AddIntegrationDialog", () => {
       {
         pluginId: "seedpool",
         payload: JSON.stringify({
-          baseUrl: "https://seedpool.org",
+          baseUrl: "https://alt.seedpool.org/",
           cron: "0 * * * *",
           required_ratio: "1.5",
           username: "seed-user",
@@ -226,7 +292,6 @@ describe("AddIntegrationDialog", () => {
     expect(toastSuccess).toHaveBeenCalledWith("Seedpool integration added");
 
     fireEvent.click(screen.getByRole("button", { name: /Seedpool/i }));
-    fireEvent.change(screen.getByLabelText(/Base URL/i), { target: { value: "https://seedpool.org" } });
     fireEvent.change(screen.getByLabelText(/Cron/i), { target: { value: "0 * * * *" } });
     fireEvent.change(screen.getByLabelText(/Required Ratio/i), { target: { value: "1.5" } });
     fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: "seed-user" } });

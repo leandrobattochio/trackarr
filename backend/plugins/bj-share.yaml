@@ -1,6 +1,9 @@
 pluginId: bj-share
 displayName: BJ-Share
 
+baseUrls:
+  - https://bj-share.info/
+
 fields:
   - name: cookie
     label: Cookie

@@ -13,6 +13,7 @@ public class PluginDefinitionDefaultsTests
         {
             PluginId = "plugin",
             DisplayName = "Plugin",
+            BaseUrls = ["https://tracker.test/"],
             Fields = [],
             CustomFields = [],
             Steps = [new StepDefinition { Name = "profile", Method = "GET", Url = "/", ResponseType = "html" }],
@@ -50,10 +51,10 @@ public class PluginDefinitionDefaultsTests
         {
             PluginId = "plugin",
             DisplayName = "Plugin",
+            BaseUrls = ["https://tracker.test/"],
             Fields =
             [
-                new FieldDefinition { Name = "custom", Label = "Custom", Type = "text" },
-                new FieldDefinition { Name = "baseUrl", Label = "Base URL", Type = "text" }
+                new FieldDefinition { Name = "custom", Label = "Custom", Type = "text" }
             ],
             CustomFields = [],
             Http = new HttpConfig
@@ -76,7 +77,7 @@ public class PluginDefinitionDefaultsTests
 
         PluginDefinitionDefaults.ApplyDefaults(definition, "test-user-agent");
 
-        definition.Fields.Count(field => string.Equals(field.Name, "baseUrl", StringComparison.OrdinalIgnoreCase)).ShouldBe(1);
+        definition.BaseUrls.ShouldBe(["https://tracker.test/"]);
         definition.Fields.ShouldContain(field => field.Name == "cron");
         definition.Fields.ShouldContain(field => field.Name == "required_ratio");
         definition.Http.BaseUrl.ShouldBe("https://tracker.test");
@@ -91,6 +92,7 @@ public class PluginDefinitionDefaultsTests
         {
             PluginId = "plugin",
             DisplayName = "Plugin",
+            BaseUrls = ["https://tracker.test/"],
             Fields =
             [
                 new FieldDefinition { Name = "cron", Label = "Cron", Type = "cron" },
@@ -124,6 +126,7 @@ public class PluginDefinitionDefaultsTests
 
         var editable = PluginDefinitionDefaults.CreateEditableDefinition(definition);
 
+        editable.BaseUrls.ShouldBe(["https://tracker.test/"]);
         editable.Fields.Select(f => f.Name).ShouldBe(["custom"]);
         editable.CustomFields.Select(f => f.Name).ShouldBe(["token"]);
         editable.Http.ShouldNotBeNull();
@@ -142,6 +145,7 @@ public class PluginDefinitionDefaultsTests
         {
             PluginId = "plugin",
             DisplayName = "Plugin",
+            BaseUrls = ["https://tracker.test/"],
             Fields = [],
             CustomFields = [],
             Http = new HttpConfig
