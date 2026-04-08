@@ -4,6 +4,7 @@ import type { ApiDashboardConfig } from "@/features/integrations/types";
 export interface ApiPluginFieldDefinition {
   name: string;
   label: string;
+  description?: string | null;
   type: string;
   required: boolean;
   sensitive: boolean;
@@ -15,6 +16,7 @@ export interface ApiPluginListItem {
   definitionValid: boolean;
   definitionError: string | null;
   dashboard: ApiDashboardConfig | null;
+  baseUrls: string[];
   fields: ApiPluginFieldDefinition[];
   customFields: ApiPluginFieldDefinition[];
 }

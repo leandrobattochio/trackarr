@@ -61,6 +61,9 @@ public sealed class YamlPluginDefinitionLoader(
             try
             {
                 var definition = DeserializeYamlDefinition(content, path);
+                if (string.IsNullOrWhiteSpace(definition.PluginId) || string.IsNullOrWhiteSpace(definition.DisplayName))
+                    throw new InvalidOperationException($"Plugin definition '{path}' is invalid. PluginId and displayName are required.");
+
                 RejectReservedFields(definition, path);
                 PluginDefinitionDefaults.ApplyDefaults(definition, settings.UserAgent);
                 loadedDefinition = new LoadedYamlPluginDefinition(

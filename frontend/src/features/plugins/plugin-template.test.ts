@@ -5,6 +5,7 @@ describe("NEW_PLUGIN_TEMPLATE", () => {
   it("includes the required sections for a starter plugin definition", () => {
     expect(NEW_PLUGIN_TEMPLATE).toContain("pluginId: custom-plugin");
     expect(NEW_PLUGIN_TEMPLATE).toContain("displayName: Custom Plugin");
+    expect(NEW_PLUGIN_TEMPLATE).toContain("baseUrls:");
     expect(NEW_PLUGIN_TEMPLATE).toContain("fields:");
     expect(NEW_PLUGIN_TEMPLATE).toContain("customFields:");
     expect(NEW_PLUGIN_TEMPLATE).toContain("authFailure:");

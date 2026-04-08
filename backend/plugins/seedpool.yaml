@@ -1,6 +1,9 @@
 pluginId: seedpool
 displayName: Seedpool
 
+baseUrls:
+  - https://seedpool.org/
+
 fields:
   - name: apiKey
     label: API Key

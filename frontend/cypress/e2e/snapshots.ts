@@ -15,7 +15,6 @@ Given("I have a Seedpool integration on the dashboard", () => {
   cy.contains("button", "Add Tracker").click();
   cy.contains("button", "Seedpool").click();
 
-  cy.get("#baseUrl").clear().type("https://seedpool.org");
   cy.get("#apiKey").clear().type("test-api-key");
   cy.get("#required_ratio").clear().type("1.25");
   cy.get("#cron").clear().type("0 * * * *");

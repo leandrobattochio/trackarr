@@ -31,7 +31,7 @@ public class YamlPluginDefinitionLoaderIntegrationTests
         definitions.Select(definition => definition.PluginId).ShouldContain("seedpool");
 
         var seedpool = definitions.Single(definition => definition.PluginId == "seedpool").Definition!;
-        seedpool.Fields.Any(field => field.Name == "baseUrl").ShouldBeTrue();
+        seedpool.BaseUrls.ShouldBe(["https://seedpool.org/"]);
         seedpool.Fields.Any(field => field.Name == "required_ratio").ShouldBeTrue();
         seedpool.Http.ShouldNotBeNull();
         seedpool.Http.BaseUrl.ShouldBe("{{baseUrl}}");
@@ -52,6 +52,8 @@ public class YamlPluginDefinitionLoaderIntegrationTests
             File.WriteAllText(Path.Combine(pluginsDirectory, "broken.yaml"), """
                 pluginId: broken
                 displayName: Broken Plugin
+                baseUrls:
+                  - https://tracker.test/
                 fields:
                   - name: baseUrl
                     label: Base URL

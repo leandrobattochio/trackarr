@@ -30,19 +30,19 @@ Given("I open the dashboard", () => {
 
 Given("I have multiple integrations on the dashboard", () => {
   createIntegration("seedpool", {
-    baseUrl: "https://seedpool.org",
+    baseUrl: "https://seedpool.org/",
     apiKey: "test-seedpool-key",
     required_ratio: "1.25",
     cron: "0 * * * *",
   });
   createIntegration("fearnopeer", {
-    baseUrl: "https://fearnopeer.com",
+    baseUrl: "https://fearnopeer.com/",
     apiKey: "test-fnp-key",
     required_ratio: "1.25",
     cron: "0 * * * *",
   });
   createIntegration("bj-share", {
-    baseUrl: "https://bj-share.info",
+    baseUrl: "https://bj-share.info/",
     cookie: "uid=test; pass=test",
     username: "bj-user",
     required_ratio: "1.25",
@@ -58,7 +58,6 @@ When("I add a Seedpool integration", () => {
   cy.contains("button", "Add Tracker").click();
   cy.contains("button", "Seedpool").click();
 
-  cy.get("#baseUrl").clear().type("https://seedpool.org");
   cy.get("#apiKey").clear().type("test-api-key");
   cy.get("#required_ratio").clear().type("1.25");
   cy.get("#cron").clear().type("0 * * * *");

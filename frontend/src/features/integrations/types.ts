@@ -50,6 +50,7 @@ export type ApiSyncResult = "success" | "authFailed" | "unknownError";
 export interface ApiPluginField {
   name: string;
   label: string;
+  description?: string | null;
   type: string;
   required: boolean;
   sensitive: boolean;
@@ -61,6 +62,7 @@ export interface ApiPlugin {
   definitionValid: boolean;
   definitionError: string | null;
   dashboard: ApiDashboardConfig | null;
+  baseUrls: string[];
   fields: ApiPluginField[];
   customFields: ApiPluginField[];
 }

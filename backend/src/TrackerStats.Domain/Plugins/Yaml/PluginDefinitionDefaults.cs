@@ -4,13 +4,12 @@ public static class PluginDefinitionDefaults
 {
     public static readonly IReadOnlyList<FieldDefinition> ReservedFields =
     [
-        new() { Name = "cron", Label = "Cron Expression", Type = "cron", Required = true },
-        new() { Name = "required_ratio", Label = "Required Ratio", Type = "number", Required = true },
-        new() { Name = "baseUrl", Label = "Base URL", Type = "text", Required = true }
+        new() { Name = "cron", Label = "Cron Expression", Description = "Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.", Type = "cron", Required = true },
+        new() { Name = "required_ratio", Label = "Required Ratio", Type = "number", Required = true }
     ];
 
     private static readonly HashSet<string> ReservedFieldNames =
-        new(ReservedFields.Select(f => f.Name), StringComparer.OrdinalIgnoreCase);
+        new([.. ReservedFields.Select(f => f.Name), "baseUrl"], StringComparer.OrdinalIgnoreCase);
 
     private static readonly IReadOnlyList<int> DefaultAuthFailureStatusCodes = [401, 403];
 
@@ -55,6 +54,7 @@ public static class PluginDefinitionDefaults
         }
         merged.AddRange(definition.Fields);
         definition.Fields = merged;
+        definition.BaseUrls ??= [];
         definition.CustomFields ??= [];
 
         definition.Http ??= new HttpConfig();
@@ -83,12 +83,14 @@ public static class PluginDefinitionDefaults
         {
             PluginId = definition.PluginId,
             DisplayName = definition.DisplayName,
+            BaseUrls = [.. definition.BaseUrls],
             Fields = definition.Fields
                 .Where(field => !IsReservedField(field.Name))
                 .Select(field => new FieldDefinition
                 {
                     Name = field.Name,
                     Label = field.Label,
+                    Description = field.Description,
                     Type = field.Type,
                     Required = field.Required,
                     Sensitive = field.Sensitive
@@ -99,6 +101,7 @@ public static class PluginDefinitionDefaults
                 {
                     Name = field.Name,
                     Label = field.Label,
+                    Description = field.Description,
                     Type = field.Type,
                     Required = field.Required,
                     Sensitive = field.Sensitive

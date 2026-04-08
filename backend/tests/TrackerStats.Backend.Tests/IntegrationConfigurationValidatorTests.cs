@@ -38,8 +38,8 @@ public class IntegrationConfigurationValidatorTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("username", "Username", "text", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("username", "Username", null, "text", true, false)
         ]));
         var sut = new IntegrationConfigurationValidator(registry);
 
@@ -55,7 +55,7 @@ public class IntegrationConfigurationValidatorTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false)
         ]));
         var sut = new IntegrationConfigurationValidator(registry);
 
@@ -66,12 +66,46 @@ public class IntegrationConfigurationValidatorTests
     }
 
     [Fact]
+    public void Validate_should_fail_when_cron_field_is_invalid()
+    {
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin",
+        [
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("cron", "Cron", null, "cron", true, false)
+        ]));
+        var sut = new IntegrationConfigurationValidator(registry);
+
+        var result = sut.Validate("plugin", """{"required_ratio":"1.0","cron":"* * *"}""");
+
+        result.IsValid.ShouldBeFalse();
+        result.Error.ShouldBe("Field 'cron' must be a valid 5-part UTC cron expression.");
+    }
+
+    [Fact]
+    public void Validate_should_fail_when_base_url_is_not_in_plugin_options()
+    {
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin",
+        [
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false)
+        ],
+        ["https://tracker.test/"]));
+        var sut = new IntegrationConfigurationValidator(registry);
+
+        var result = sut.Validate("plugin", """{"baseUrl":"https://other.test/","required_ratio":"1.0"}""");
+
+        result.IsValid.ShouldBeFalse();
+        result.Error.ShouldBe("Field 'baseUrl' must match one of the plugin's configured base URLs.");
+    }
+
+    [Fact]
     public void Validate_should_fail_when_plugin_configuration_rejects_http_client_setup()
     {
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin(
             "plugin",
-            [new PluginField("required_ratio", "Required Ratio", "number", true, false)],
+            [new PluginField("required_ratio", "Required Ratio", null, "number", true, false)],
             configureHttpClient: _ => throw new InvalidOperationException("Bad base URL")));
         var sut = new IntegrationConfigurationValidator(registry);
 
@@ -87,8 +121,8 @@ public class IntegrationConfigurationValidatorTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("username", "Username", "text", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("username", "Username", null, "text", true, false)
         ]));
         var sut = new IntegrationConfigurationValidator(registry);
 

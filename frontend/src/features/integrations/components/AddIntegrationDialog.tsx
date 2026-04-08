@@ -1,8 +1,7 @@
-import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import { useState, type FormEvent } from "react";
 import { Plus, Check, ChevronLeft, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +11,18 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { usePlugins, useCreateIntegration } from "@/features/integrations/hooks";
-import type { ApiPlugin, ApiPluginField } from "@/features/integrations/types";
+import type { ApiPlugin } from "@/features/integrations/types";
+import {
+  type AddIntegrationErrors,
+  getInitialFieldValues,
+  normalizeFieldValue,
+  normalizeIntegrationFieldValues,
+  validateBaseUrlValue,
+  validateFieldValue,
+  validateIntegrationFields,
+} from "@/features/integrations/components/add-integration-validation";
+import { IntegrationConfigurationForm } from "@/features/integrations/components/shared/integration-dialog/IntegrationConfigurationForm";
+import { createAddIntegrationFormStrategy } from "@/features/integrations/components/shared/integration-dialog/integrationFormStrategies";
 import { useDebounce } from "@/shared/hooks/use-debounce";
 import { toast } from "sonner";
 
@@ -20,28 +30,12 @@ interface AddIntegrationDialogProps {
   addedPluginIds: string[];
 }
 
-function getFieldHelpText(type: string): string | null {
-  if (type !== "cron") return null;
-
-  return "Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.";
-}
-
-function getFieldPlaceholder(type: string): string | undefined {
-  if (type === "cron") return "0 * * * *";
-  if (type === "number") return "1.00";
-  return undefined;
-}
-
-function getInputType(type: string, sensitive: boolean): string {
-  if (sensitive || type === "password") return "password";
-  if (type === "number") return "number";
-  return "text";
-}
-
 export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogProps) {
   const [open, setOpen] = useState(false);
   const [selectedPlugin, setSelectedPlugin] = useState<ApiPlugin | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<AddIntegrationErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const debouncedSearch = useDebounce(search, 250);
@@ -58,12 +52,16 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
 
   function handleSelectPlugin(plugin: ApiPlugin) {
     setSelectedPlugin(plugin);
-    setFieldValues(Object.fromEntries(getAllFields(plugin).map((f) => [f.name, ""])));
+    setFieldValues(getInitialFieldValues(plugin));
+    setFieldErrors({});
+    setSubmitError(null);
   }
 
   function handleBack() {
     setSelectedPlugin(null);
     setFieldValues({});
+    setFieldErrors({});
+    setSubmitError(null);
   }
 
   function handleSubmit(e: FormEvent) {
@@ -71,16 +69,29 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
     /* c8 ignore next */
     if (!selectedPlugin) return;
 
+    const normalizedFieldValues = normalizeIntegrationFieldValues(selectedPlugin, fieldValues);
+    const nextFieldErrors = validateIntegrationFields(selectedPlugin, normalizedFieldValues);
+    setFieldValues(normalizedFieldValues);
+    setFieldErrors(nextFieldErrors);
+    setSubmitError(null);
+
+    if (Object.keys(nextFieldErrors).length > 0) return;
+
     createIntegration(
-      { pluginId: selectedPlugin.pluginId, payload: JSON.stringify(fieldValues) },
+      { pluginId: selectedPlugin.pluginId, payload: JSON.stringify(normalizedFieldValues) },
       {
         onSuccess: () => {
           toast.success(`${selectedPlugin.displayName} integration added`);
           setOpen(false);
           setSelectedPlugin(null);
           setFieldValues({});
+          setFieldErrors({});
+          setSubmitError(null);
         },
-        onError: (err) => toast.error(err.message),
+        onError: (err) => {
+          setSubmitError(err.message);
+          toast.error(err.message);
+        },
       },
     );
   }
@@ -90,9 +101,25 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
     if (!value) {
       setSelectedPlugin(null);
       setFieldValues({});
+      setFieldErrors({});
+      setSubmitError(null);
       setSearch("");
     }
   }
+
+  const formStrategy = selectedPlugin
+    ? createAddIntegrationFormStrategy({
+        plugin: selectedPlugin,
+        fieldValues,
+        fieldErrors,
+        clearSubmitError: () => setSubmitError(null),
+        setFieldValues,
+        setFieldErrors,
+        validateBaseUrlValue,
+        validateFieldValue,
+        normalizeFieldValue,
+      })
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -103,7 +130,7 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
         </Button>
       </DialogTrigger>
 
-      <DialogContent>
+      <DialogContent className="flex h-[min(720px,calc(100vh-2rem))] max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-2xl">
         {selectedPlugin === null ? (
           <>
             <DialogHeader>
@@ -111,50 +138,53 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
               <DialogDescription>Choose a private tracker to connect.</DialogDescription>
             </DialogHeader>
 
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search trackers…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-                autoFocus
-              />
-            </div>
+            <div className="flex min-h-0 flex-1 flex-col gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search trackers..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                  autoFocus
+                />
+              </div>
 
-            <div className="overflow-y-auto h-[268px] space-y-3 pr-1">
-              {pluginsLoading && (
-                <div className="flex justify-center py-6">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              )}
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+                {pluginsLoading && (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                )}
 
-              {!pluginsLoading && filteredPlugins.length === 0 && (
-                <p className="py-6 text-center text-sm text-muted-foreground">
-                  No trackers match "{debouncedSearch}"
-                </p>
-              )}
+                {!pluginsLoading && filteredPlugins.length === 0 && (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    No trackers match "{debouncedSearch}"
+                  </p>
+                )}
 
-              {!pluginsLoading && filteredPlugins.map((plugin) => {
-                const isAdded = addedPluginIds.includes(plugin.pluginId);
-                return (
-                  <button
-                    key={plugin.pluginId}
-                    disabled={isAdded}
-                    onClick={() => handleSelectPlugin(plugin)}
-                    className="flex w-full items-center gap-4 rounded-lg border border-border/50 bg-muted/30 p-4 text-left transition-colors hover:bg-accent disabled:opacity-50"
-                  >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary/10 font-display text-sm font-bold text-primary">
-                      {plugin.displayName.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-display text-sm font-semibold">{plugin.displayName}</p>
-                      <p className="text-xs text-muted-foreground">{plugin.pluginId}</p>
-                    </div>
-                    {isAdded && <Check className="h-5 w-5 text-success" />}
-                  </button>
-                );
-              })}
+                {!pluginsLoading &&
+                  filteredPlugins.map((plugin) => {
+                    const isAdded = addedPluginIds.includes(plugin.pluginId);
+                    return (
+                      <button
+                        key={plugin.pluginId}
+                        disabled={isAdded}
+                        onClick={() => handleSelectPlugin(plugin)}
+                        className="flex w-full items-center gap-4 rounded-lg border border-border/50 bg-muted/30 p-4 text-left transition-colors hover:bg-accent disabled:opacity-50"
+                      >
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary/10 font-display text-sm font-bold text-primary">
+                          {plugin.displayName.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-display text-sm font-semibold">{plugin.displayName}</p>
+                          <p className="text-xs text-muted-foreground">{plugin.pluginId}</p>
+                        </div>
+                        {isAdded && <Check className="h-5 w-5 text-success" />}
+                      </button>
+                    );
+                  })}
+              </div>
             </div>
           </>
         ) : (
@@ -169,73 +199,31 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
               <DialogDescription>Enter your credentials to connect this tracker.</DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-              <FieldSection
-                title="Connection"
-                fields={selectedPlugin.fields}
-                fieldValues={fieldValues}
-                onChange={setFieldValues}
-              />
-              <FieldSection
-                title="Custom Fields"
-                fields={selectedPlugin.customFields}
-                fieldValues={fieldValues}
-                onChange={setFieldValues}
-              />
+            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col pt-2" noValidate>
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+                {submitError && (
+                  <div
+                    className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+                    role="alert"
+                  >
+                    {submitError}
+                  </div>
+                )}
+                {formStrategy && (
+                  <IntegrationConfigurationForm plugin={selectedPlugin} strategy={formStrategy} />
+                )}
+              </div>
 
-              <Button type="submit" className="w-full" disabled={isCreating}>
-                {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isCreating ? "Connecting…" : "Connect"}
-              </Button>
+              <div className="border-t border-border/50 pt-4">
+                <Button type="submit" className="w-full" disabled={isCreating}>
+                  {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isCreating ? "Connecting..." : "Connect"}
+                </Button>
+              </div>
             </form>
           </>
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-function getAllFields(plugin: ApiPlugin) {
-  return [...plugin.fields, ...plugin.customFields];
-}
-
-interface FieldSectionProps {
-  title: string;
-  fields: ApiPluginField[];
-  fieldValues: Record<string, string>;
-  onChange: Dispatch<SetStateAction<Record<string, string>>>;
-}
-
-function FieldSection({ title, fields, fieldValues, onChange }: FieldSectionProps) {
-  if (fields.length === 0) return null;
-
-  return (
-    <div className="space-y-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
-      {fields.map((field) => (
-        <div key={field.name} className="space-y-1.5">
-          <Label htmlFor={field.name}>
-            {field.label}
-            {field.required && <span className="ml-1 text-destructive">*</span>}
-          </Label>
-          <Input
-            id={field.name}
-            type={getInputType(field.type, field.sensitive)}
-            required={field.required}
-            /* c8 ignore next */
-            value={fieldValues[field.name] ?? ""}
-            placeholder={getFieldPlaceholder(field.type)}
-            autoComplete="off"
-            step={field.type === "number" ? "any" : undefined}
-            onChange={(e) =>
-              onChange((prev) => ({ ...prev, [field.name]: e.target.value }))
-            }
-          />
-          {getFieldHelpText(field.type) && (
-            <p className="text-xs text-muted-foreground">{getFieldHelpText(field.type)}</p>
-          )}
-        </div>
-      ))}
-    </div>
   );
 }

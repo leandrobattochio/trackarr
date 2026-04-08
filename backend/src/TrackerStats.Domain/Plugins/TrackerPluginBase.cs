@@ -8,6 +8,7 @@ public abstract class TrackerPluginBase(PluginConfiguration? configuration = nul
     public abstract string DisplayName { get; }
     public virtual DashboardConfig Dashboard => new();
     public abstract AuthMode AuthMode { get; }
+    public virtual IReadOnlyList<string> BaseUrls => [];
     public abstract IReadOnlyList<PluginField> Fields { get; }
 
     public abstract void ConfigureHttpClient(HttpClient httpClient);

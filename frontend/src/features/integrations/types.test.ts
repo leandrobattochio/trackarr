@@ -47,6 +47,7 @@ describe("mapIntegration", () => {
         byteUnitSystem: "decimal",
         metrics: [],
       },
+      baseUrls: ["https://seedpool.org/"],
       fields: [],
       customFields: [],
     }];

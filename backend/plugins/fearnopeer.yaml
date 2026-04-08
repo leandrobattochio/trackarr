@@ -1,6 +1,9 @@
 pluginId: fearnopeer
 displayName: Fearnopeer
 
+baseUrls:
+  - https://fearnopeer.com/
+
 fields:
   - name: apiKey
     label: API Key

@@ -4,6 +4,10 @@ pluginId: custom-plugin
 # Human-readable name shown in the UI.
 displayName: Custom Plugin
 
+# Allowed tracker hosts exposed as the engine-owned Base URL dropdown.
+baseUrls:
+  - https://tracker.example/
+
 # User-supplied connection fields.
 # Engine-owned fields like cron, required_ratio, and baseUrl are injected automatically,
 # so do not declare them here.
@@ -24,7 +28,7 @@ customFields:
     sensitive: false
 
 # Shared HTTP settings applied before every step.
-# baseUrl is engine-owned and automatically resolved from the integration payload.
+# http.baseUrl is engine-owned and automatically resolved from the selected base URL.
 http:
   headers:
     Accept: application/json

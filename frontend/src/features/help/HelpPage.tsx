@@ -17,11 +17,13 @@ const yamlFlow = [
   {
     id: "02",
     title: "Inputs",
-    fields: ["fields", "customFields"],
+    fields: ["baseUrls", "fields", "customFields"],
     details: [
+      "`baseUrls` is required and defines the allowed tracker host choices shown in the integration forms.",
       "Each item defines `name`, `label`, `type`, `required`, and `sensitive`.",
       "These fields are rendered in the integration form and validated by the backend.",
-      "Engine-owned values like `required_ratio`, `cron`, and `baseUrl` should not be declared here.",
+      "Engine-owned input values like `required_ratio` and `cron` should not be declared here.",
+      "The runtime `baseUrl` value is also engine-owned, but its allowed options come from `baseUrls` above.",
       "`customFields` uses the same shape as `fields` and can be omitted if not needed.",
     ],
   },
@@ -31,7 +33,7 @@ const yamlFlow = [
     fields: ["http", "authFailure"],
     details: [
       "Supports `headers` and `cookies`.",
-      "`baseUrl` exists in the model, but the engine owns it and resolves it from the integration payload.",
+      "`http.baseUrl` is engine-owned and resolved from the selected `baseUrls` entry at runtime.",
       "Supports `httpStatusCodes` and `htmlPatterns`.",
       "Use this when a tracker returns a login page or auth-related status instead of valid stats.",
     ],

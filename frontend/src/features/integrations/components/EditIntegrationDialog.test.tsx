@@ -1,3 +1,4 @@
+import * as React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -23,6 +24,7 @@ vi.mock("sonner", () => ({
 vi.mock("lucide-react", () => ({
   Loader2: () => <svg data-testid="icon-loader" />,
   Pencil: () => <svg data-testid="icon-pencil" />,
+  Info: () => <svg data-testid="icon-info" />,
 }));
 
 vi.mock("@/features/integrations/hooks", () => ({
@@ -33,6 +35,75 @@ vi.mock("@/features/integrations/hooks", () => ({
 vi.mock("@/features/integrations/components/shared/MetricTooltip", () => ({
   MetricTooltip: ({ children }: unknown) => <div>{children}</div>,
 }));
+
+vi.mock("@/components/ui/select", () => {
+  const SelectTrigger = () => null;
+  const SelectContent = ({ children }: { children: unknown }) => <>{children}</>;
+  const SelectValue = () => null;
+  const SelectItem = ({ children }: { children: unknown }) => <>{children}</>;
+
+  function isElementWithChildren(
+    child: unknown,
+  ): child is React.ReactElement<{ children?: React.ReactNode }> {
+    return React.isValidElement<{ children?: React.ReactNode }>(child);
+  }
+
+  function isSelectItemElement(
+    child: unknown,
+  ): child is React.ReactElement<{ value: string; children?: React.ReactNode }> {
+    return React.isValidElement<{ value: string; children?: React.ReactNode }>(child);
+  }
+
+  function collectItems(children: unknown): Array<{ value: string; label: string }> {
+    const items: Array<{ value: string; label: string }> = [];
+
+    React.Children.forEach(children, (child) => {
+      if (!isElementWithChildren(child)) return;
+
+      if (child.type === SelectItem && isSelectItemElement(child)) {
+        items.push({ value: child.props.value, label: String(child.props.children) });
+        return;
+      }
+
+      items.push(...collectItems(child.props?.children));
+    });
+
+    return items;
+  }
+
+  function findTrigger(children: unknown): Record<string, unknown> | null {
+    for (const child of React.Children.toArray(children)) {
+      if (!isElementWithChildren(child)) continue;
+      if (child.type === SelectTrigger) return child.props;
+
+      const nested = findTrigger(child.props?.children);
+      if (nested) return nested;
+    }
+
+    return null;
+  }
+
+  return {
+    Select: ({ value, onValueChange, children }: { value: string; onValueChange?: (value: string) => void; children: unknown }) => {
+      const trigger = findTrigger(children) ?? {};
+      const items = collectItems(children);
+
+      return (
+        <select id={trigger.id as string | undefined} value={value} onChange={(event) => onValueChange?.(event.target.value)}>
+          {items.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      );
+    },
+    SelectTrigger,
+    SelectContent,
+    SelectItem,
+    SelectValue,
+  };
+});
 
 vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, disabled, type = "button", ...props }: unknown) => (
@@ -73,6 +144,7 @@ const tracker: TrackerIntegration = {
   byteUnitSystem: "binary",
   name: "Seedpool",
   payload: {
+    baseUrl: "https://seedpool.org/",
     cron: "0 * * * *",
     requiredRatio: "1.5",
     password: "secret",
@@ -102,10 +174,11 @@ const tracker: TrackerIntegration = {
 
 const plugin = {
   pluginId: "seedpool",
+  baseUrls: ["https://seedpool.org/", "https://alt.seedpool.org/"],
   fields: [
-    { name: "cron", label: "Cron", type: "cron", required: true, sensitive: false },
+    { name: "cron", label: "Cron", description: "Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.", type: "cron", required: true, sensitive: false },
     { name: "requiredRatio", label: "Required Ratio", type: "number", required: false, sensitive: false },
-    { name: "apiKey", label: "API Key", type: "text", required: false, sensitive: false },
+    { name: "apiKey", label: "API Key", description: "Paste the API key issued by the tracker.", type: "text", required: false, sensitive: false },
     { name: "plainPassword", label: "Plain Password", type: "password", required: false, sensitive: false },
     { name: "password", label: "Password", type: "password", required: true, sensitive: true },
   ],
@@ -132,21 +205,28 @@ describe("EditIntegrationDialog", () => {
     fireEvent.click(screen.getByText("open-dialog"));
 
     const cronInput = screen.getByLabelText("Cron*");
+    const baseUrlInput = screen.getByLabelText(/Base URL/i);
     const ratioInput = screen.getByLabelText("Required Ratio");
     const apiKeyInput = screen.getByLabelText("API Key");
     const plainPasswordInput = screen.getByLabelText("Plain Password");
     const passwordInput = screen.getByLabelText("Password*");
     const passkeyInput = screen.getByLabelText("Passkey");
 
+    expect(baseUrlInput).toHaveValue("https://seedpool.org/");
     expect(cronInput).toHaveValue("0 * * * *");
+    expect(cronInput).toBeRequired();
     expect(apiKeyInput).toHaveValue("");
     expect(plainPasswordInput).toHaveAttribute("type", "password");
     expect(plainPasswordInput).toHaveValue("secret2");
     expect(passwordInput).toHaveValue("");
+    expect(passwordInput).toBeRequired();
     expect(passkeyInput).toHaveValue("");
     expect(passwordInput).toHaveAttribute("placeholder", "*****");
     expect(screen.getByText("Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.")).toBeInTheDocument();
+    expect(screen.getByText("Paste the API key issued by the tracker.")).toBeInTheDocument();
+    expect(screen.getAllByTestId("icon-info").length).toBeGreaterThan(0);
 
+    fireEvent.change(baseUrlInput, { target: { value: "https://alt.seedpool.org/" } });
     fireEvent.change(ratioInput, { target: { value: "2.0" } });
     fireEvent.submit(screen.getByRole("button", { name: /Save changes/i }).closest("form") as HTMLFormElement);
 
@@ -156,6 +236,7 @@ describe("EditIntegrationDialog", () => {
         dto: {
           pluginId: "seedpool",
           payload: JSON.stringify({
+            baseUrl: "https://alt.seedpool.org/",
             cron: "0 * * * *",
             requiredRatio: "2.0",
             apiKey: "",
@@ -189,6 +270,7 @@ describe("EditIntegrationDialog", () => {
 
     fireEvent.change(screen.getByLabelText("Required Ratio"), { target: { value: "9.9" } });
     fireEvent.click(screen.getByText("close-dialog"));
+    expect(screen.getByLabelText(/Base URL/i)).toHaveValue("https://seedpool.org/");
     expect(screen.getByLabelText("Required Ratio")).toHaveValue(1.5);
   });
 

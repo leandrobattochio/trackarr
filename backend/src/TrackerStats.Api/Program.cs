@@ -1,8 +1,10 @@
 using System.Data.Common;
+using FluentValidation;
 using Hangfire;
 using Hangfire.Storage.SQLite;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
+using TrackerStats.Api.Controllers;
 using TrackerStats.Domain.Plugins;
 using TrackerStats.Domain.Plugins.Yaml;
 using TrackerStats.Domain.Repositories;
@@ -26,6 +28,7 @@ var hangfireDatabasePath = ResolveSqliteDatabasePath(hangfireConnectionString, "
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateIntegrationRequestValidator>();
 
 builder.Services.AddDbContext<AppDbContext>(opts =>
 {

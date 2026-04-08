@@ -1,9 +1,13 @@
 pluginId: bj-share
 displayName: BJ-Share
 
+baseUrls:
+  - https://bj-share.info/
+
 fields:
   - name: cookie
     label: Cookie
+    description: Open Chrome DevTools, inspect a request to the tracker, copy the full Cookie header value, and paste it here.
     type: text
     required: true
     sensitive: true
@@ -11,6 +15,7 @@ fields:
 customFields:
   - name: username
     label: User Name
+    description: Enter the username of your account on the tracker.
     type: text
     required: true
 
