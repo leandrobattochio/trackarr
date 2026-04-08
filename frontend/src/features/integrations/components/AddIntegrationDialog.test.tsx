@@ -27,6 +27,7 @@ vi.mock("lucide-react", () => ({
   ChevronLeft: () => <svg data-testid="icon-back" />,
   Loader2: () => <svg data-testid="icon-loader" />,
   Search: () => <svg data-testid="icon-search" />,
+  Info: () => <svg data-testid="icon-info" />,
 }));
 
 vi.mock("@/features/integrations/hooks", () => ({
@@ -142,9 +143,9 @@ const plugin = {
   displayName: "Seedpool",
   baseUrls: ["https://seedpool.org/", "https://alt.seedpool.org/"],
   fields: [
-    { name: "cron", label: "Cron", type: "cron", required: true, sensitive: false },
+    { name: "cron", label: "Cron", description: "Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.", type: "cron", required: true, sensitive: false },
     { name: "required_ratio", label: "Required Ratio", type: "number", required: true, sensitive: false },
-    { name: "username", label: "Username", type: "text", required: true, sensitive: false },
+    { name: "username", label: "Username", description: "Enter the username of your account on the tracker.", type: "text", required: true, sensitive: false },
     { name: "password", label: "Password", type: "password", required: true, sensitive: true },
     { name: "plainPassword", label: "Plain Password", type: "password", required: false, sensitive: false },
   ],
@@ -198,7 +199,7 @@ describe("AddIntegrationDialog", () => {
     pluginsState.data = [
       {
         ...plugin,
-        customFields: [{ name: "customCron", label: "Custom Cron", type: "cron", required: true, sensitive: false }],
+        customFields: [{ name: "customCron", label: "Custom Cron", description: "Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.", type: "cron", required: true, sensitive: false }],
       },
     ];
     pluginsState.isLoading = false;
@@ -258,6 +259,8 @@ describe("AddIntegrationDialog", () => {
     expect(plainPasswordInput).toHaveAttribute("type", "password");
     expect(passkeyInput).toHaveAttribute("type", "password");
     expect(screen.getByText("Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.")).toBeInTheDocument();
+    expect(screen.getByText("Enter the username of your account on the tracker.")).toBeInTheDocument();
+    expect(screen.getAllByTestId("icon-info").length).toBeGreaterThan(0);
 
     expect(baseUrlInput).toHaveValue("https://seedpool.org/");
 

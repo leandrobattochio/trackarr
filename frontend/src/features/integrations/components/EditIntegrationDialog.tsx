@@ -1,5 +1,5 @@
 import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import { Loader2, Pencil } from "lucide-react";
+import { Info, Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,10 +25,8 @@ interface EditIntegrationDialogProps {
 
 const SENSITIVE_MASK = "*****";
 
-function getFieldHelpText(type: string): string | null {
-  if (type !== "cron") return null;
-
-  return "Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.";
+function getFieldHelpText(field: ApiPluginField): string | null {
+  return field.description?.trim() || null;
 }
 
 function getFieldPlaceholder(type: string): string | undefined {
@@ -234,11 +232,22 @@ function FieldSection({ title, trackerId, fields, fieldValues, onChange }: Field
               onChange((prev) => ({ ...prev, [field.name]: e.target.value }))
             }
           />
-          {getFieldHelpText(field.type) && (
-            <p className="text-xs text-muted-foreground">{getFieldHelpText(field.type)}</p>
+          {getFieldHelpText(field) && (
+            <FieldDescription description={getFieldHelpText(field)!} />
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function FieldDescription({ description }: { description: string }) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
+      <div className="flex items-start gap-2">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-foreground/70" />
+        <p className="leading-relaxed">{description}</p>
+      </div>
     </div>
   );
 }

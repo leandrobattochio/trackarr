@@ -23,6 +23,7 @@ vi.mock("sonner", () => ({
 vi.mock("lucide-react", () => ({
   Loader2: () => <svg data-testid="icon-loader" />,
   Pencil: () => <svg data-testid="icon-pencil" />,
+  Info: () => <svg data-testid="icon-info" />,
 }));
 
 vi.mock("@/features/integrations/hooks", () => ({
@@ -164,9 +165,9 @@ const plugin = {
   pluginId: "seedpool",
   baseUrls: ["https://seedpool.org/", "https://alt.seedpool.org/"],
   fields: [
-    { name: "cron", label: "Cron", type: "cron", required: true, sensitive: false },
+    { name: "cron", label: "Cron", description: "Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.", type: "cron", required: true, sensitive: false },
     { name: "requiredRatio", label: "Required Ratio", type: "number", required: false, sensitive: false },
-    { name: "apiKey", label: "API Key", type: "text", required: false, sensitive: false },
+    { name: "apiKey", label: "API Key", description: "Paste the API key issued by the tracker.", type: "text", required: false, sensitive: false },
     { name: "plainPassword", label: "Plain Password", type: "password", required: false, sensitive: false },
     { name: "password", label: "Password", type: "password", required: true, sensitive: true },
   ],
@@ -209,6 +210,8 @@ describe("EditIntegrationDialog", () => {
     expect(passkeyInput).toHaveValue("");
     expect(passwordInput).toHaveAttribute("placeholder", "*****");
     expect(screen.getByText("Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.")).toBeInTheDocument();
+    expect(screen.getByText("Paste the API key issued by the tracker.")).toBeInTheDocument();
+    expect(screen.getAllByTestId("icon-info").length).toBeGreaterThan(0);
 
     fireEvent.change(baseUrlInput, { target: { value: "https://alt.seedpool.org/" } });
     fireEvent.change(ratioInput, { target: { value: "2.0" } });
