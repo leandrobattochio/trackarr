@@ -9,6 +9,58 @@
 
 TrackArr is a self-hosted dashboard for private tracker monitoring. It lets you register tracker integrations, sync stats manually or on a schedule, keep historical snapshots, and define new tracker connectors through YAML instead of hard-coded backend logic.
 
+## Docker Compose example
+
+For self-hosting on your own server, the stack needs the TrackArr container plus a PostgreSQL database. A minimal `docker-compose.yml` can look like this:
+
+```yaml
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: trackarr-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: trackarr
+      POSTGRES_USER: arr
+      POSTGRES_PASSWORD: arr123
+    volumes:
+      - /mnt/user/appdata/trackarr/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arr -d trackarr"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arr
+
+  trackarr:
+    image: ghcr.io/leandrobattochio/trackarr:v0.2.2
+    container_name: trackarr
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "3012:3000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__PostgresConnection: Host=db;Port=5432;Database=trackarr;Username=arr;Password=arr123
+      Hangfire__Directory: /data
+      Plugins__Directory: /data
+      APP_TIMEZONE: America/Sao_Paulo
+      TZ: America/Sao_Paulo
+    volumes:
+      - /mnt/user/media/backup_configuracoes/trackarr:/data
+    networks:
+      - arr
+
+networks:
+  arr:
+    driver: bridge
+```
+
+Adjust the host volume paths, published port, timezone, and image tag to fit your environment.
+
 ## What it does
 
 - Monitors tracker ratio and transfer stats from a single dashboard
