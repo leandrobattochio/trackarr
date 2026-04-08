@@ -26,6 +26,7 @@ public sealed class YamlTrackerPlugin(
         .Select(definitionField => new PluginField(
             definitionField.Name,
             definitionField.Label,
+            definitionField.Description,
             definitionField.Type,
             definitionField.Required,
             definitionField.Sensitive))

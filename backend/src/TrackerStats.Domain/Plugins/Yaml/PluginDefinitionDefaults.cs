@@ -4,7 +4,7 @@ public static class PluginDefinitionDefaults
 {
     public static readonly IReadOnlyList<FieldDefinition> ReservedFields =
     [
-        new() { Name = "cron", Label = "Cron Expression", Type = "cron", Required = true },
+        new() { Name = "cron", Label = "Cron Expression", Description = "Use a Hangfire cron expression in UTC, for example `0 * * * *` to run every hour.", Type = "cron", Required = true },
         new() { Name = "required_ratio", Label = "Required Ratio", Type = "number", Required = true }
     ];
 
@@ -90,6 +90,7 @@ public static class PluginDefinitionDefaults
                 {
                     Name = field.Name,
                     Label = field.Label,
+                    Description = field.Description,
                     Type = field.Type,
                     Required = field.Required,
                     Sensitive = field.Sensitive
@@ -100,6 +101,7 @@ public static class PluginDefinitionDefaults
                 {
                     Name = field.Name,
                     Label = field.Label,
+                    Description = field.Description,
                     Type = field.Type,
                     Required = field.Required,
                     Sensitive = field.Sensitive

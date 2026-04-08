@@ -343,6 +343,45 @@ public class PluginsControllerTests
         json[0].GetProperty("customFields")[0].GetProperty("name").GetString().ShouldBe("token");
     }
 
+    [Fact]
+    public void GetAll_should_include_field_descriptions_for_valid_plugins()
+    {
+        using var fixture = new PluginsFixture();
+        File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "valid.yaml"), """
+            pluginId: valid
+            displayName: Valid
+            baseUrls:
+              - https://tracker.test/
+            fields:
+              - name: cookie
+                label: Cookie
+                description: Copy the full Cookie header value from the tracker request.
+                type: text
+                required: true
+                sensitive: true
+            steps:
+              - name: profile
+                method: GET
+                url: "/"
+                responseType: html
+            dashboard:
+              metrics:
+                - stat: ratio
+                  label: Ratio
+                  format: text
+            """);
+        var controller = fixture.CreateController();
+
+        var result = controller.GetAll();
+
+        var ok = result.ShouldBeOfType<OkObjectResult>();
+        var json = TestHttp.ToJson(ok.Value);
+        json[0].GetProperty("fields").EnumerateArray()
+            .Single(field => field.GetProperty("name").GetString() == "cookie")
+            .GetProperty("description").GetString()
+            .ShouldBe("Copy the full Cookie header value from the tracker request.");
+    }
+
     [Theory]
     [InlineData("""
         displayName: Invalid

@@ -40,8 +40,8 @@ public class IntegrationRequestValidatorsTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("cron", "Cron", "cron", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("cron", "Cron", null, "cron", true, false)
         ]));
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
 
@@ -58,8 +58,8 @@ public class IntegrationRequestValidatorsTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("cron", "Cron", "cron", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("cron", "Cron", null, "cron", true, false)
         ],
         ["https://tracker.test/"]));
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
@@ -77,8 +77,8 @@ public class IntegrationRequestValidatorsTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("cron", "Cron", "cron", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("cron", "Cron", null, "cron", true, false)
         ],
         ["https://tracker.test/"]));
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
@@ -96,8 +96,8 @@ public class IntegrationRequestValidatorsTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("cron", "Cron", "cron", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("cron", "Cron", null, "cron", true, false)
         ],
         ["https://tracker.test/"]));
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
@@ -114,8 +114,8 @@ public class IntegrationRequestValidatorsTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("cron", "Cron", "cron", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("cron", "Cron", null, "cron", true, false)
         ],
         ["http://localhost:8080/"]));
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
@@ -132,8 +132,8 @@ public class IntegrationRequestValidatorsTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("cron", "Cron", "cron", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("cron", "Cron", null, "cron", true, false)
         ],
         ["http://my.local/url"]));
         var validator = new CreateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
@@ -150,8 +150,8 @@ public class IntegrationRequestValidatorsTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("cron", "Cron", "cron", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("cron", "Cron", null, "cron", true, false)
         ]));
         var validator = new UpdateIntegrationRequestValidator(registry, new IntegrationConfigurationValidator(registry));
 

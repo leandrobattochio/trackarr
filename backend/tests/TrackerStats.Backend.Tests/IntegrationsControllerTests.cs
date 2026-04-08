@@ -55,8 +55,8 @@ public class IntegrationsControllerTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("username", "Username", "text", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("username", "Username", null, "text", true, false)
         ]));
         var controller = CreateController(repository, registry);
 
@@ -98,8 +98,8 @@ public class IntegrationsControllerTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("username", "Username", "text", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("username", "Username", null, "text", true, false)
         ]));
         var controller = CreateController(registry: registry);
 
@@ -119,8 +119,8 @@ public class IntegrationsControllerTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("username", "Username", "text", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("username", "Username", null, "text", true, false)
         ]));
         var controller = CreateController(repository: repository, registry: registry, scheduler: scheduler);
 
@@ -219,9 +219,9 @@ public class IntegrationsControllerTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("username", "Username", "text", true, false),
-            new PluginField("secret", "Secret", "text", true, true)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("username", "Username", null, "text", true, false),
+            new PluginField("secret", "Secret", null, "text", true, true)
         ]));
         var controller = CreateController(repository, registry);
 
@@ -249,9 +249,9 @@ public class IntegrationsControllerTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("username", "Username", "text", true, false),
-            new PluginField("secret", "Secret", "text", true, true)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("username", "Username", null, "text", true, false),
+            new PluginField("secret", "Secret", null, "text", true, true)
         ]));
         var controller = CreateController(repository, registry, scheduler: scheduler);
 
@@ -346,9 +346,9 @@ public class IntegrationsControllerTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("username", "Username", "text", true, false),
-            new PluginField("secret", "Secret", "text", true, true)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("username", "Username", null, "text", true, false),
+            new PluginField("secret", "Secret", null, "text", true, true)
         ]));
         var controller = CreateController(repository, registry, scheduler: scheduler);
 
@@ -378,7 +378,7 @@ public class IntegrationsControllerTests
         var registry = new FakeTrackerPluginRegistry();
         var plugin = new FakeTrackerPlugin(
             "plugin",
-            [new PluginField("required_ratio", "Required Ratio", "number", true, false)],
+            [new PluginField("required_ratio", "Required Ratio", null, "number", true, false)],
             fetch: (_, _) => Task.FromResult(new TrackerFetchResult(
                 PluginProcessResult.Success,
                 new global::TrackerStats.Domain.Plugins.TrackerStats(

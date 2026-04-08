@@ -38,8 +38,8 @@ public class IntegrationConfigurationValidatorTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("username", "Username", "text", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("username", "Username", null, "text", true, false)
         ]));
         var sut = new IntegrationConfigurationValidator(registry);
 
@@ -55,7 +55,7 @@ public class IntegrationConfigurationValidatorTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false)
         ]));
         var sut = new IntegrationConfigurationValidator(registry);
 
@@ -71,8 +71,8 @@ public class IntegrationConfigurationValidatorTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("cron", "Cron", "cron", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("cron", "Cron", null, "cron", true, false)
         ]));
         var sut = new IntegrationConfigurationValidator(registry);
 
@@ -88,7 +88,7 @@ public class IntegrationConfigurationValidatorTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false)
         ],
         ["https://tracker.test/"]));
         var sut = new IntegrationConfigurationValidator(registry);
@@ -105,7 +105,7 @@ public class IntegrationConfigurationValidatorTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin(
             "plugin",
-            [new PluginField("required_ratio", "Required Ratio", "number", true, false)],
+            [new PluginField("required_ratio", "Required Ratio", null, "number", true, false)],
             configureHttpClient: _ => throw new InvalidOperationException("Bad base URL")));
         var sut = new IntegrationConfigurationValidator(registry);
 
@@ -121,8 +121,8 @@ public class IntegrationConfigurationValidatorTests
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
-            new PluginField("required_ratio", "Required Ratio", "number", true, false),
-            new PluginField("username", "Username", "text", true, false)
+            new PluginField("required_ratio", "Required Ratio", null, "number", true, false),
+            new PluginField("username", "Username", null, "text", true, false)
         ]));
         var sut = new IntegrationConfigurationValidator(registry);
 

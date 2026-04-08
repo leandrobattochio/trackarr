@@ -53,6 +53,7 @@ public class PluginsController(
                 {
                     name = f.Name,
                     label = f.Label,
+                    description = f.Description,
                     type = f.Type,
                     required = f.Required,
                     sensitive = f.Sensitive
@@ -63,6 +64,7 @@ public class PluginsController(
                 {
                     name = f.Name,
                     label = f.Label,
+                    description = f.Description,
                     type = f.Type,
                     required = f.Required,
                     sensitive = f.Sensitive
