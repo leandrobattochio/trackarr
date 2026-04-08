@@ -16,7 +16,6 @@ import { usePlugins, useCreateIntegration } from "@/features/integrations/hooks"
 import type { ApiPlugin, ApiPluginField } from "@/features/integrations/types";
 import {
   BASE_URL_FIELD_NAME,
-  getAllFields,
   getInitialFieldValues,
   normalizeFieldValue,
   normalizeIntegrationFieldValues,
@@ -92,8 +91,7 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
     setFieldErrors(nextFieldErrors);
     setSubmitError(null);
 
-    if (Object.keys(nextFieldErrors).length > 0)
-      return;
+    if (Object.keys(nextFieldErrors).length > 0) return;
 
     createIntegration(
       { pluginId: selectedPlugin.pluginId, payload: JSON.stringify(normalizedFieldValues) },
@@ -134,7 +132,7 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
         </Button>
       </DialogTrigger>
 
-      <DialogContent>
+      <DialogContent className="flex h-[min(720px,calc(100vh-2rem))] max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-2xl">
         {selectedPlugin === null ? (
           <>
             <DialogHeader>
@@ -142,50 +140,53 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
               <DialogDescription>Choose a private tracker to connect.</DialogDescription>
             </DialogHeader>
 
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search trackers…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-                autoFocus
-              />
-            </div>
+            <div className="flex min-h-0 flex-1 flex-col gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search trackers..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                  autoFocus
+                />
+              </div>
 
-            <div className="overflow-y-auto h-[268px] space-y-3 pr-1">
-              {pluginsLoading && (
-                <div className="flex justify-center py-6">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              )}
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+                {pluginsLoading && (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                )}
 
-              {!pluginsLoading && filteredPlugins.length === 0 && (
-                <p className="py-6 text-center text-sm text-muted-foreground">
-                  No trackers match "{debouncedSearch}"
-                </p>
-              )}
+                {!pluginsLoading && filteredPlugins.length === 0 && (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    No trackers match "{debouncedSearch}"
+                  </p>
+                )}
 
-              {!pluginsLoading && filteredPlugins.map((plugin) => {
-                const isAdded = addedPluginIds.includes(plugin.pluginId);
-                return (
-                  <button
-                    key={plugin.pluginId}
-                    disabled={isAdded}
-                    onClick={() => handleSelectPlugin(plugin)}
-                    className="flex w-full items-center gap-4 rounded-lg border border-border/50 bg-muted/30 p-4 text-left transition-colors hover:bg-accent disabled:opacity-50"
-                  >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary/10 font-display text-sm font-bold text-primary">
-                      {plugin.displayName.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-display text-sm font-semibold">{plugin.displayName}</p>
-                      <p className="text-xs text-muted-foreground">{plugin.pluginId}</p>
-                    </div>
-                    {isAdded && <Check className="h-5 w-5 text-success" />}
-                  </button>
-                );
-              })}
+                {!pluginsLoading &&
+                  filteredPlugins.map((plugin) => {
+                    const isAdded = addedPluginIds.includes(plugin.pluginId);
+                    return (
+                      <button
+                        key={plugin.pluginId}
+                        disabled={isAdded}
+                        onClick={() => handleSelectPlugin(plugin)}
+                        className="flex w-full items-center gap-4 rounded-lg border border-border/50 bg-muted/30 p-4 text-left transition-colors hover:bg-accent disabled:opacity-50"
+                      >
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary/10 font-display text-sm font-bold text-primary">
+                          {plugin.displayName.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-display text-sm font-semibold">{plugin.displayName}</p>
+                          <p className="text-xs text-muted-foreground">{plugin.pluginId}</p>
+                        </div>
+                        {isAdded && <Check className="h-5 w-5 text-success" />}
+                      </button>
+                    );
+                  })}
+              </div>
             </div>
           </>
         ) : (
@@ -200,73 +201,80 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
               <DialogDescription>Enter your credentials to connect this tracker.</DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4 pt-2" noValidate>
-              {submitError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert">
-                  {submitError}
-                </div>
-              )}
-              <BaseUrlField
-                plugin={selectedPlugin}
-                value={fieldValues[BASE_URL_FIELD_NAME] ?? ""}
-                error={fieldErrors[BASE_URL_FIELD_NAME]}
-                onChange={(value) => {
-                  setSubmitError(null);
-                  setFieldValues((prev) => ({ ...prev, [BASE_URL_FIELD_NAME]: value }));
-                  setFieldErrors((prev) => {
-                    const nextError = validateBaseUrlValue(selectedPlugin, value);
-                    if (!nextError) {
-                      const { [BASE_URL_FIELD_NAME]: _removed, ...rest } = prev;
-                      return rest;
-                    }
+            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col pt-2" noValidate>
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+                {submitError && (
+                  <div
+                    className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+                    role="alert"
+                  >
+                    {submitError}
+                  </div>
+                )}
+                <BaseUrlField
+                  plugin={selectedPlugin}
+                  value={fieldValues[BASE_URL_FIELD_NAME] ?? ""}
+                  error={fieldErrors[BASE_URL_FIELD_NAME]}
+                  onChange={(value) => {
+                    setSubmitError(null);
+                    setFieldValues((prev) => ({ ...prev, [BASE_URL_FIELD_NAME]: value }));
+                    setFieldErrors((prev) => {
+                      const nextError = validateBaseUrlValue(selectedPlugin, value);
+                      if (!nextError) {
+                        const { [BASE_URL_FIELD_NAME]: _removed, ...rest } = prev;
+                        return rest;
+                      }
 
-                    return { ...prev, [BASE_URL_FIELD_NAME]: nextError };
-                  });
-                }}
-              />
-              <FieldSection
-                title="Connection"
-                fields={selectedPlugin.fields}
-                fieldValues={fieldValues}
-                fieldErrors={fieldErrors}
-                onChange={(field, value) => {
-                  setSubmitError(null);
-                  setFieldValues((prev) => ({ ...prev, [field.name]: value }));
-                  setFieldErrors((prev) => {
-                    const nextError = validateFieldValue(field, normalizeFieldValue(field, value));
-                    if (!nextError) {
-                      const { [field.name]: _removed, ...rest } = prev;
-                      return rest;
-                    }
+                      return { ...prev, [BASE_URL_FIELD_NAME]: nextError };
+                    });
+                  }}
+                />
+                <FieldSection
+                  title="Connection"
+                  fields={selectedPlugin.fields}
+                  fieldValues={fieldValues}
+                  fieldErrors={fieldErrors}
+                  onChange={(field, value) => {
+                    setSubmitError(null);
+                    setFieldValues((prev) => ({ ...prev, [field.name]: value }));
+                    setFieldErrors((prev) => {
+                      const nextError = validateFieldValue(field, normalizeFieldValue(field, value));
+                      if (!nextError) {
+                        const { [field.name]: _removed, ...rest } = prev;
+                        return rest;
+                      }
 
-                    return { ...prev, [field.name]: nextError };
-                  });
-                }}
-              />
-              <FieldSection
-                title="Custom Fields"
-                fields={selectedPlugin.customFields}
-                fieldValues={fieldValues}
-                fieldErrors={fieldErrors}
-                onChange={(field, value) => {
-                  setSubmitError(null);
-                  setFieldValues((prev) => ({ ...prev, [field.name]: value }));
-                  setFieldErrors((prev) => {
-                    const nextError = validateFieldValue(field, normalizeFieldValue(field, value));
-                    if (!nextError) {
-                      const { [field.name]: _removed, ...rest } = prev;
-                      return rest;
-                    }
+                      return { ...prev, [field.name]: nextError };
+                    });
+                  }}
+                />
+                <FieldSection
+                  title="Custom Fields"
+                  fields={selectedPlugin.customFields}
+                  fieldValues={fieldValues}
+                  fieldErrors={fieldErrors}
+                  onChange={(field, value) => {
+                    setSubmitError(null);
+                    setFieldValues((prev) => ({ ...prev, [field.name]: value }));
+                    setFieldErrors((prev) => {
+                      const nextError = validateFieldValue(field, normalizeFieldValue(field, value));
+                      if (!nextError) {
+                        const { [field.name]: _removed, ...rest } = prev;
+                        return rest;
+                      }
 
-                    return { ...prev, [field.name]: nextError };
-                  });
-                }}
-              />
+                      return { ...prev, [field.name]: nextError };
+                    });
+                  }}
+                />
+              </div>
 
-              <Button type="submit" className="w-full" disabled={isCreating}>
-                {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isCreating ? "Connecting…" : "Connect"}
-              </Button>
+              <div className="border-t border-border/50 pt-4">
+                <Button type="submit" className="w-full" disabled={isCreating}>
+                  {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isCreating ? "Connecting..." : "Connect"}
+                </Button>
+              </div>
             </form>
           </>
         )}
@@ -353,9 +361,7 @@ function FieldSection({ title, fields, fieldValues, fieldErrors, onChange }: Fie
               {fieldErrors[field.name]}
             </p>
           )}
-          {getFieldHelpText(field) && (
-            <FieldDescription description={getFieldHelpText(field)!} />
-          )}
+          {getFieldHelpText(field) && <FieldDescription description={getFieldHelpText(field)!} />}
         </div>
       ))}
     </div>
