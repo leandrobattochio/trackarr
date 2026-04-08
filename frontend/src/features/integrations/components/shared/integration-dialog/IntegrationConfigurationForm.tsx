@@ -4,7 +4,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ApiPlugin, ApiPluginField } from "@/features/integrations/types";
 import type { IntegrationFormStrategy } from "@/features/integrations/components/shared/integration-dialog/integrationFormStrategies";
-import { cn } from "@/lib/utils";
 
 interface IntegrationConfigurationFormProps {
   plugin: ApiPlugin;
@@ -35,7 +34,7 @@ function BaseUrlField({ plugin, strategy }: IntegrationConfigurationFormProps) {
           id={id}
           aria-invalid={error ? "true" : "false"}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={getFieldChromeClassName(error)}
+          className={error ? "border-destructive focus:border-destructive focus:ring-destructive" : undefined}
         >
           <SelectValue placeholder="Select a base URL" />
         </SelectTrigger>
@@ -90,7 +89,7 @@ function FieldSection({ title, fields, strategy }: FieldSectionProps) {
               aria-invalid={error ? "true" : "false"}
               aria-describedby={error ? `${id}-error` : undefined}
               onChange={(event) => onChange(event.target.value)}
-              className={getFieldChromeClassName(error)}
+              className={error ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive" : undefined}
             />
             {error && (
               <p id={`${id}-error`} className="text-xs text-destructive">
@@ -113,15 +112,6 @@ function getInputType(type: string, sensitive: boolean): string {
   if (sensitive || type === "password") return "password";
   if (type === "number") return "number";
   return "text";
-}
-
-function getFieldChromeClassName(error?: string) {
-  return cn(
-    "transition-[border-color,box-shadow] focus-visible:ring-1 focus-visible:ring-offset-0",
-    error
-      ? "border-destructive focus-visible:ring-destructive"
-      : "focus-visible:border-ring",
-  );
 }
 
 function FieldDescription({ description }: { description: string }) {
