@@ -99,7 +99,11 @@ internal static class IntegrationRequestValidationHelpers
         {
             return JsonSerializer.Deserialize<Dictionary<string, string?>>(payload) ?? [];
         }
-        catch
+        catch (JsonException)
+        {
+            return [];
+        }
+        catch (NotSupportedException)
         {
             return [];
         }
