@@ -248,6 +248,7 @@ describe("SnapshotsPage", () => {
           capturedAt: "2026-01-01T00:00:00.000Z",
           uploadedBytes: null,
           downloadedBytes: 20,
+          ratio: null,
           seedingTorrents: null,
           leechingTorrents: 2,
           activeTorrents: 3,
@@ -256,6 +257,7 @@ describe("SnapshotsPage", () => {
           capturedAt: "2026-01-01T00:30:00.000Z",
           uploadedBytes: 10,
           downloadedBytes: null,
+          ratio: 1.25,
           seedingTorrents: 4,
           leechingTorrents: null,
           activeTorrents: null,
@@ -267,11 +269,13 @@ describe("SnapshotsPage", () => {
     expect(formatSnapshotRangeLabelSpy).toHaveBeenCalledWith("custom", "2026-01-01T00:00", "2026-01-01T01:00");
     expect(screen.getByTestId("summary-cards")).toBeInTheDocument();
     expect(screen.getByTestId("line-chart-card-Transfer History")).toBeInTheDocument();
+    expect(screen.getByTestId("line-chart-card-Ratio History")).toBeInTheDocument();
     expect(screen.getByTestId("line-chart-card-Torrent Activity")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Back to Dashboard/i })).toHaveAttribute("href", "/");
     expect(formatBytesSpy).toHaveBeenCalledWith(10, "decimal");
 
     fireEvent.click(screen.getByText("toggle-Transfer History"));
+    fireEvent.click(screen.getByText("toggle-Ratio History"));
     fireEvent.click(screen.getByText("toggle-Torrent Activity"));
   });
 });
