@@ -6,6 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SnapshotFiltersCard, SnapshotLineChartCard, SnapshotSummaryCards } from "@/features/snapshots/components";
 import { useIntegrations, usePlugins } from "@/features/integrations/hooks";
 import { mapIntegration } from "@/features/integrations/types";
+import {
+  ratioSeriesOptions,
+  snapshotChartConfig,
+  torrentSeriesOptions,
+  transferSeriesOptions,
+  type RatioSeriesKey,
+  type TorrentSeriesKey,
+  type TransferSeriesKey,
+} from "@/features/snapshots/chart-config";
 import { useSnapshotFilters, useSnapshots } from "@/features/snapshots/hooks";
 import { formatSnapshotRangeLabel } from "@/features/snapshots/range";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
@@ -13,43 +22,6 @@ import { usePageTitle } from "@/shared/hooks/use-page-title";
 import { formatBytes } from "@/shared/lib/formatters";
 
 const DISPLAY_TIMEZONE = import.meta.env.VITE_APP_TIMEZONE || "America/Sao_Paulo";
-
-const chartConfig = {
-  uploadedBytes: {
-    label: "Uploaded",
-    color: "hsl(var(--success))",
-  },
-  downloadedBytes: {
-    label: "Downloaded",
-    color: "hsl(var(--primary))",
-  },
-  seedingTorrents: {
-    label: "Seeding",
-    color: "hsl(174 72% 46%)",
-  },
-  leechingTorrents: {
-    label: "Leeching",
-    color: "hsl(38 92% 50%)",
-  },
-  activeTorrents: {
-    label: "Active",
-    color: "hsl(0 72% 58%)",
-  },
-};
-
-const transferSeriesOptions = [
-  { key: "uploadedBytes", label: "Uploaded", strokeToken: "var(--color-uploadedBytes)", strokeWidth: 2.5 },
-  { key: "downloadedBytes", label: "Downloaded", strokeToken: "var(--color-downloadedBytes)", strokeWidth: 2.5 },
-] as const;
-
-const torrentSeriesOptions = [
-  { key: "seedingTorrents", label: "Seeding", strokeToken: "var(--color-seedingTorrents)" },
-  { key: "leechingTorrents", label: "Leeching", strokeToken: "var(--color-leechingTorrents)" },
-  { key: "activeTorrents", label: "Active", strokeToken: "var(--color-activeTorrents)" },
-] as const;
-
-type TransferSeriesKey = (typeof transferSeriesOptions)[number]["key"];
-type TorrentSeriesKey = (typeof torrentSeriesOptions)[number]["key"];
 
 function toUtcIsoFromLocalInput(value: string) {
   return new Date(value).toISOString();
@@ -76,6 +48,10 @@ function formatExactDateTime(iso: string) {
   }).format(new Date(iso));
 }
 
+function formatRatio(value: number) {
+  return value.toFixed(2);
+}
+
 export default function SnapshotsPage() {
   usePageTitle("TrackArr | Snapshots");
   const {
@@ -97,6 +73,9 @@ export default function SnapshotsPage() {
   const [visibleTransferSeries, setVisibleTransferSeries] = useState<Record<TransferSeriesKey, boolean>>({
     uploadedBytes: true,
     downloadedBytes: true,
+  });
+  const [visibleRatioSeries, setVisibleRatioSeries] = useState<Record<RatioSeriesKey, boolean>>({
+    ratio: true,
   });
   const [visibleTorrentSeries, setVisibleTorrentSeries] = useState<Record<TorrentSeriesKey, boolean>>({
     seedingTorrents: true,
@@ -142,6 +121,7 @@ export default function SnapshotsPage() {
         ...item,
         uploadedBytes: item.uploadedBytes ?? 0,
         downloadedBytes: item.downloadedBytes ?? 0,
+        ratio: item.ratio,
         seedingTorrents: item.seedingTorrents ?? 0,
         leechingTorrents: item.leechingTorrents ?? 0,
         activeTorrents: item.activeTorrents ?? 0,
@@ -152,6 +132,13 @@ export default function SnapshotsPage() {
 
   function toggleTransferSeries(key: TransferSeriesKey, checked: boolean) {
     setVisibleTransferSeries((current) => ({
+      ...current,
+      [key]: checked,
+    }));
+  }
+
+  function toggleRatioSeries(key: RatioSeriesKey, checked: boolean) {
+    setVisibleRatioSeries((current) => ({
       ...current,
       [key]: checked,
     }));
@@ -251,7 +238,7 @@ export default function SnapshotsPage() {
                     title="Transfer History"
                     description="Uploaded and downloaded values over time."
                     chartData={chartData}
-                    chartConfig={chartConfig}
+                    chartConfig={snapshotChartConfig}
                     seriesOptions={transferSeriesOptions}
                     visibleSeries={visibleTransferSeries}
                     onToggleSeries={toggleTransferSeries}
@@ -265,10 +252,27 @@ export default function SnapshotsPage() {
                   />
 
                   <SnapshotLineChartCard
+                    title="Ratio History"
+                    description="Ratio values over time."
+                    chartData={chartData}
+                    chartConfig={snapshotChartConfig}
+                    seriesOptions={ratioSeriesOptions}
+                    visibleSeries={visibleRatioSeries}
+                    onToggleSeries={toggleRatioSeries}
+                    yAxisWidth={56}
+                    yAxisFormatter={formatRatio}
+                    tooltipLabelFormatter={formatExactDateTime}
+                    tooltipValueFormatter={(value) => ({
+                      label: "Ratio",
+                      value: formatRatio(value),
+                    })}
+                  />
+
+                  <SnapshotLineChartCard
                     title="Torrent Activity"
                     description="Seeding, leeching, and active torrent counts over time."
                     chartData={chartData}
-                    chartConfig={chartConfig}
+                    chartConfig={snapshotChartConfig}
                     seriesOptions={torrentSeriesOptions}
                     visibleSeries={visibleTorrentSeries}
                     onToggleSeries={toggleTorrentSeries}
