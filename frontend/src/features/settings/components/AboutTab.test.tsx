@@ -42,6 +42,15 @@ describe("AboutTab", () => {
       startupDirectory: "/app",
       environmentName: "Production",
       uptime: "3 days",
+      updateCheck: {
+        enabled: true,
+        currentVersion: "1.2.3",
+        latestVersion: "1.2.4",
+        updateAvailable: true,
+        releaseUrl: "https://github.com/leandrobattochio/trackarr/releases/tag/v1.2.4",
+        checkedAt: "2026-04-09T21:00:00Z",
+        error: null,
+      },
     };
 
     const { rerender } = render(
@@ -55,6 +64,12 @@ describe("AboutTab", () => {
     expect(screen.getByText("Yes")).toBeInTheDocument();
     expect(screen.getByText("Applied Migrations")).toBeInTheDocument();
     expect(screen.getByText("8")).toBeInTheDocument();
+    expect(screen.getByText("Latest Version")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "1.2.4" })).toHaveAttribute(
+      "href",
+      "https://github.com/leandrobattochio/trackarr/releases/tag/v1.2.4",
+    );
+    expect(screen.getByText("Update available")).toBeInTheDocument();
 
     rerender(
       <AboutTab
@@ -64,6 +79,72 @@ describe("AboutTab", () => {
       />,
     );
     expect(screen.getByText("No")).toBeInTheDocument();
+  });
+
+  it("renders disabled, failed, and up-to-date update check states", () => {
+    const aboutInfo = {
+      version: "1.2.3",
+      dotNetVersion: "10.0.0",
+      runningInDocker: false,
+      databaseEngine: "PostgreSQL",
+      appliedMigrations: 8,
+      appDataDirectory: "/data",
+      startupDirectory: "/app",
+      environmentName: "Production",
+      uptime: "3 days",
+      updateCheck: {
+        enabled: false,
+        currentVersion: "1.2.3",
+        latestVersion: null,
+        updateAvailable: false,
+        releaseUrl: null,
+        checkedAt: null,
+        error: null,
+      },
+    };
+
+    const { rerender } = render(
+      <AboutTab isLoading={false} error={null} aboutInfo={aboutInfo} />,
+    );
+
+    expect(screen.getByText("Disabled")).toBeInTheDocument();
+    expect(screen.getByText("Not checked")).toBeInTheDocument();
+    expect(screen.getByText("Automatic checks disabled")).toBeInTheDocument();
+
+    rerender(
+      <AboutTab
+        isLoading={false}
+        error={null}
+        aboutInfo={{
+          ...aboutInfo,
+          updateCheck: {
+            ...aboutInfo.updateCheck,
+            enabled: true,
+            latestVersion: null,
+            error: "rate limited",
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("Unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Check failed: rate limited")).toBeInTheDocument();
+
+    rerender(
+      <AboutTab
+        isLoading={false}
+        error={null}
+        aboutInfo={{
+          ...aboutInfo,
+          updateCheck: {
+            ...aboutInfo.updateCheck,
+            enabled: true,
+            latestVersion: "1.2.3",
+            error: null,
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("Up to date")).toBeInTheDocument();
   });
 });
 

@@ -7,7 +7,7 @@ const pageTitleSpy = vi.fn();
 const mutateSpy = vi.fn();
 
 const settingsQuery = {
-  data: undefined as { userAgent: string } | undefined,
+  data: undefined as { userAgent: string; checkForUpdates: boolean; checkForUpdatesOverridden: boolean } | undefined,
   isLoading: false,
   error: null as Error | null,
 };
@@ -59,9 +59,12 @@ vi.mock("@/features/settings/components", () => ({
       <span>{`loading:${String(props.isLoading)}`}</span>
       <span>{`error:${props.error?.message ?? "none"}`}</span>
       <span>{`ua:${props.userAgent}`}</span>
+      <span>{`check:${String(props.checkForUpdates)}`}</span>
+      <span>{`overridden:${String(props.checkForUpdatesOverridden)}`}</span>
       <span>{`validation:${props.validationError ?? "none"}`}</span>
       <button type="button" onClick={() => props.onChangeUserAgent("   ")}>set-empty</button>
       <button type="button" onClick={() => props.onChangeUserAgent("TrackArr/2.0")}>set-valid</button>
+      <button type="button" onClick={() => props.onChangeCheckForUpdates(!props.checkForUpdates)}>toggle-updates</button>
       <button type="button" onClick={props.onSave}>save-settings</button>
     </div>
   ),
@@ -108,7 +111,11 @@ describe("SettingsPage", () => {
   });
 
   it("saves successfully and handles mutation errors", () => {
-    settingsQuery.data = { userAgent: "TrackArr/1.0" };
+    settingsQuery.data = {
+      userAgent: "TrackArr/1.0",
+      checkForUpdates: true,
+      checkForUpdatesOverridden: false,
+    };
     settingsQuery.isLoading = false;
     settingsQuery.error = null;
     aboutQuery.data = { version: "1.0.0" };
@@ -118,21 +125,28 @@ describe("SettingsPage", () => {
     mutateSpy.mockReset();
 
     mutateSpy
-      .mockImplementationOnce((_value: string, options: unknown) => options.onSuccess({ userAgent: "TrackArr/2.0" }))
-      .mockImplementationOnce((_value: string, options: unknown) => options.onError(new Error("write failed")));
+      .mockImplementationOnce((_value: unknown, options: unknown) => options.onSuccess({
+        userAgent: "TrackArr/2.0",
+        checkForUpdates: false,
+        checkForUpdatesOverridden: true,
+      }))
+      .mockImplementationOnce((_value: unknown, options: unknown) => options.onError(new Error("write failed")));
 
     render(<SettingsPage />);
 
     expect(screen.getByText("ua:TrackArr/1.0")).toBeInTheDocument();
+    expect(screen.getByText("check:true")).toBeInTheDocument();
+    expect(screen.getByText("overridden:false")).toBeInTheDocument();
     expect(screen.getByText("dirty:false")).toBeInTheDocument();
     expect(screen.getByText("about-version:1.0.0")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("set-valid"));
+    fireEvent.click(screen.getByText("toggle-updates"));
     expect(screen.getByText("dirty:true")).toBeInTheDocument();
     fireEvent.click(screen.getByText("save-settings"));
 
     expect(mutateSpy).toHaveBeenCalledWith(
-      "TrackArr/2.0",
+      { userAgent: "TrackArr/2.0", checkForUpdates: false },
       expect.objectContaining({
         onSuccess: expect.any(Function),
         onError: expect.any(Function),
@@ -140,6 +154,8 @@ describe("SettingsPage", () => {
     );
     expect(toastSuccess).toHaveBeenCalledWith("Settings saved.");
     expect(screen.getByText("ua:TrackArr/2.0")).toBeInTheDocument();
+    expect(screen.getByText("check:false")).toBeInTheDocument();
+    expect(screen.getByText("overridden:true")).toBeInTheDocument();
     expect(screen.getByText("dirty:false")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("set-valid"));

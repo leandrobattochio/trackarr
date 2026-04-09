@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { settingsApi } from "@/features/settings/api";
+import type { ApiSettings } from "@/features/settings/types";
 
 export const SETTINGS_KEY = ["settings"] as const;
 export const SETTINGS_ABOUT_KEY = ["settings", "about"] as const;
@@ -15,9 +16,10 @@ export function useUpdateSettings() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userAgent: string) => settingsApi.update(userAgent),
+    mutationFn: (settings: Pick<ApiSettings, "userAgent" | "checkForUpdates">) => settingsApi.update(settings),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: SETTINGS_KEY });
+      queryClient.invalidateQueries({ queryKey: SETTINGS_ABOUT_KEY });
     },
   });
 }

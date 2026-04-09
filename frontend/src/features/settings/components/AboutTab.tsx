@@ -12,6 +12,9 @@ export function AboutTab({ isLoading, error, aboutInfo }: AboutTabProps) {
   const rows = aboutInfo
     ? [
         ["Version", aboutInfo.version],
+        ["Latest Version", formatLatestVersion(aboutInfo)],
+        ["Update Checks", aboutInfo.updateCheck.enabled ? "Enabled" : "Disabled"],
+        ["Update Status", formatUpdateStatus(aboutInfo)],
         [".NET", aboutInfo.dotNetVersion],
         ["Docker", aboutInfo.runningInDocker ? "Yes" : "No"],
         ["Database", aboutInfo.databaseEngine],
@@ -47,7 +50,20 @@ export function AboutTab({ isLoading, error, aboutInfo }: AboutTabProps) {
               {rows.map(([label, value]) => (
                 <div key={label} className="contents">
                   <dt className="text-sm font-semibold text-foreground">{label}</dt>
-                  <dd className="text-sm text-muted-foreground break-all">{value}</dd>
+                  <dd className="text-sm text-muted-foreground break-all">
+                    {label === "Latest Version" && aboutInfo.updateCheck.releaseUrl ? (
+                      <a
+                        className="text-primary underline-offset-4 hover:underline"
+                        href={aboutInfo.updateCheck.releaseUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {value}
+                      </a>
+                    ) : (
+                      value
+                    )}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -56,4 +72,28 @@ export function AboutTab({ isLoading, error, aboutInfo }: AboutTabProps) {
       </CardContent>
     </Card>
   );
+}
+
+function formatLatestVersion(aboutInfo: ApiAboutInfo) {
+  if (!aboutInfo.updateCheck.enabled) {
+    return "Not checked";
+  }
+
+  return aboutInfo.updateCheck.latestVersion ?? "Unavailable";
+}
+
+function formatUpdateStatus(aboutInfo: ApiAboutInfo) {
+  if (!aboutInfo.updateCheck.enabled) {
+    return "Automatic checks disabled";
+  }
+
+  if (aboutInfo.updateCheck.error) {
+    return `Check failed: ${aboutInfo.updateCheck.error}`;
+  }
+
+  if (aboutInfo.updateCheck.updateAvailable) {
+    return "Update available";
+  }
+
+  return "Up to date";
 }

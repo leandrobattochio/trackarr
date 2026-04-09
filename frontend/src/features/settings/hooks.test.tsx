@@ -30,7 +30,11 @@ function createWrapper() {
 
 describe("settings hooks", () => {
   it("loads settings and about info", async () => {
-    vi.mocked(settingsApi.get).mockResolvedValueOnce({ userAgent: "Trackarr/1.0" });
+    vi.mocked(settingsApi.get).mockResolvedValueOnce({
+      userAgent: "Trackarr/1.0",
+      checkForUpdates: true,
+      checkForUpdatesOverridden: false,
+    });
     vi.mocked(settingsApi.getAbout).mockResolvedValueOnce({
       version: "1.0.0",
       dotNetVersion: "9.0.0",
@@ -41,6 +45,15 @@ describe("settings hooks", () => {
       startupDirectory: "/app",
       environmentName: "Production",
       uptime: "1 day",
+      updateCheck: {
+        enabled: true,
+        currentVersion: "1.0.0",
+        latestVersion: "1.0.1",
+        updateAvailable: true,
+        releaseUrl: "https://github.test/release",
+        checkedAt: "2026-04-09T21:00:00Z",
+        error: null,
+      },
     });
 
     const { wrapper } = createWrapper();
@@ -50,22 +63,31 @@ describe("settings hooks", () => {
     await waitFor(() => expect(settingsResult.current.isSuccess).toBe(true));
     await waitFor(() => expect(aboutResult.current.isSuccess).toBe(true));
 
-    expect(settingsResult.current.data).toEqual({ userAgent: "Trackarr/1.0" });
+    expect(settingsResult.current.data).toEqual({
+      userAgent: "Trackarr/1.0",
+      checkForUpdates: true,
+      checkForUpdatesOverridden: false,
+    });
     expect(aboutResult.current.data?.version).toBe("1.0.0");
     expect(SETTINGS_KEY).toEqual(["settings"]);
     expect(SETTINGS_ABOUT_KEY).toEqual(["settings", "about"]);
   });
 
   it("invalidates settings after a successful update", async () => {
-    vi.mocked(settingsApi.update).mockResolvedValueOnce({ userAgent: "Updated" });
+    vi.mocked(settingsApi.update).mockResolvedValueOnce({
+      userAgent: "Updated",
+      checkForUpdates: false,
+      checkForUpdatesOverridden: true,
+    });
 
     const { queryClient, wrapper } = createWrapper();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useUpdateSettings(), { wrapper });
 
-    await result.current.mutateAsync("Updated");
+    await result.current.mutateAsync({ userAgent: "Updated", checkForUpdates: false });
 
-    expect(settingsApi.update).toHaveBeenCalledWith("Updated");
+    expect(settingsApi.update).toHaveBeenCalledWith({ userAgent: "Updated", checkForUpdates: false });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: SETTINGS_KEY });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: SETTINGS_ABOUT_KEY });
   });
 });

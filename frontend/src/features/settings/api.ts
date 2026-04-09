@@ -4,9 +4,9 @@ import type { ApiAboutInfo, ApiSettings } from "@/features/settings/types";
 export const settingsApi = {
   get: () => request<ApiSettings>("/settings"),
   getAbout: () => request<ApiAboutInfo>("/about"),
-  update: (userAgent: string) =>
+  update: (settings: Pick<ApiSettings, "userAgent" | "checkForUpdates">) =>
     request<ApiSettings>("/settings", {
       method: "PUT",
-      body: JSON.stringify({ userAgent }),
+      body: JSON.stringify(settings),
     }),
 };

@@ -10,7 +10,11 @@ describe("settingsApi", () => {
   });
 
   it("loads settings", async () => {
-    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ userAgent: "agent-1" }), { status: 200 }));
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
+      userAgent: "agent-1",
+      checkForUpdates: true,
+      checkForUpdatesOverridden: false,
+    }), { status: 200 }));
 
     await settingsApi.get();
 
@@ -30,6 +34,15 @@ describe("settingsApi", () => {
       startupDirectory: "/app",
       environmentName: "Production",
       uptime: "01:23:45",
+      updateCheck: {
+        enabled: true,
+        currentVersion: "1.0.0",
+        latestVersion: "1.0.1",
+        updateAvailable: true,
+        releaseUrl: "https://github.test/release",
+        checkedAt: "2026-04-09T21:00:00Z",
+        error: null,
+      },
     }), { status: 200 }));
 
     await settingsApi.getAbout();
@@ -40,13 +53,17 @@ describe("settingsApi", () => {
   });
 
   it("updates settings", async () => {
-    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ userAgent: "agent-2" }), { status: 200 }));
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
+      userAgent: "agent-2",
+      checkForUpdates: false,
+      checkForUpdatesOverridden: true,
+    }), { status: 200 }));
 
-    await settingsApi.update("agent-2");
+    await settingsApi.update({ userAgent: "agent-2", checkForUpdates: false });
 
     expect(fetch).toHaveBeenCalledWith("/api/settings", {
       method: "PUT",
-      body: JSON.stringify({ userAgent: "agent-2" }),
+      body: JSON.stringify({ userAgent: "agent-2", checkForUpdates: false }),
       headers: { "Content-Type": "application/json" },
     });
   });
