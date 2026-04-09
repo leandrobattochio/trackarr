@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -12,22 +11,16 @@ public sealed class AboutService(
     AppDbContext dbContext,
     IConfiguration configuration,
     IHostEnvironment hostEnvironment,
-    IUpdateCheckService updateCheckService) : IAboutService
+    IApplicationVersionService versionService) : IAboutService
 {
-    public async Task<AboutSnapshot> GetAsync(CancellationToken ct)
+    public AboutSnapshot Get()
     {
         var providerName = dbContext.Database.ProviderName ?? string.Empty;
         var databaseEngine = providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase)
             ? "PostgreSQL"
             : "Unknown";
 
-        var entryAssembly = Assembly.GetEntryAssembly();
-        var informationalVersion = entryAssembly?
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion;
-        var version = informationalVersion
-            ?? entryAssembly?.GetName().Version?.ToString()
-            ?? "Unknown";
+        var version = versionService.GetVersion();
         var appDataDirectory = configuration["Hangfire:Directory"]
             ?? InferAppDataDirectory(configuration["Plugins:Directory"])
             ?? "Not configured";
@@ -38,7 +31,6 @@ public sealed class AboutService(
             "true",
             StringComparison.OrdinalIgnoreCase);
         var uptime = FormatUptime(DateTimeOffset.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime());
-        var updateCheck = await updateCheckService.CheckAsync(version, ct);
 
         return new AboutSnapshot(
             version,
@@ -49,8 +41,7 @@ public sealed class AboutService(
             appDataDirectory,
             startupDirectory,
             hostEnvironment.EnvironmentName,
-            uptime,
-            updateCheck);
+            uptime);
     }
 
     private static string? InferAppDataDirectory(string? pluginsDirectory)

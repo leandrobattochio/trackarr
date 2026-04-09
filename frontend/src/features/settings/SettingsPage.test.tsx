@@ -18,6 +18,10 @@ const aboutQuery = {
   error: null as Error | null,
 };
 
+const updateCheckQuery = {
+  data: undefined as unknown,
+};
+
 const updateMutation = {
   mutate: (...args: unknown[]) => mutateSpy(...args),
   isPending: false,
@@ -48,6 +52,7 @@ vi.mock("@/shared/hooks/use-page-title", () => ({
 vi.mock("@/features/settings/hooks", () => ({
   useSettings: () => settingsQuery,
   useAboutInfo: () => aboutQuery,
+  useUpdateCheck: () => updateCheckQuery,
   useUpdateSettings: () => updateMutation,
 }));
 
@@ -73,6 +78,7 @@ vi.mock("@/features/settings/components", () => ({
       <span>{`about-loading:${String(props.isLoading)}`}</span>
       <span>{`about-error:${props.error?.message ?? "none"}`}</span>
       <span>{`about-version:${props.aboutInfo?.version ?? "none"}`}</span>
+      <span>{`about-update:${props.updateCheck?.latestVersion ?? "none"}`}</span>
     </div>
   ),
 }));
@@ -87,6 +93,7 @@ describe("SettingsPage", () => {
     aboutQuery.data = undefined;
     aboutQuery.isLoading = true;
     aboutQuery.error = new Error("about failed");
+    updateCheckQuery.data = undefined;
     updateMutation.isPending = true;
     mutateSpy.mockReset();
 
@@ -100,6 +107,7 @@ describe("SettingsPage", () => {
     expect(screen.getByText("about-loading:true")).toBeInTheDocument();
     expect(screen.getByText("about-error:about failed")).toBeInTheDocument();
     expect(screen.getByText("about-version:none")).toBeInTheDocument();
+    expect(screen.getByText("about-update:none")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("set-empty"));
     fireEvent.click(screen.getByText("save-settings"));
@@ -119,6 +127,7 @@ describe("SettingsPage", () => {
     settingsQuery.isLoading = false;
     settingsQuery.error = null;
     aboutQuery.data = { version: "1.0.0" };
+    updateCheckQuery.data = { latestVersion: "1.0.1" };
     aboutQuery.isLoading = false;
     aboutQuery.error = null;
     updateMutation.isPending = false;
@@ -139,6 +148,7 @@ describe("SettingsPage", () => {
     expect(screen.getByText("overridden:false")).toBeInTheDocument();
     expect(screen.getByText("dirty:false")).toBeInTheDocument();
     expect(screen.getByText("about-version:1.0.0")).toBeInTheDocument();
+    expect(screen.getByText("about-update:1.0.1")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("set-valid"));
     fireEvent.click(screen.getByText("toggle-updates"));

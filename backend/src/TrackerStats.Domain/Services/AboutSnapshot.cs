@@ -9,5 +9,4 @@ public sealed record AboutSnapshot(
     string AppDataDirectory,
     string StartupDirectory,
     string EnvironmentName,
-    string Uptime,
-    UpdateCheckSnapshot UpdateCheck);
+    string Uptime);

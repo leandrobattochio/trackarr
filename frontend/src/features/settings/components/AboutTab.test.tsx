@@ -17,7 +17,7 @@ import { AboutTab } from "@/features/settings/components/AboutTab";
 describe("AboutTab", () => {
   it("renders loading and error states", () => {
     const { rerender } = render(
-      <AboutTab isLoading error={null} aboutInfo={null} />,
+      <AboutTab isLoading error={null} aboutInfo={null} updateCheck={null} />,
     );
     expect(screen.getByTestId("icon-loader")).toBeInTheDocument();
 
@@ -26,6 +26,7 @@ describe("AboutTab", () => {
         isLoading={false}
         error={new Error("about failed")}
         aboutInfo={null}
+        updateCheck={null}
       />,
     );
     expect(screen.getByText("Failed to load system information: about failed")).toBeInTheDocument();
@@ -42,19 +43,19 @@ describe("AboutTab", () => {
       startupDirectory: "/app",
       environmentName: "Production",
       uptime: "3 days",
-      updateCheck: {
-        enabled: true,
-        currentVersion: "1.2.3",
-        latestVersion: "1.2.4",
-        updateAvailable: true,
-        releaseUrl: "https://github.com/leandrobattochio/trackarr/releases/tag/v1.2.4",
-        checkedAt: "2026-04-09T21:00:00Z",
-        error: null,
-      },
+    };
+    const updateCheck = {
+      enabled: true,
+      currentVersion: "1.2.3",
+      latestVersion: "1.2.4",
+      updateAvailable: true,
+      releaseUrl: "https://github.com/leandrobattochio/trackarr/releases/tag/v1.2.4",
+      checkedAt: "2026-04-09T21:00:00Z",
+      error: null,
     };
 
     const { rerender } = render(
-      <AboutTab isLoading={false} error={null} aboutInfo={aboutInfo} />,
+      <AboutTab isLoading={false} error={null} aboutInfo={aboutInfo} updateCheck={updateCheck} />,
     );
 
     expect(screen.getByText("System Information")).toBeInTheDocument();
@@ -76,6 +77,7 @@ describe("AboutTab", () => {
         isLoading={false}
         error={null}
         aboutInfo={{ ...aboutInfo, runningInDocker: false }}
+        updateCheck={updateCheck}
       />,
     );
     expect(screen.getByText("No")).toBeInTheDocument();
@@ -92,19 +94,19 @@ describe("AboutTab", () => {
       startupDirectory: "/app",
       environmentName: "Production",
       uptime: "3 days",
-      updateCheck: {
-        enabled: false,
-        currentVersion: "1.2.3",
-        latestVersion: null,
-        updateAvailable: false,
-        releaseUrl: null,
-        checkedAt: null,
-        error: null,
-      },
+    };
+    const updateCheck = {
+      enabled: false,
+      currentVersion: "1.2.3",
+      latestVersion: null,
+      updateAvailable: false,
+      releaseUrl: null,
+      checkedAt: null,
+      error: null,
     };
 
     const { rerender } = render(
-      <AboutTab isLoading={false} error={null} aboutInfo={aboutInfo} />,
+      <AboutTab isLoading={false} error={null} aboutInfo={aboutInfo} updateCheck={updateCheck} />,
     );
 
     expect(screen.getByText("Disabled")).toBeInTheDocument();
@@ -115,14 +117,12 @@ describe("AboutTab", () => {
       <AboutTab
         isLoading={false}
         error={null}
-        aboutInfo={{
-          ...aboutInfo,
-          updateCheck: {
-            ...aboutInfo.updateCheck,
-            enabled: true,
-            latestVersion: null,
-            error: "rate limited",
-          },
+        aboutInfo={aboutInfo}
+        updateCheck={{
+          ...updateCheck,
+          enabled: true,
+          latestVersion: null,
+          error: "rate limited",
         }}
       />,
     );
@@ -133,14 +133,12 @@ describe("AboutTab", () => {
       <AboutTab
         isLoading={false}
         error={null}
-        aboutInfo={{
-          ...aboutInfo,
-          updateCheck: {
-            ...aboutInfo.updateCheck,
-            enabled: true,
-            latestVersion: "1.2.3",
-            error: null,
-          },
+        aboutInfo={aboutInfo}
+        updateCheck={{
+          ...updateCheck,
+          enabled: true,
+          latestVersion: "1.2.3",
+          error: null,
         }}
       />,
     );

@@ -34,20 +34,29 @@ describe("settingsApi", () => {
       startupDirectory: "/app",
       environmentName: "Production",
       uptime: "01:23:45",
-      updateCheck: {
-        enabled: true,
-        currentVersion: "1.0.0",
-        latestVersion: "1.0.1",
-        updateAvailable: true,
-        releaseUrl: "https://github.test/release",
-        checkedAt: "2026-04-09T21:00:00Z",
-        error: null,
-      },
     }), { status: 200 }));
 
     await settingsApi.getAbout();
 
     expect(fetch).toHaveBeenCalledWith("/api/about", {
+      headers: { "Content-Type": "application/json" },
+    });
+  });
+
+  it("loads update check information", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
+      enabled: true,
+      currentVersion: "1.0.0",
+      latestVersion: "1.0.1",
+      updateAvailable: true,
+      releaseUrl: "https://github.test/release",
+      checkedAt: "2026-04-09T21:00:00Z",
+      error: null,
+    }), { status: 200 }));
+
+    await settingsApi.getUpdateCheck();
+
+    expect(fetch).toHaveBeenCalledWith("/api/update-check", {
       headers: { "Content-Type": "application/json" },
     });
   });

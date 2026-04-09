@@ -343,7 +343,7 @@ internal sealed class FakeApplicationSettingsService(
 
 internal sealed class FakeAboutService(string databaseEngine = "SQLite") : IAboutService
 {
-    public Task<AboutSnapshot> GetAsync(CancellationToken ct) => Task.FromResult(new AboutSnapshot(
+    public AboutSnapshot Get() => new(
         "1.0.0-test",
         "10.0.0",
         false,
@@ -352,8 +352,7 @@ internal sealed class FakeAboutService(string databaseEngine = "SQLite") : IAbou
         "/data",
         "/app",
         "Development",
-        "01:23:45",
-        new UpdateCheckSnapshot(true, "1.0.0-test", "1.0.1", true, "https://github.test/release", DateTimeOffset.UnixEpoch, null)));
+        "01:23:45");
 }
 
 internal sealed class FakeHostEnvironment(string contentRootPath) : IHostEnvironment

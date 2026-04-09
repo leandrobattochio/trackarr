@@ -1,20 +1,21 @@
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ApiAboutInfo } from "@/features/settings/types";
+import type { ApiAboutInfo, ApiUpdateCheck } from "@/features/settings/types";
 
 interface AboutTabProps {
   isLoading: boolean;
   error: Error | null;
   aboutInfo: ApiAboutInfo | null;
+  updateCheck: ApiUpdateCheck | null;
 }
 
-export function AboutTab({ isLoading, error, aboutInfo }: AboutTabProps) {
+export function AboutTab({ isLoading, error, aboutInfo, updateCheck }: AboutTabProps) {
   const rows = aboutInfo
     ? [
         ["Version", aboutInfo.version],
-        ["Latest Version", formatLatestVersion(aboutInfo)],
-        ["Update Checks", aboutInfo.updateCheck.enabled ? "Enabled" : "Disabled"],
-        ["Update Status", formatUpdateStatus(aboutInfo)],
+        ["Latest Version", formatLatestVersion(updateCheck)],
+        ["Update Checks", updateCheck?.enabled ? "Enabled" : "Disabled"],
+        ["Update Status", formatUpdateStatus(updateCheck)],
         [".NET", aboutInfo.dotNetVersion],
         ["Docker", aboutInfo.runningInDocker ? "Yes" : "No"],
         ["Database", aboutInfo.databaseEngine],
@@ -51,10 +52,10 @@ export function AboutTab({ isLoading, error, aboutInfo }: AboutTabProps) {
                 <div key={label} className="contents">
                   <dt className="text-sm font-semibold text-foreground">{label}</dt>
                   <dd className="text-sm text-muted-foreground break-all">
-                    {label === "Latest Version" && aboutInfo.updateCheck.releaseUrl ? (
+                    {label === "Latest Version" && updateCheck?.releaseUrl ? (
                       <a
                         className="text-primary underline-offset-4 hover:underline"
-                        href={aboutInfo.updateCheck.releaseUrl}
+                        href={updateCheck.releaseUrl}
                         target="_blank"
                         rel="noreferrer"
                       >
@@ -74,24 +75,24 @@ export function AboutTab({ isLoading, error, aboutInfo }: AboutTabProps) {
   );
 }
 
-function formatLatestVersion(aboutInfo: ApiAboutInfo) {
-  if (!aboutInfo.updateCheck.enabled) {
+function formatLatestVersion(updateCheck: ApiUpdateCheck | null) {
+  if (!updateCheck?.enabled) {
     return "Not checked";
   }
 
-  return aboutInfo.updateCheck.latestVersion ?? "Unavailable";
+  return updateCheck.latestVersion ?? "Unavailable";
 }
 
-function formatUpdateStatus(aboutInfo: ApiAboutInfo) {
-  if (!aboutInfo.updateCheck.enabled) {
+function formatUpdateStatus(updateCheck: ApiUpdateCheck | null) {
+  if (!updateCheck?.enabled) {
     return "Automatic checks disabled";
   }
 
-  if (aboutInfo.updateCheck.error) {
-    return `Check failed: ${aboutInfo.updateCheck.error}`;
+  if (updateCheck.error) {
+    return `Check failed: ${updateCheck.error}`;
   }
 
-  if (aboutInfo.updateCheck.updateAvailable) {
+  if (updateCheck.updateAvailable) {
     return "Update available";
   }
 

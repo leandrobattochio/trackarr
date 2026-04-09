@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AboutTab, HttpSettingsTab } from "@/features/settings/components";
-import { useAboutInfo, useSettings, useUpdateSettings } from "@/features/settings/hooks";
+import { useAboutInfo, useSettings, useUpdateCheck, useUpdateSettings } from "@/features/settings/hooks";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { usePageTitle } from "@/shared/hooks/use-page-title";
 
@@ -11,6 +11,7 @@ export default function SettingsPage() {
 
   const settingsQuery = useSettings();
   const aboutQuery = useAboutInfo();
+  const updateCheckQuery = useUpdateCheck();
   const updateMutation = useUpdateSettings();
   const [userAgent, setUserAgent] = useState("");
   const [baselineUserAgent, setBaselineUserAgent] = useState("");
@@ -102,6 +103,7 @@ export default function SettingsPage() {
               isLoading={aboutQuery.isLoading}
               error={aboutQuery.error}
               aboutInfo={aboutQuery.data ?? null}
+              updateCheck={updateCheckQuery.data ?? null}
             />
           </TabsContent>
         </Tabs>

@@ -14,7 +14,6 @@ export interface ApiAboutInfo {
   startupDirectory: string;
   environmentName: string;
   uptime: string;
-  updateCheck: ApiUpdateCheck;
 }
 
 export interface ApiUpdateCheck {

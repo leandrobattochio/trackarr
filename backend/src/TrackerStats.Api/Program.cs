@@ -51,6 +51,7 @@ builder.Services.AddHttpClient("github-releases", client =>
 builder.Services.AddScoped<IIntegrationRepository, IntegrationRepository>();
 builder.Services.AddScoped<IIntegrationSnapshotRepository, IntegrationSnapshotRepository>();
 builder.Services.AddSingleton<IApplicationSettingsService, ApplicationSettingsService>();
+builder.Services.AddSingleton<IApplicationVersionService, ApplicationVersionService>();
 builder.Services.AddSingleton<IUpdateCheckService, GitHubUpdateCheckService>();
 builder.Services.AddScoped<IAboutService, AboutService>();
 builder.Services.AddSingleton<ITrackerPluginHttpClientFactory, TrackerPluginHttpClientFactory>();
