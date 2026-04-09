@@ -47,6 +47,7 @@ services:
       ConnectionStrings__PostgresConnection: Host=db;Port=5432;Database=trackarr;Username=arr;Password=arr123
       Hangfire__Directory: /data
       Plugins__Directory: /data
+      Updates__CheckForUpdates: "true"
       APP_TIMEZONE: America/Sao_Paulo
       TZ: America/Sao_Paulo
     volumes:
@@ -60,6 +61,8 @@ networks:
 ```
 
 Adjust the host volume paths, published port, timezone, and image tag to fit your environment.
+
+TrackArr can check GitHub Releases for newer container tags. `Updates__CheckForUpdates` controls the default for automatic update checks, and it defaults to `true` when omitted. After this setting is changed from the Settings page, the database value overrides the environment variable until it is changed again in the UI.
 
 ## What it does
 
@@ -256,6 +259,7 @@ Relevant environment variables from `docker/docker-compose.yml`:
 - `APP_TIMEZONE`
 - `Hangfire__Directory`
 - `Plugins__Directory`
+- `Updates__CheckForUpdates`
 - `POSTGRES_DB`
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
@@ -266,6 +270,7 @@ Storage layout:
 - PostgreSQL stores the main application data
 - Hangfire stores job data in a SQLite file under `Hangfire__Directory`
 - Plugin definitions are read from `Plugins__Directory`
+- Update checks query GitHub Releases when `Updates__CheckForUpdates` is enabled, unless the Settings page has stored an override
 
 ## Data storage
 
