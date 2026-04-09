@@ -11,9 +11,10 @@ namespace TrackerStats.Infrastructure.Services;
 public sealed class AboutService(
     AppDbContext dbContext,
     IConfiguration configuration,
-    IHostEnvironment hostEnvironment) : IAboutService
+    IHostEnvironment hostEnvironment,
+    IUpdateCheckService updateCheckService) : IAboutService
 {
-    public AboutSnapshot Get()
+    public async Task<AboutSnapshot> GetAsync(CancellationToken ct)
     {
         var providerName = dbContext.Database.ProviderName ?? string.Empty;
         var databaseEngine = providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase)
@@ -37,6 +38,7 @@ public sealed class AboutService(
             "true",
             StringComparison.OrdinalIgnoreCase);
         var uptime = FormatUptime(DateTimeOffset.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime());
+        var updateCheck = await updateCheckService.CheckAsync(version, ct);
 
         return new AboutSnapshot(
             version,
@@ -47,7 +49,8 @@ public sealed class AboutService(
             appDataDirectory,
             startupDirectory,
             hostEnvironment.EnvironmentName,
-            uptime);
+            uptime,
+            updateCheck);
     }
 
     private static string? InferAppDataDirectory(string? pluginsDirectory)

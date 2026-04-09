@@ -316,22 +316,34 @@ internal sealed class FakeYamlPluginDefinitionLoader(IReadOnlyList<LoadedYamlPlu
     public IReadOnlyList<LoadedYamlPluginDefinition> LoadDefinitions() => definitions;
 }
 
-internal sealed class FakeApplicationSettingsService(string userAgent = "test-user-agent") : IApplicationSettingsService
+internal sealed class FakeApplicationSettingsService(
+    string userAgent = "test-user-agent",
+    bool checkForUpdates = true) : IApplicationSettingsService
 {
     private string _userAgent = userAgent;
+    private bool _checkForUpdates = checkForUpdates;
+    private bool _checkForUpdatesOverridden;
 
-    public ApplicationSettingsSnapshot GetRequired() => new(_userAgent);
+    public ApplicationSettingsSnapshot GetRequired() => new(_userAgent, _checkForUpdates, _checkForUpdatesOverridden);
 
     public Task<ApplicationSettingsSnapshot> UpdateUserAgentAsync(string userAgent, CancellationToken ct)
     {
         _userAgent = userAgent.Trim();
-        return Task.FromResult(new ApplicationSettingsSnapshot(_userAgent));
+        return Task.FromResult(new ApplicationSettingsSnapshot(_userAgent, _checkForUpdates, _checkForUpdatesOverridden));
+    }
+
+    public Task<ApplicationSettingsSnapshot> UpdateAsync(string userAgent, bool checkForUpdates, CancellationToken ct)
+    {
+        _userAgent = userAgent.Trim();
+        _checkForUpdates = checkForUpdates;
+        _checkForUpdatesOverridden = true;
+        return Task.FromResult(new ApplicationSettingsSnapshot(_userAgent, _checkForUpdates, _checkForUpdatesOverridden));
     }
 }
 
 internal sealed class FakeAboutService(string databaseEngine = "SQLite") : IAboutService
 {
-    public AboutSnapshot Get() => new(
+    public Task<AboutSnapshot> GetAsync(CancellationToken ct) => Task.FromResult(new AboutSnapshot(
         "1.0.0-test",
         "10.0.0",
         false,
@@ -340,7 +352,8 @@ internal sealed class FakeAboutService(string databaseEngine = "SQLite") : IAbou
         "/data",
         "/app",
         "Development",
-        "01:23:45");
+        "01:23:45",
+        new UpdateCheckSnapshot(true, "1.0.0-test", "1.0.1", true, "https://github.test/release", DateTimeOffset.UnixEpoch, null)));
 }
 
 internal sealed class FakeHostEnvironment(string contentRootPath) : IHostEnvironment

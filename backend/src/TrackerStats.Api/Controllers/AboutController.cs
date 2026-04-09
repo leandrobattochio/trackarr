@@ -8,9 +8,9 @@ namespace TrackerStats.Api.Controllers;
 public sealed class AboutController(IAboutService aboutService) : ControllerBase
 {
     [HttpGet]
-    public IActionResult Get()
+    public async Task<IActionResult> Get(CancellationToken ct)
     {
-        var about = aboutService.Get();
+        var about = await aboutService.GetAsync(ct);
         return Ok(new
         {
             version = about.Version,
@@ -21,7 +21,8 @@ public sealed class AboutController(IAboutService aboutService) : ControllerBase
             appDataDirectory = about.AppDataDirectory,
             startupDirectory = about.StartupDirectory,
             environmentName = about.EnvironmentName,
-            uptime = about.Uptime
+            uptime = about.Uptime,
+            updateCheck = about.UpdateCheck
         });
     }
 }
