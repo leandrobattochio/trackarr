@@ -1,6 +1,7 @@
 import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -10,8 +11,11 @@ interface HttpSettingsTabProps {
   isLoading: boolean;
   error: Error | null;
   userAgent: string;
+  checkForUpdates: boolean;
+  checkForUpdatesOverridden: boolean;
   validationError: string | null;
   onChangeUserAgent: (value: string) => void;
+  onChangeCheckForUpdates: (value: boolean) => void;
   onSave: () => void;
 }
 
@@ -21,8 +25,11 @@ export function HttpSettingsTab({
   isLoading,
   error,
   userAgent,
+  checkForUpdates,
+  checkForUpdatesOverridden,
   validationError,
   onChangeUserAgent,
+  onChangeCheckForUpdates,
   onSave,
 }: HttpSettingsTabProps) {
   return (
@@ -57,6 +64,28 @@ export function HttpSettingsTab({
               />
               <p className="text-sm text-muted-foreground">
                 This value is required and is applied to plugin HTTP requests.
+              </p>
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-border/60 p-4">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="check-for-updates"
+                  checked={checkForUpdates}
+                  onCheckedChange={(checked) => onChangeCheckForUpdates(checked === true)}
+                  disabled={isBusy}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="check-for-updates">Check for TrackArr updates</Label>
+                  <p className="text-sm text-muted-foreground">
+                    The backend checks GitHub releases and reports when a newer container tag is available.
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {checkForUpdatesOverridden
+                  ? "Saved in the database and overriding the environment flag."
+                  : "Using the environment-configured default until this setting is saved."}
               </p>
             </div>
 

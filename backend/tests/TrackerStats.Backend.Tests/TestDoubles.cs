@@ -316,16 +316,28 @@ internal sealed class FakeYamlPluginDefinitionLoader(IReadOnlyList<LoadedYamlPlu
     public IReadOnlyList<LoadedYamlPluginDefinition> LoadDefinitions() => definitions;
 }
 
-internal sealed class FakeApplicationSettingsService(string userAgent = "test-user-agent") : IApplicationSettingsService
+internal sealed class FakeApplicationSettingsService(
+    string userAgent = "test-user-agent",
+    bool checkForUpdates = true) : IApplicationSettingsService
 {
     private string _userAgent = userAgent;
+    private bool _checkForUpdates = checkForUpdates;
+    private bool _checkForUpdatesOverridden;
 
-    public ApplicationSettingsSnapshot GetRequired() => new(_userAgent);
+    public ApplicationSettingsSnapshot GetRequired() => new(_userAgent, _checkForUpdates, _checkForUpdatesOverridden);
 
     public Task<ApplicationSettingsSnapshot> UpdateUserAgentAsync(string userAgent, CancellationToken ct)
     {
         _userAgent = userAgent.Trim();
-        return Task.FromResult(new ApplicationSettingsSnapshot(_userAgent));
+        return Task.FromResult(new ApplicationSettingsSnapshot(_userAgent, _checkForUpdates, _checkForUpdatesOverridden));
+    }
+
+    public Task<ApplicationSettingsSnapshot> UpdateAsync(string userAgent, bool checkForUpdates, CancellationToken ct)
+    {
+        _userAgent = userAgent.Trim();
+        _checkForUpdates = checkForUpdates;
+        _checkForUpdatesOverridden = true;
+        return Task.FromResult(new ApplicationSettingsSnapshot(_userAgent, _checkForUpdates, _checkForUpdatesOverridden));
     }
 }
 

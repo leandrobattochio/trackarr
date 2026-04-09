@@ -20,6 +20,7 @@ public sealed class AppDbContextTests
         var settings = await db.ApplicationSettings.SingleAsync();
         settings.Id.ShouldBe(1);
         settings.UserAgent.ShouldBe(AppDbContext.DefaultUserAgent);
+        settings.CheckForUpdatesOverride.ShouldBeNull();
     }
 
     [Fact]
@@ -34,7 +35,8 @@ public sealed class AppDbContextTests
             db.ApplicationSettings.Add(new TrackerStats.Domain.Entities.ApplicationSettings
             {
                 Id = 1,
-                UserAgent = "custom-agent"
+                UserAgent = "custom-agent",
+                CheckForUpdatesOverride = false
             });
             await db.SaveChangesAsync();
         }
@@ -48,6 +50,7 @@ public sealed class AppDbContextTests
         {
             var settings = await db.ApplicationSettings.SingleAsync();
             settings.UserAgent.ShouldBe("custom-agent");
+            settings.CheckForUpdatesOverride.ShouldBe(false);
         }
     }
 }
