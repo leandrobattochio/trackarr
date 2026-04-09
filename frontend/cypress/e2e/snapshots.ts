@@ -107,6 +107,13 @@ Then("I should see snapshot results for that preset", () => {
   cy.contains("Points").parent().should("contain.text", "2");
 });
 
+Then("I should see the ratio snapshot chart", () => {
+  cy.contains("Ratio History").should("be.visible");
+  cy.contains("Ratio values over time.").should("be.visible");
+  cy.contains("label", "Ratio").should("be.visible");
+  cy.contains("Required Ratio").should("not.exist");
+});
+
 When("I switch to a custom snapshot range", () => {
   cy.clock(new Date("2026-04-06T01:00:00.000Z").getTime(), ["Date"]);
   cy.contains("button", "Custom").click();

@@ -13,7 +13,9 @@ Feature: Snapshot history
     And I filter snapshots using the 15 minute preset
     Then the snapshots request should use the 15 minute preset
     And I should see snapshot results for that preset
+    And I should see the ratio snapshot chart
     When I switch to a custom snapshot range
     And I apply the custom snapshot range
     Then the snapshots request should use the custom range
     And I should see snapshot results for that custom range
+    And I should see the ratio snapshot chart
