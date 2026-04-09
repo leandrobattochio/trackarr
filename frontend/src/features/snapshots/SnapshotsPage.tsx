@@ -49,7 +49,7 @@ function formatExactDateTime(iso: string) {
 }
 
 function formatRatio(value: number) {
-  return Number.isFinite(value) ? value.toFixed(2) : "N/A";
+  return value.toFixed(2);
 }
 
 export default function SnapshotsPage() {
@@ -262,8 +262,8 @@ export default function SnapshotsPage() {
                     yAxisWidth={56}
                     yAxisFormatter={formatRatio}
                     tooltipLabelFormatter={formatExactDateTime}
-                    tooltipValueFormatter={(value, name) => ({
-                      label: name === "ratio" ? "Ratio" : String(name),
+                    tooltipValueFormatter={(value) => ({
+                      label: "Ratio",
                       value: formatRatio(value),
                     })}
                   />
