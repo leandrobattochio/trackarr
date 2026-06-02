@@ -8,15 +8,24 @@ internal static class NumericParser
     {
         var trimmed = value.Trim();
 
+        decimal multiplier = 1m;
+        if (trimmed.Length > 0)
+        {
+            var last = char.ToUpperInvariant(trimmed[^1]);
+            if (last == 'K') { multiplier = 1_000m; trimmed = trimmed[..^1]; }
+            else if (last == 'M') { multiplier = 1_000_000m; trimmed = trimmed[..^1]; }
+            else if (last == 'B') { multiplier = 1_000_000_000m; trimmed = trimmed[..^1]; }
+        }
+
         if (trimmed.Contains(','))
         {
             var normalized = trimmed.Replace(".", string.Empty).Replace(",", ".");
             if (decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsedComma))
-                return parsedComma;
+                return parsedComma * multiplier;
         }
 
         if (decimal.TryParse(trimmed, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
-            return parsed;
+            return parsed * multiplier;
 
         throw new InvalidOperationException($"Invalid numeric value '{value}'.");
     }

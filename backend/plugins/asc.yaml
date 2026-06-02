@@ -33,7 +33,7 @@ steps:
         regex: "Ratio:\\s*<b>\\s*<font[^>]*>\\s*<b>(?<value>[\\d\\.,]+)</b>"
         transform: decimal
       seedBonus:
-        regex: "ASC\\s+B[oô]nus:\\s*<b>(?<value>[\\d\\.,]+)</b>"
+        regex: "ASC\\s+B[oô]nus:\\s*<b>(?<value>[\\d\\.,]+[KkMmBb]?)</b>"
         transform: decimal
       uploadedBytes:
         regex: "fa-upload[^>]*></i>\\s*(?<value>[\\d\\.,]+\\s*[KMGTPE]?B)"
