@@ -70,5 +70,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<ApplicationSettings>()
             .Property(settings => settings.UserAgent)
             .IsRequired();
+
+        modelBuilder.Entity<ApplicationSettings>()
+            .Property(settings => settings.CheckForUpdatesOverride);
     }
 }

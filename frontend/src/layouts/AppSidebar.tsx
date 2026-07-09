@@ -1,5 +1,6 @@
 import { CircleHelp, ChartLine, LayoutDashboard, Puzzle, Settings2 } from "lucide-react";
 import { NavLink } from "@/layouts/NavLink";
+import { useUpdateCheck } from "@/features/settings/hooks";
 import {
   Sidebar,
   SidebarContent,
@@ -22,7 +23,10 @@ const navItems = [
 
 export function AppSidebar() {
   const { state } = useSidebar();
+  const updateCheck = useUpdateCheck();
   const collapsed = state === "collapsed";
+  const latestVersion = updateCheck.data?.latestVersion;
+  const showUpdateNotice = !collapsed && updateCheck.data?.updateAvailable === true && latestVersion;
 
   return (
     <Sidebar collapsible="icon">
@@ -33,6 +37,11 @@ export function AppSidebar() {
           </div>
           {!collapsed && <span className="font-display text-base font-bold text-foreground">TrackArr</span>}
         </div>
+        {showUpdateNotice && (
+          <div className="mx-3 mb-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">
+            New update available: {latestVersion}
+          </div>
+        )}
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>

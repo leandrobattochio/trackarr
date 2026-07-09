@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -11,7 +10,8 @@ namespace TrackerStats.Infrastructure.Services;
 public sealed class AboutService(
     AppDbContext dbContext,
     IConfiguration configuration,
-    IHostEnvironment hostEnvironment) : IAboutService
+    IHostEnvironment hostEnvironment,
+    IApplicationVersionService versionService) : IAboutService
 {
     public AboutSnapshot Get()
     {
@@ -20,13 +20,7 @@ public sealed class AboutService(
             ? "PostgreSQL"
             : "Unknown";
 
-        var entryAssembly = Assembly.GetEntryAssembly();
-        var informationalVersion = entryAssembly?
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion;
-        var version = informationalVersion
-            ?? entryAssembly?.GetName().Version?.ToString()
-            ?? "Unknown";
+        var version = versionService.GetVersion();
         var appDataDirectory = configuration["Hangfire:Directory"]
             ?? InferAppDataDirectory(configuration["Plugins:Directory"])
             ?? "Not configured";

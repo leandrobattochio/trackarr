@@ -6,6 +6,7 @@ import { NavLink } from "@/layouts/NavLink";
 import { AppSidebar } from "@/layouts/AppSidebar";
 
 let sidebarState: "expanded" | "collapsed" = "expanded";
+let updateCheckData: { updateAvailable: boolean; latestVersion: string | null } | undefined;
 
 vi.mock("lucide-react", () => ({
   CircleHelp: () => <svg data-testid="icon-help" />,
@@ -27,6 +28,10 @@ vi.mock("@/components/ui/sidebar", () => ({
   SidebarMenuButton: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SidebarMenuItem: ({ children }: { children: React.ReactNode }) => <li>{children}</li>,
   useSidebar: () => ({ state: sidebarState }),
+}));
+
+vi.mock("@/features/settings/hooks", () => ({
+  useUpdateCheck: () => ({ data: updateCheckData }),
 }));
 
 describe("layouts", () => {
@@ -58,6 +63,7 @@ describe("layouts", () => {
 
   it("renders sidebar navigation and hides labels when collapsed", () => {
     sidebarState = "expanded";
+    updateCheckData = { updateAvailable: true, latestVersion: "0.3.2" };
     const { rerender } = render(
       <MemoryRouter>
         <AppSidebar />
@@ -70,6 +76,7 @@ describe("layouts", () => {
     expect(screen.getByText("Manage Plugins")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
     expect(screen.getByText("Help")).toBeInTheDocument();
+    expect(screen.getByText("New update available: 0.3.2")).toBeInTheDocument();
 
     sidebarState = "collapsed";
     rerender(
@@ -79,5 +86,6 @@ describe("layouts", () => {
     );
 
     expect(screen.queryByText("TrackArr")).not.toBeInTheDocument();
+    expect(screen.queryByText("New update available: 0.3.2")).not.toBeInTheDocument();
   });
 });
