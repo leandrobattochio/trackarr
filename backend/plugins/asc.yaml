@@ -2,7 +2,7 @@ pluginId: asc
 displayName: Amigos-Share Club
 
 baseUrls:
-  - https://cliente.amigos-share.club/
+  - https://amigos-share.club/
 
 fields:
   - name: cookie
@@ -18,34 +18,29 @@ http:
 
 authFailure:
   htmlPatterns:
-    - "Login"
-    - "login.php"
-    - "name=\"password\""
-    - "type=\"password\""
+    - "\"auth\":{\"user\":null"
 
 steps:
   - name: profile
     method: GET
-    url: ""
+    url: "dashboard"
     responseType: html
     extract:
       ratio:
-        regex: "Ratio:\\s*<b>\\s*<font[^>]*>\\s*<b>(?<value>[\\d\\.,]+)</b>"
+        regex: "\"stats\":\\{.*?\"ratio\":(?<value>\\d+(?:\\.\\d{1,4})?)"
         transform: decimal
       seedBonus:
-        regex: "ASC\\s+B[oô]nus:\\s*<b>(?<value>[\\d\\.,]+[KkMmBb]?)</b>"
+        regex: "\"stats\":\\{.*?\"seedBonus\":(?<value>\\d+(?:\\.\\d+)?)"
         transform: decimal
       uploadedBytes:
-        regex: "fa-upload[^>]*></i>\\s*(?<value>[\\d\\.,]+\\s*[KMGTPE]?B)"
-        transform: byteSize
+        regex: "\"stats\":\\{.*?\"uploaded\":(?<value>\\d+)"
       downloadedBytes:
-        regex: "fa-download[^>]*></i>\\s*(?<value>[\\d\\.,]+\\s*[KMGTPE]?B)"
-        transform: byteSize
+        regex: "\"stats\":\\{.*?\"downloaded\":(?<value>\\d+)"
       seedingTorrents:
-        regex: "action=enviando\"[^>]*>.*?</i>\\s*Enviando\\s*-\\s*\\(\\s*(?<value>\\d+)\\s*\\)"
+        regex: "\"stats\":\\{.*?\"seeding\":(?<value>\\d+)"
         transform: integer
       leechingTorrents:
-        regex: "action=baixando\"[^>]*>.*?</i>\\s*Baixando\\s*-\\s*\\(\\s*(?<value>\\d+)\\s*\\)"
+        regex: "\"stats\":\\{.*?\"leeching\":(?<value>\\d+)"
         transform: integer
 
 mapping:
@@ -59,7 +54,6 @@ mapping:
   activeTorrents: "steps.profile.seedingTorrents + steps.profile.leechingTorrents"
 
 dashboard:
-  byteUnitSystem: decimal
   metrics:
     - stat: uploadedBytes
       label: Uploaded
@@ -72,7 +66,7 @@ dashboard:
       icon: arrow-down
       tone: primary
     - stat: seedBonus
-      label: ASC Bonus
+      label: ASC Coins
       format: text
       icon: coins
       tone: warning
