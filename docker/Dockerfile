@@ -5,11 +5,10 @@ FROM node:22-bookworm-slim AS frontend-build
 ARG APP_TIMEZONE
 ENV VITE_APP_TIMEZONE=${APP_TIMEZONE}
 WORKDIR /src/frontend
-COPY frontend/package.json ./
-COPY frontend/yarn.lock ./
-RUN corepack enable && yarn install --frozen-lockfile
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
+RUN npm install -g pnpm@12.11.2 && pnpm install --frozen-lockfile
 COPY frontend/ ./
-RUN yarn build
+RUN pnpm build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
 ARG APP_VERSION

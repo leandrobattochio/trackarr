@@ -3,7 +3,7 @@ setlocal
 
 cd /d "%~dp0"
 
-call yarn test:coverage
+call pnpm test:coverage
 if errorlevel 1 goto :fail
 
 echo Coverage report generated in frontend\coverage
