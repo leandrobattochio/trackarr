@@ -15,15 +15,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: yarn
-          cache-dependency-path: frontend/yarn.lock
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - run: corepack enable
-      - run: yarn install --frozen-lockfile
-      - run: yarn build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
 
   frontend-lint:
     runs-on: ubuntu-latest
@@ -33,15 +36,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: yarn
-          cache-dependency-path: frontend/yarn.lock
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - run: corepack enable
-      - run: yarn install --frozen-lockfile
-      - run: yarn lint
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
 
   frontend-test:
     runs-on: ubuntu-latest
@@ -51,15 +57,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: yarn
-          cache-dependency-path: frontend/yarn.lock
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - run: corepack enable
-      - run: yarn install --frozen-lockfile
-      - run: yarn test:coverage
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:coverage
 
       - name: Upload frontend coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -87,31 +96,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: yarn
-          cache-dependency-path: frontend/yarn.lock
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - run: corepack enable
-      - run: yarn install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - name: Audit moderate and above
-        shell: bash
-        run: |
-          audit_output=$(yarn audit --json || true)
-          echo "$audit_output"
-
-          summary=$(echo "$audit_output" | grep '"type":"auditSummary"' | tail -n 1)
-          if [ -z "$summary" ]; then
-            echo "Missing yarn audit summary"
-            exit 1
-          fi
-
-          moderate=$(echo "$summary" | sed -E 's/.*"moderate":([0-9]+).*/\1/')
-          high=$(echo "$summary" | sed -E 's/.*"high":([0-9]+).*/\1/')
-          critical=$(echo "$summary" | sed -E 's/.*"critical":([0-9]+).*/\1/')
-
-          if [ "$moderate" -gt 0 ] || [ "$high" -gt 0 ] || [ "$critical" -gt 0 ]; then
-            echo "Audit failed: moderate=$moderate high=$high critical=$critical"
-            exit 1
-          fi
+        run: pnpm audit --audit-level moderate

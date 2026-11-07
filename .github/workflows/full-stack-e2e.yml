@@ -28,18 +28,21 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: yarn
-          cache-dependency-path: frontend/yarn.lock
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
 
-      - run: corepack enable
-      - run: yarn install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
         working-directory: ${{ github.workspace }}/frontend
 
       - run: dotnet restore "${{ github.workspace }}/backend/TrackerStats.sln"
@@ -66,7 +69,7 @@ jobs:
         run: |
           cd "${{ github.workspace }}/frontend"
           mkdir -p .e2e
-          yarn dev --host 127.0.0.1 --port 8080 > .e2e/frontend.log 2>&1 &
+          pnpm dev --host 127.0.0.1 --port 8080 > .e2e/frontend.log 2>&1 &
           echo $! > .e2e/frontend.pid
 
       - name: Wait for app startup
@@ -90,7 +93,7 @@ jobs:
           curl -fsS http://127.0.0.1:8080 > /dev/null
 
       - name: Run Cypress browser end-to-end tests
-        run: yarn e2e
+        run: pnpm e2e
         working-directory: ${{ github.workspace }}/frontend
 
       - name: Stop local app processes

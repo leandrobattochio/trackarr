@@ -174,7 +174,7 @@ Plugin definitions are loaded from YAML files on disk. The Manage Plugins page e
 ### Requirements
 
 - Node.js 22+
-- Yarn
+- pnpm
 - .NET SDK 10
 
 ### Local development config
@@ -225,8 +225,8 @@ On startup the backend:
 
 ```powershell
 cd frontend
-yarn install
-yarn dev
+pnpm install
+pnpm dev
 ```
 
 Frontend dev server:
