@@ -27,6 +27,15 @@ vi.mock("lucide-react", () => ({
   Info: () => <svg data-testid="icon-info" />,
 }));
 
+vi.mock("@/features/proxies/hooks", () => ({
+  useProxies: () => ({
+    data: [
+      { id: "proxy-1", name: "Home VPN", type: "socks5", host: "10.0.0.2", port: 1080, username: null, hasPassword: false },
+      { id: "proxy-2", name: "Office", type: "http", host: "10.0.0.3", port: 3128, username: "alice", hasPassword: true },
+    ],
+  }),
+}));
+
 vi.mock("@/features/integrations/hooks", () => ({
   usePlugins: () => pluginsState,
   useUpdateIntegration: () => updateMutation,
@@ -255,6 +264,25 @@ describe("EditIntegrationDialog", () => {
 
     fireEvent.submit(screen.getByRole("button", { name: /Save changes/i }).closest("form") as HTMLFormElement);
     expect(toastError).toHaveBeenCalledWith("Update failed: bad payload");
+  });
+
+  it("starts from the integration's proxy and saves the one picked", () => {
+    pluginsState.data = [plugin];
+    updateMutation.isPending = false;
+    updateMutation.mutate.mockClear();
+
+    render(<EditIntegrationDialog tracker={{ ...tracker, proxyId: "proxy-1" }} />);
+    fireEvent.click(screen.getByText("open-dialog"));
+
+    const proxySelect = document.getElementById("integration-proxy") as HTMLSelectElement;
+    expect(proxySelect).toHaveValue("proxy-1");
+    fireEvent.change(proxySelect, { target: { value: "none" } });
+    fireEvent.submit(screen.getByRole("button", { name: /Save changes/i }).closest("form") as HTMLFormElement);
+
+    expect(updateMutation.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ dto: expect.objectContaining({ proxyId: null }) }),
+      expect.anything(),
+    );
   });
 
   it("respects disabled/editing states and resets values on close", () => {

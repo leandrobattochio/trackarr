@@ -14,7 +14,7 @@ public class IntegrationsController(
     IIntegrationRepository repository,
     IIntegrationSnapshotRepository snapshotRepository,
     ITrackerPluginRegistry registry,
-    ITrackerPluginHttpClientFactory httpClientFactory,
+    IProxyRepository proxyRepository,
     IntegrationConfigurationValidator configurationValidator,
     IntegrationSyncService syncService,
     IntegrationRecurringJobScheduler recurringJobScheduler,
@@ -24,8 +24,6 @@ public class IntegrationsController(
 {
     private static readonly JsonSerializerOptions _jsonOpts = new() { PropertyNameCaseInsensitive = true };
     private const string SensitiveMask = "*****";
-
-    private readonly ITrackerPluginHttpClientFactory _httpClientFactory = httpClientFactory;
 
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
@@ -120,6 +118,10 @@ public class IntegrationsController(
         if (!validation.IsValid)
             return BadRequest(new { error = validation.Error });
 
+        var proxyError = await AssignProxyAsync(integration, request.ProxyId, ct);
+        if (proxyError is not null)
+            return proxyError;
+
         integration.Payload = mergedPayload;
         integration.RequiredRatio = ParseRequiredRatio(mergedPayload);
 
@@ -148,6 +150,10 @@ public class IntegrationsController(
             RequiredRatio = ParseRequiredRatio(request.Payload)
         };
 
+        var proxyError = await AssignProxyAsync(integration, request.ProxyId, ct);
+        if (proxyError is not null)
+            return proxyError;
+
         await repository.AddAsync(integration, ct);
         recurringJobScheduler.Schedule(integration);
 
@@ -157,6 +163,24 @@ public class IntegrationsController(
     // ---------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------
+
+    private async Task<BadRequestObjectResult?> AssignProxyAsync(Integration integration, Guid? proxyId, CancellationToken ct)
+    {
+        if (proxyId is null)
+        {
+            integration.ProxyId = null;
+            integration.Proxy = null;
+            return null;
+        }
+
+        var proxy = await proxyRepository.GetByIdAsync(proxyId.Value, ct);
+        if (proxy is null)
+            return new BadRequestObjectResult(new { error = $"Proxy '{proxyId}' does not exist." });
+
+        integration.ProxyId = proxy.Id;
+        integration.Proxy = proxy;
+        return null;
+    }
 
     private static async Task<BadRequestObjectResult?> ValidateRequestAsync<TRequest>(
         IValidator<TRequest> validator,
@@ -199,6 +223,7 @@ public class IntegrationsController(
                 },
             payload,
             url = payload.GetValueOrDefault("baseUrl"),
+            proxyId = i.ProxyId,
             requiredRatio = i.RequiredRatio,
             lastSyncAt = NormalizeUtc(i.LastSyncAt),
             nextAutomaticSyncAt = NormalizeUtc(nextAutomaticSyncAt),
@@ -293,5 +318,5 @@ public class IntegrationsController(
     }
 }
 
-public record CreateIntegrationRequest(string PluginId, string Payload);
-public record UpdateIntegrationRequest(string PluginId, string Payload);
+public record CreateIntegrationRequest(string PluginId, string Payload, Guid? ProxyId = null);
+public record UpdateIntegrationRequest(string PluginId, string Payload, Guid? ProxyId = null);

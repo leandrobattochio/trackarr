@@ -122,4 +122,34 @@ public class IntegrationSyncServiceTests
         snapshots.Added.ShouldBeEmpty();
         repository.Find(integration.Id)!.LastSyncResult.ShouldBe(PluginProcessResult.UnknownError);
     }
+
+    [Fact]
+    public async Task SyncAsync_should_send_the_requests_through_the_integration_proxy()
+    {
+        var proxy = new TrackerProxy { Id = Guid.NewGuid(), Name = "vpn", Type = TrackerProxyType.Http, Host = "10.0.0.2", Port = 8888 };
+        var integration = new Integration
+        {
+            Id = Guid.NewGuid(),
+            PluginId = "plugin",
+            Payload = """{"required_ratio":"1.0"}""",
+            ProxyId = proxy.Id,
+            Proxy = proxy
+        };
+        var repository = new InMemoryIntegrationRepository();
+        repository.Seed(integration);
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin"));
+        var httpClients = new FakeTrackerPluginHttpClientFactory();
+        var sut = new IntegrationSyncService(
+            repository,
+            new InMemoryIntegrationSnapshotRepository(),
+            registry,
+            httpClients,
+            new IntegrationConfigurationValidator(registry),
+            NullLogger<IntegrationSyncService>.Instance);
+
+        await sut.SyncAsync(integration.Id, CancellationToken.None);
+
+        httpClients.Proxies.ShouldHaveSingleItem().ShouldBeSameAs(proxy);
+    }
 }

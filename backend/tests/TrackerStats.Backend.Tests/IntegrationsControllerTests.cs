@@ -465,11 +465,55 @@ public class IntegrationsControllerTests
         json.GetProperty("stats").GetProperty("ratio").GetDecimal().ShouldBe(3.5m);
     }
 
+    [Fact]
+    public async Task Create_should_reject_a_proxy_that_does_not_exist()
+    {
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin"));
+        var repository = new InMemoryIntegrationRepository();
+        var controller = CreateController(repository, registry);
+        var proxyId = Guid.NewGuid();
+
+        var result = await controller.Create(
+            new CreateIntegrationRequest("plugin", """{"required_ratio":"1.0"}""", proxyId), CancellationToken.None);
+
+        var badRequest = result.ShouldBeOfType<BadRequestObjectResult>();
+        TestHttp.ToJson(badRequest.Value).GetProperty("error").GetString().ShouldBe($"Proxy '{proxyId}' does not exist.");
+        repository.Added.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Create_and_update_should_store_the_proxy_and_return_its_id()
+    {
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin"));
+        var repository = new InMemoryIntegrationRepository();
+        var proxies = new InMemoryProxyRepository(repository);
+        var proxy = new TrackerProxy { Id = Guid.NewGuid(), Name = "vpn", Type = TrackerProxyType.Socks5, Host = "10.0.0.2", Port = 1080 };
+        await proxies.AddAsync(proxy, CancellationToken.None);
+        var controller = CreateController(repository, registry, proxies: proxies);
+        const string payload = """{"required_ratio":"1.0","cron":"0 * * * *"}""";
+
+        var created = await controller.Create(new CreateIntegrationRequest("plugin", payload, proxy.Id), CancellationToken.None);
+
+        var json = TestHttp.ToJson(created.ShouldBeOfType<CreatedAtActionResult>().Value);
+        json.GetProperty("proxyId").GetGuid().ShouldBe(proxy.Id);
+        var id = json.GetProperty("id").GetGuid();
+        repository.Find(id)!.ProxyId.ShouldBe(proxy.Id);
+
+        var updated = await controller.Update(id, new UpdateIntegrationRequest("plugin", payload, null), CancellationToken.None);
+
+        TestHttp.ToJson(updated.ShouldBeOfType<OkObjectResult>().Value).GetProperty("proxyId").ValueKind
+            .ShouldBe(System.Text.Json.JsonValueKind.Null);
+        repository.Find(id)!.ProxyId.ShouldBeNull();
+    }
+
     private static IntegrationsController CreateController(
         InMemoryIntegrationRepository? repository = null,
         FakeTrackerPluginRegistry? registry = null,
         InMemoryIntegrationSnapshotRepository? snapshotRepository = null,
-        FakeSchedulerBundle? scheduler = null)
+        FakeSchedulerBundle? scheduler = null,
+        InMemoryProxyRepository? proxies = null)
     {
         repository ??= new InMemoryIntegrationRepository();
         registry ??= new FakeTrackerPluginRegistry();
@@ -490,7 +534,7 @@ public class IntegrationsControllerTests
             repository,
             snapshotRepository,
             registry,
-            new FakeTrackerPluginHttpClientFactory(),
+            proxies ?? new InMemoryProxyRepository(repository),
             validator,
             syncService,
             scheduler.Scheduler,

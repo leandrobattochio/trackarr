@@ -21,6 +21,7 @@ import {
   validateFieldValue,
   validateIntegrationFields,
 } from "@/features/integrations/components/add-integration-validation";
+import { ProxySelect } from "@/features/proxies";
 import { IntegrationConfigurationForm } from "@/features/integrations/components/shared/integration-dialog/IntegrationConfigurationForm";
 import { createAddIntegrationFormStrategy } from "@/features/integrations/components/shared/integration-dialog/integrationFormStrategies";
 import { useDebounce } from "@/shared/hooks/use-debounce";
@@ -36,6 +37,7 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<AddIntegrationErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [proxyId, setProxyId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const debouncedSearch = useDebounce(search, 250);
@@ -78,7 +80,7 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
     if (Object.keys(nextFieldErrors).length > 0) return;
 
     createIntegration(
-      { pluginId: selectedPlugin.pluginId, payload: JSON.stringify(normalizedFieldValues) },
+      { pluginId: selectedPlugin.pluginId, payload: JSON.stringify(normalizedFieldValues), proxyId },
       {
         onSuccess: () => {
           toast.success(`${selectedPlugin.displayName} integration added`);
@@ -87,6 +89,7 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
           setFieldValues({});
           setFieldErrors({});
           setSubmitError(null);
+          setProxyId(null);
         },
         onError: (err) => {
           setSubmitError(err.message);
@@ -103,6 +106,7 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
       setFieldValues({});
       setFieldErrors({});
       setSubmitError(null);
+      setProxyId(null);
       setSearch("");
     }
   }
@@ -212,6 +216,7 @@ export function AddIntegrationDialog({ addedPluginIds }: AddIntegrationDialogPro
                 {formStrategy && (
                   <IntegrationConfigurationForm plugin={selectedPlugin} strategy={formStrategy} />
                 )}
+                <ProxySelect value={proxyId} onChange={setProxyId} />
               </div>
 
               <div className="border-t border-border/50 pt-4">

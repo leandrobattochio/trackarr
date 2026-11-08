@@ -47,7 +47,7 @@ public sealed class PluginDryRunService(
         HttpClient httpClient;
         try
         {
-            httpClient = httpClientFactory.CreateClient(plugin);
+            httpClient = httpClientFactory.CreateClient(plugin, integration.Proxy);
         }
         catch (Exception ex)
         {

@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<Integration> Integrations => Set<Integration>();
     public DbSet<IntegrationSnapshot> IntegrationSnapshots => Set<IntegrationSnapshot>();
     public DbSet<WhatsNewState> WhatsNewStates => Set<WhatsNewState>();
+    public DbSet<TrackerProxy> Proxies => Set<TrackerProxy>();
 
     public async Task EnsureSeedDataAsync(CancellationToken ct = default)
     {
@@ -79,6 +80,21 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ApplicationSettings>()
             .Property(settings => settings.UserAgent)
             .IsRequired();
+
+        var proxy = modelBuilder.Entity<TrackerProxy>();
+        proxy.ToTable("Proxies");
+        proxy.Property(p => p.Name).IsRequired().HasMaxLength(100);
+        proxy.HasIndex(p => p.Name).IsUnique();
+        proxy.Property(p => p.Type).HasConversion<string>().HasMaxLength(16);
+        proxy.Property(p => p.Host).IsRequired().HasMaxLength(255);
+        proxy.Property(p => p.Username).HasMaxLength(255);
+        proxy.Property(p => p.Password).HasMaxLength(255);
+
+        modelBuilder.Entity<Integration>()
+            .HasOne(i => i.Proxy)
+            .WithMany()
+            .HasForeignKey(i => i.ProxyId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         var whatsNew = modelBuilder.Entity<WhatsNewState>();
         whatsNew.ToTable("WhatsNewState");

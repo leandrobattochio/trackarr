@@ -17,4 +17,6 @@ public class Integration
     public int? SeedingTorrents { get; set; }
     public int? LeechingTorrents { get; set; }
     public int? ActiveTorrents { get; set; }
+    public Guid? ProxyId { get; set; }
+    public TrackerProxy? Proxy { get; set; }
 }

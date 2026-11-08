@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProxiesTab } from "@/features/proxies";
 import { AboutTab, HttpSettingsTab, PluginDownloadStatus } from "@/features/settings/components";
 import { useAboutInfo, usePluginDownloadStatus, useSettings, useUpdateSettings } from "@/features/settings/hooks";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
@@ -70,6 +71,7 @@ export default function SettingsPage() {
         <Tabs defaultValue="http" className="space-y-6">
           <TabsList>
             <TabsTrigger value="http">HTTP</TabsTrigger>
+            <TabsTrigger value="proxies">Proxies</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>
 
@@ -84,6 +86,10 @@ export default function SettingsPage() {
               onChangeUserAgent={handleChangeUserAgent}
               onSave={handleSave}
             />
+          </TabsContent>
+
+          <TabsContent value="proxies" className="mt-0">
+            <ProxiesTab />
           </TabsContent>
 
           <TabsContent value="about" className="mt-0 space-y-6">

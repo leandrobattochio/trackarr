@@ -19,8 +19,11 @@ internal static class TestApp
         [HangfireConnectionEnvVar] = $"Data Source={Path.Combine(dataDirectory, "hangfire-e2e.db")}",
         [DataDirectoryEnvVar] = dataDirectory,
         [RepoPlugins.SourceUrlEnvVar] = RepoPlugins.OfflineSourceUrl(dataDirectory),
-        [RepoPlugins.AppReleasesUrlEnvVar] = RepoPlugins.OfflineAppReleasesUrl
+        [RepoPlugins.AppReleasesUrlEnvVar] = RepoPlugins.OfflineAppReleasesUrl,
+        [ProxyTestUrlEnvVar] = $"{FakeTracker.BaseUrl}api/user?api_token={FakeTracker.ApiKey}"
     };
+
+    public const string ProxyTestUrlEnvVar = "Proxies__TestUrl";
 
     public static void Apply(IReadOnlyDictionary<string, string?> variables)
     {

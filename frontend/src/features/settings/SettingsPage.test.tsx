@@ -58,6 +58,10 @@ vi.mock("@/features/settings/hooks", () => ({
   useUpdateSettings: () => updateMutation,
 }));
 
+vi.mock("@/features/proxies", () => ({
+  ProxiesTab: () => <div>proxies-tab</div>,
+}));
+
 vi.mock("@/features/settings/components", () => ({
   HttpSettingsTab: (props: unknown) => (
     <div data-testid="http-tab">

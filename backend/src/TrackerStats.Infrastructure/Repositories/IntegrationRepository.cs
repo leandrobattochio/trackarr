@@ -15,10 +15,11 @@ public class IntegrationRepository(AppDbContext db) : IIntegrationRepository
     }
 
     public async Task<IReadOnlyList<Integration>> ListAsync(CancellationToken ct) =>
-        await db.Integrations.ToListAsync(ct);
+        await db.Integrations.Include(integration => integration.Proxy).ToListAsync(ct);
 
     public async Task<Integration?> GetByIdAsync(Guid id, CancellationToken ct) =>
-        await db.Integrations.FindAsync([id], ct);
+        await db.Integrations.Include(integration => integration.Proxy)
+            .FirstOrDefaultAsync(integration => integration.Id == id, ct);
 
     public async Task<bool> ExistsByPluginIdAsync(string pluginId, CancellationToken ct) =>
         await db.Integrations.AnyAsync(
@@ -28,6 +29,9 @@ public class IntegrationRepository(AppDbContext db) : IIntegrationRepository
     public async Task UpdateAsync(Integration integration, CancellationToken ct)
     {
         db.Integrations.Update(integration);
+        // Update walks the graph; the loaded proxy is only read here, never saved through its integration.
+        if (integration.Proxy is not null)
+            db.Entry(integration.Proxy).State = EntityState.Unchanged;
         await db.SaveChangesAsync(ct);
     }
 

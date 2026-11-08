@@ -42,7 +42,7 @@ public class IntegrationSyncService(
             var plugin = registry.CreateById(integration.PluginId, configuration)
                 ?? throw new InvalidOperationException($"Plugin '{integration.PluginId}' not found.");
 
-            using var httpClient = httpClientFactory.CreateClient(plugin);
+            using var httpClient = httpClientFactory.CreateClient(plugin, integration.Proxy);
             var fetchResult = await plugin.FetchStatsAsync(httpClient, ct);
             if (fetchResult.Result is PluginProcessResult.Success && fetchResult.Stats is null)
                 fetchResult = fetchResult with { Result = PluginProcessResult.UnknownError };
