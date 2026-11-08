@@ -19,6 +19,7 @@ public sealed class AboutControllerTests : IDisposable
         var ok = result.ShouldBeOfType<OkObjectResult>();
         var json = TestHttp.ToJson(ok.Value);
         json.GetProperty("databaseEngine").GetString().ShouldBe("PostgreSQL");
+        json.GetProperty("databasePath").ValueKind.ShouldBe(System.Text.Json.JsonValueKind.Null);
         json.GetProperty("version").GetString().ShouldBe("1.0.0-test");
         json.GetProperty("dotNetVersion").GetString().ShouldBe("10.0.0");
         json.GetProperty("runningInDocker").GetBoolean().ShouldBeFalse();
@@ -27,6 +28,19 @@ public sealed class AboutControllerTests : IDisposable
         json.GetProperty("startupDirectory").GetString().ShouldBe("/app");
         json.GetProperty("environmentName").GetString().ShouldBe("Development");
         json.GetProperty("uptime").GetString().ShouldBe("01:23:45");
+    }
+
+    [Fact]
+    public void Get_should_return_the_sqlite_database_path()
+    {
+        var controller = new AboutController(
+            new FakeAboutService("SQLite", "/data/trackarr.db"),
+            new PluginStateStore(PluginStorageLayout.ForDataDirectory(_rootDirectory)));
+
+        var json = TestHttp.ToJson(controller.Get().ShouldBeOfType<OkObjectResult>().Value);
+
+        json.GetProperty("databaseEngine").GetString().ShouldBe("SQLite");
+        json.GetProperty("databasePath").GetString().ShouldBe("/data/trackarr.db");
     }
 
     [Fact]

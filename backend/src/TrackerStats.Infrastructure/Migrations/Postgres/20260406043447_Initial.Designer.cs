@@ -2,18 +2,21 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TrackerStats.Infrastructure.Data;
 
 #nullable disable
 
-namespace TrackerStats.Infrastructure.Migrations
+namespace TrackerStats.Infrastructure.Migrations.Postgres
 {
-    [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(PostgresAppDbContext))]
+    [Migration("20260406043447_Initial")]
+    partial class Initial
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -139,31 +142,6 @@ namespace TrackerStats.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("IntegrationSnapshots");
-                });
-
-            modelBuilder.Entity("TrackerStats.Domain.Entities.WhatsNewState", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("LastReadAppVersion")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("LastReadAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<long?>("LastReadPluginChangeId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("WhatsNewState", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1
-                        });
                 });
 #pragma warning restore 612, 618
         }

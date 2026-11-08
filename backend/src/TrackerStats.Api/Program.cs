@@ -2,7 +2,6 @@ using System.Data.Common;
 using FluentValidation;
 using Hangfire;
 using Hangfire.Storage.SQLite;
-using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using TrackerStats.Api.Controllers;
 using TrackerStats.Domain.Plugins;
@@ -23,9 +22,7 @@ using TrackerStats.PluginEngine.Extraction;
 using TrackerStats.PluginEngine.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
-var postgresConnectionString = builder.Configuration.GetConnectionString("PostgresConnection");
-if (string.IsNullOrWhiteSpace(postgresConnectionString))
-    throw new InvalidOperationException("Connection string 'PostgresConnection' was not found.");
+var database = AppDatabase.FromConfiguration(builder.Configuration, builder.Environment);
 
 var hangfireConnectionString = ResolveHangfireConnectionString(builder.Configuration, builder.Environment);
 var hangfireDatabasePath = ResolveSqliteDatabasePath(hangfireConnectionString, "hangfire.db");
@@ -34,10 +31,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateIntegrationRequestValidator>();
 
-builder.Services.AddDbContext<AppDbContext>(opts =>
-{
-    opts.UseNpgsql(postgresConnectionString);
-});
+database.Register(builder.Services);
 
 builder.Services.AddHangfire(config => config
     .UseSimpleAssemblyNameTypeSerializer()
@@ -92,7 +86,8 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
+    await database.MigrateAsync(scope.ServiceProvider, app.Logger);
+    await database.LogEngineAsync(db.Database, app.Logger);
     await db.EnsureSeedDataAsync();
     scope.ServiceProvider.GetRequiredService<LegacyPluginCleanup>().Run();
     scope.ServiceProvider.GetRequiredService<PluginSnapshotSeeder>().Run();

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace TrackerStats.Infrastructure.Migrations
+namespace TrackerStats.Infrastructure.Migrations.Postgres
 {
     /// <inheritdoc />
     public partial class WhatsNewState : Migration

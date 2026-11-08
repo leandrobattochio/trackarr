@@ -15,6 +15,7 @@ export function AboutTab({ isLoading, error, aboutInfo }: AboutTabProps) {
         [".NET", aboutInfo.dotNetVersion],
         ["Docker", aboutInfo.runningInDocker ? "Yes" : "No"],
         ["Database", aboutInfo.databaseEngine],
+        ...(aboutInfo.databasePath ? [["Database File", aboutInfo.databasePath]] : []),
         ["Applied Migrations", aboutInfo.appliedMigrations.toString()],
         ["AppData Directory", aboutInfo.appDataDirectory],
         ["Startup Directory", aboutInfo.startupDirectory],

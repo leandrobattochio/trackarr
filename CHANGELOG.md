@@ -5,6 +5,45 @@ All notable changes to trackarr are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-11-08
+
+trackarr now runs as a single container: SQLite is the default database, and PostgreSQL is
+optional. This is not a breaking change for existing installs: if you set
+`ConnectionStrings__PostgresConnection` today, keep it, and trackarr keeps using your PostgreSQL
+database and its data with no change.
+
+If you ran the repository's `docker/docker-compose.yml`, which included PostgreSQL until v0.4,
+start that stack with `docker/docker-compose.postgres.yml` from now on: it uses the same names
+and finds your data.
+
+### Added
+
+- SQLite support. Without `ConnectionStrings__PostgresConnection`, the application data lives in
+  `<Data__Directory>/trackarr.db`, created and migrated on the first start.
+- A "Using PostgreSQL" section in the README and `docker/docker-compose.postgres.yml`, an example
+  with a PostgreSQL container.
+- The startup log names the database engine and its version, plus the file path for SQLite. The
+  connection string and its password are never logged.
+- **Settings > About** shows `SQLite` with the database file path, or `PostgreSQL`.
+
+### Changed
+
+- `ConnectionStrings__PostgresConnection` is optional. Setting it means "use PostgreSQL".
+- `docker/docker-compose.yml` and the README compose example run trackarr alone, with no
+  PostgreSQL service.
+- trackarr no longer creates a missing PostgreSQL database. Startup stops with a message telling
+  you to create it, or to remove the setting to use SQLite. Tables inside an existing database are
+  still created.
+- When PostgreSQL cannot be reached, startup retries 3 times, 5 seconds apart, then stops with a
+  clear message; during those retries any PostgreSQL error is retried, since a server that is
+  still starting refuses connections for a moment. Other PostgreSQL errors stop startup at once.
+- A corrupt `trackarr.db` stops startup with a message saying to restore it from a backup or
+  delete it.
+
+trackarr never copies data between SQLite and PostgreSQL. Migrating an existing SQLite database to
+PostgreSQL is not supported, and removing the PostgreSQL setting opens the SQLite file that is on
+disk, or an empty one: it does not bring the PostgreSQL data back.
+
 ## [0.4.0] - 2026-11-08
 
 **This release has breaking changes.** Read the
@@ -63,4 +102,5 @@ Integrations, their settings and their snapshot history are kept.
 - When two files declared the same plugin id, the editor and the runtime used different files.
 - Saving a plugin in the editor rewrote the YAML and dropped its comments.
 
+[0.5.0]: https://github.com/leandrobattochio/trackarr/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/leandrobattochio/trackarr/compare/v0.3.2...v0.4.0

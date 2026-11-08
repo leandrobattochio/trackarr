@@ -8,25 +8,39 @@ permissions:
 
 jobs:
   full-stack-e2e:
+    name: full-stack-e2e (${{ matrix.database }})
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: trackarr
-          POSTGRES_USER: trackarr
-          POSTGRES_PASSWORD: trackarr
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U trackarr -d trackarr"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - database: sqlite
+            engine: SQLite
+            test-filter: Database=Sqlite
+          - database: postgres
+            engine: PostgreSQL
+            test-filter: Database=Postgres
     env:
       DOTNET_CLI_HOME: ${{ github.workspace }}/backend/.dotnet
     steps:
       - uses: actions/checkout@v5
+
+      # A step rather than a service container, so the SQLite leg runs with no PostgreSQL at all.
+      - name: Start PostgreSQL
+        if: matrix.database == 'postgres'
+        shell: bash
+        run: |
+          docker run -d --name trackarr-postgres \
+            -e POSTGRES_DB=trackarr -e POSTGRES_USER=trackarr -e POSTGRES_PASSWORD=trackarr \
+            -p 5432:5432 postgres:17-alpine
+          for _ in {1..30}; do
+            if docker exec trackarr-postgres pg_isready -h 127.0.0.1 -U trackarr -d trackarr > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs trackarr-postgres
+          exit 1
 
       - uses: pnpm/action-setup@v4
         with:
@@ -47,20 +61,24 @@ jobs:
 
       - run: dotnet restore "${{ github.workspace }}/backend/TrackerStats.sln"
 
-      - name: Run backend Testcontainers end-to-end tests
+      - name: Run backend end-to-end tests
         run: >
           dotnet test "${{ github.workspace }}/backend/tests/TrackerStats.Api.EndToEndTests/TrackerStats.Api.EndToEndTests.csproj"
           --configuration Release
           --no-restore
+          --filter "${{ matrix.test-filter }}"
 
       - name: Start backend API
         shell: bash
         env:
-          ConnectionStrings__PostgresConnection: Host=127.0.0.1;Port=5432;Database=trackarr;Username=trackarr;Password=trackarr
+          DATABASE: ${{ matrix.database }}
           ConnectionStrings__HangfireConnection: Data Source=${{ github.workspace }}/backend/.e2e/hangfire.db
           Data__Directory: ${{ runner.temp }}/trackarr-data
           PluginSource__Url: file://${{ github.workspace }}/backend/tests/fixtures/plugin-source/
         run: |
+          if [ "$DATABASE" = postgres ]; then
+            export ConnectionStrings__PostgresConnection="Host=127.0.0.1;Port=5432;Database=trackarr;Username=trackarr;Password=trackarr"
+          fi
           mkdir -p backend/.e2e
           dotnet run --project backend/src/TrackerStats.Api/TrackerStats.Api.csproj --configuration Release --no-restore --urls http://127.0.0.1:5000 > backend/.e2e/backend.log 2>&1 &
           echo $! > backend/.e2e/backend.pid
@@ -77,14 +95,14 @@ jobs:
         shell: bash
         run: |
           # The startup download installs the fixture plugins in the background.
-          for i in {1..60}; do
+          for _ in {1..60}; do
             if curl -fsS http://127.0.0.1:5000/api/plugins | jq -e 'length >= 4' > /dev/null; then
               break
             fi
             sleep 2
           done
 
-          for i in {1..60}; do
+          for _ in {1..60}; do
             if curl -fsS http://127.0.0.1:8080 > /dev/null; then
               break
             fi
@@ -93,6 +111,7 @@ jobs:
 
           curl -fsS http://127.0.0.1:5000/api/plugins | jq -e 'length >= 4' > /dev/null
           curl -fsS http://127.0.0.1:8080 > /dev/null
+          curl -fsS http://127.0.0.1:5000/api/about | jq -e --arg engine "${{ matrix.engine }}" '.databaseEngine == $engine'
 
       - name: Run Cypress browser end-to-end tests
         run: pnpm e2e
@@ -114,7 +133,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: full-stack-e2e-artifacts
+          name: full-stack-e2e-artifacts-${{ matrix.database }}
           path: |
             backend/.e2e/backend.log
             frontend/.e2e/frontend.log

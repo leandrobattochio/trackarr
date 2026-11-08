@@ -7,6 +7,7 @@ export interface ApiAboutInfo {
   dotNetVersion: string;
   runningInDocker: boolean;
   databaseEngine: string;
+  databasePath: string | null;
   appliedMigrations: number;
   appDataDirectory: string;
   startupDirectory: string;

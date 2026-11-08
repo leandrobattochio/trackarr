@@ -25,6 +25,7 @@ describe("settingsApi", () => {
       dotNetVersion: "10.0.0",
       runningInDocker: true,
       databaseEngine: "PostgreSQL",
+      databasePath: null,
       appliedMigrations: 3,
       appDataDirectory: "/data",
       startupDirectory: "/app",

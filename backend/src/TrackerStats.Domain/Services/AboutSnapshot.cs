@@ -5,6 +5,7 @@ public sealed record AboutSnapshot(
     string DotNetVersion,
     bool RunningInDocker,
     string DatabaseEngine,
+    string? DatabasePath,
     int AppliedMigrations,
     string AppDataDirectory,
     string StartupDirectory,
