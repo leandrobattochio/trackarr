@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using TrackerStats.Domain.Plugins;
 using TrackerStats.Domain.Plugins.Yaml;
 using PluginTrackerStats = TrackerStats.Domain.Plugins.TrackerStats;
@@ -16,18 +17,31 @@ public class ResultMapper : IResultMapper
             $"Plugin '{definition.PluginId}' is missing a mapping definition.");
 
         var stats = new PluginTrackerStats(
-            Ratio: ResolveRequiredDecimal(mapping.Ratio, configuration, stepResults, nameof(mapping.Ratio)),
-            UploadedBytes: ResolveRequiredLong(mapping.UploadedBytes, configuration, stepResults, nameof(mapping.UploadedBytes)),
-            DownloadedBytes: ResolveRequiredLong(mapping.DownloadedBytes, configuration, stepResults, nameof(mapping.DownloadedBytes)),
-            SeedBonus: ResolveOptionalString(mapping.SeedBonus, configuration, stepResults),
-            Buffer: ResolveOptionalString(mapping.Buffer, configuration, stepResults),
-            HitAndRuns: ResolveOptionalInt(mapping.HitAndRuns, configuration, stepResults),
-            RequiredRatio: ResolveRequiredDecimal(mapping.RequiredRatio, configuration, stepResults, nameof(mapping.RequiredRatio)),
-            SeedingTorrents: ResolveRequiredInt(mapping.SeedingTorrents, configuration, stepResults, nameof(mapping.SeedingTorrents)),
-            LeechingTorrents: ResolveRequiredInt(mapping.LeechingTorrents, configuration, stepResults, nameof(mapping.LeechingTorrents)),
-            ActiveTorrents: ResolveRequiredInt(mapping.ActiveTorrents, configuration, stepResults, nameof(mapping.ActiveTorrents)));
+            Ratio: ResolveField(nameof(mapping.Ratio), () => ResolveRequiredDecimal(mapping.Ratio, configuration, stepResults, nameof(mapping.Ratio))),
+            UploadedBytes: ResolveField(nameof(mapping.UploadedBytes), () => ResolveRequiredLong(mapping.UploadedBytes, configuration, stepResults, nameof(mapping.UploadedBytes))),
+            DownloadedBytes: ResolveField(nameof(mapping.DownloadedBytes), () => ResolveRequiredLong(mapping.DownloadedBytes, configuration, stepResults, nameof(mapping.DownloadedBytes))),
+            SeedBonus: ResolveField(nameof(mapping.SeedBonus), () => ResolveOptionalString(mapping.SeedBonus, configuration, stepResults)),
+            Buffer: ResolveField(nameof(mapping.Buffer), () => ResolveOptionalString(mapping.Buffer, configuration, stepResults)),
+            HitAndRuns: ResolveField(nameof(mapping.HitAndRuns), () => ResolveOptionalInt(mapping.HitAndRuns, configuration, stepResults)),
+            RequiredRatio: ResolveField(nameof(mapping.RequiredRatio), () => ResolveRequiredDecimal(mapping.RequiredRatio, configuration, stepResults, nameof(mapping.RequiredRatio))),
+            SeedingTorrents: ResolveField(nameof(mapping.SeedingTorrents), () => ResolveRequiredInt(mapping.SeedingTorrents, configuration, stepResults, nameof(mapping.SeedingTorrents))),
+            LeechingTorrents: ResolveField(nameof(mapping.LeechingTorrents), () => ResolveRequiredInt(mapping.LeechingTorrents, configuration, stepResults, nameof(mapping.LeechingTorrents))),
+            ActiveTorrents: ResolveField(nameof(mapping.ActiveTorrents), () => ResolveRequiredInt(mapping.ActiveTorrents, configuration, stepResults, nameof(mapping.ActiveTorrents))));
 
         return new TrackerFetchResult(PluginProcessResult.Success, stats);
+    }
+
+    private static T ResolveField<T>(string propertyName, Func<T> resolve)
+    {
+        try
+        {
+            return resolve();
+        }
+        catch (Exception ex)
+        {
+            var field = $"mapping.{JsonNamingPolicy.CamelCase.ConvertName(propertyName)}";
+            throw new PluginFieldException(PluginProcessResult.UnknownError, null, field, ex.Message, ex);
+        }
     }
 
     private static decimal ResolveRequiredDecimal(

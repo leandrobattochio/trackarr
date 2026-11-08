@@ -23,11 +23,17 @@ public class IntegrationSyncService(
             return IntegrationSyncOutcome.NotFound(integrationId);
 
         var validation = configurationValidator.Validate(integration);
+        if (validation.ErrorCode == IntegrationConfigurationErrorCodes.InvalidOverride)
+            return IntegrationSyncOutcome.InvalidOverride(integration, validation.Error!);
+
         if (validation.Plugin is null)
             return IntegrationSyncOutcome.PluginMissing(integration);
 
         if (!validation.IsValid)
-            return IntegrationSyncOutcome.InvalidConfiguration(integration, validation.Error ?? "Integration configuration is invalid.");
+            return IntegrationSyncOutcome.InvalidConfiguration(
+                integration,
+                validation.Error ?? "Integration configuration is invalid.",
+                validation.ErrorCode);
 
         try
         {
@@ -105,16 +111,23 @@ public record IntegrationSyncOutcome(
     bool WasFound,
     bool PluginExists,
     bool ConfigurationIsValid,
-    string? ConfigurationError)
+    string? ConfigurationError,
+    string? ConfigurationErrorCode = null)
 {
     public static IntegrationSyncOutcome NotFound(Guid integrationId) =>
         new(null, null, WasFound: false, PluginExists: false, ConfigurationIsValid: false, ConfigurationError: null);
 
     public static IntegrationSyncOutcome PluginMissing(Integration integration) =>
-        new(integration, null, WasFound: true, PluginExists: false, ConfigurationIsValid: false, ConfigurationError: null);
+        new(integration, null, WasFound: true, PluginExists: false, ConfigurationIsValid: false, ConfigurationError: null,
+            ConfigurationErrorCode: IntegrationConfigurationErrorCodes.PluginNotFound);
 
-    public static IntegrationSyncOutcome InvalidConfiguration(Integration integration, string error) =>
-        new(integration, null, WasFound: true, PluginExists: true, ConfigurationIsValid: false, ConfigurationError: error);
+    public static IntegrationSyncOutcome InvalidConfiguration(Integration integration, string error, string? errorCode = null) =>
+        new(integration, null, WasFound: true, PluginExists: true, ConfigurationIsValid: false, ConfigurationError: error,
+            ConfigurationErrorCode: errorCode);
+
+    public static IntegrationSyncOutcome InvalidOverride(Integration integration, string error) =>
+        new(integration, null, WasFound: true, PluginExists: true, ConfigurationIsValid: false, ConfigurationError: error,
+            ConfigurationErrorCode: IntegrationConfigurationErrorCodes.InvalidOverride);
 
     public static IntegrationSyncOutcome Completed(Integration integration, PluginProcessResult result) =>
         new(integration, result, WasFound: true, PluginExists: true, ConfigurationIsValid: true, ConfigurationError: null);

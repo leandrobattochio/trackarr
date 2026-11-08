@@ -7,8 +7,7 @@ Given("I open the manage plugins page", () => {
 
 Then("I should see the disk-backed plugin catalog", () => {
   cy.contains("Plugin Catalog").should("be.visible");
-  cy.contains("Seedpool").should("be.visible");
-  cy.contains("Disk").should("be.visible");
+  cy.contains("button", "Seedpool").scrollIntoView().should("be.visible").and("contain.text", "Official v");
 });
 
 When("I select the Seedpool plugin definition", () => {
@@ -16,7 +15,7 @@ When("I select the Seedpool plugin definition", () => {
 });
 
 Then("I should see the Seedpool definition editor", () => {
-  cy.contains("Seedpool").should("be.visible");
+  cy.contains("h3", "Seedpool").should("be.visible");
   cy.contains("seedpool · editable").should("be.visible");
   cy.contains("button", "Save").should("be.disabled");
   cy.get(".monaco-editor").should("exist");
@@ -29,6 +28,6 @@ When("I start a new plugin draft", () => {
 Then("I should see the new plugin draft editor", () => {
   cy.contains("New Plugin Draft").should("be.visible");
   cy.contains("button", "Create Plugin").should("be.visible");
-  cy.contains("Create writes a new physical YAML file into the plugin directory.").should("be.visible");
+  cy.contains("Create saves a new custom plugin. Its pluginId must not belong to an official plugin.").should("be.visible");
   cy.get(".monaco-editor").should("exist");
 });

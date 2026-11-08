@@ -45,6 +45,27 @@ describe("HelpPage", () => {
     expect(screen.getByText("dashboard")).toBeInTheDocument();
 
     expect(screen.getAllByText("DOWN")).toHaveLength(5);
+  });
+
+  it("explains the plugin kinds, how to change a plugin and the status badges", () => {
+    render(<HelpPage />);
+
+    expect(screen.getByRole("heading", { name: "Plugins" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Official" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Override" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Custom" })).toBeInTheDocument();
+    expect(screen.getByText("Edited (base v1.1.0)")).toBeInTheDocument();
+    expect(screen.getByText(/downloads the official plugins on every start/i)).toBeInTheDocument();
+
+    expect(screen.getByRole("heading", { name: "Changing a plugin" })).toBeInTheDocument();
+    expect(screen.getByText(/editing the files on disk is not supported/i)).toBeInTheDocument();
+    expect(screen.getByText(/Use official \(deletes your copy with no backup\)/)).toBeInTheDocument();
+
+    expect(screen.getByRole("heading", { name: "Status badges" })).toBeInTheDocument();
+    for (const badge of ["Outdated", "Orphan", "Deprecated", "Incompatible"]) {
+      expect(screen.getByText(badge)).toBeInTheDocument();
+    }
+    expect(screen.getByText("schemaVersion")).toBeInTheDocument();
     expect(screen.getByText(/Result: the YAML starts as plugin metadata/i)).toBeInTheDocument();
   });
 });

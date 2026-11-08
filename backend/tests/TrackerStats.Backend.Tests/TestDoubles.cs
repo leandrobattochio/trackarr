@@ -74,6 +74,10 @@ internal sealed class FakeTrackerPluginRegistry : ITrackerPluginRegistry
 
     public IReadOnlyList<ITrackerPlugin> GetAll() => _prototypes.Values.ToList();
 
+    public Dictionary<string, string> InvalidOverrides { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public string? GetInvalidOverrideError(string pluginId) => InvalidOverrides.GetValueOrDefault(pluginId);
+
     public IReadOnlyList<PluginCatalogEntry> GetCatalog() =>
         _prototypes.Values.Select(plugin => new PluginCatalogEntry(
             plugin.PluginId,
@@ -314,6 +318,8 @@ internal sealed class FakeStorageConnection : IStorageConnection
 internal sealed class FakeYamlPluginDefinitionLoader(IReadOnlyList<LoadedYamlPluginDefinition> definitions) : IYamlPluginDefinitionLoader
 {
     public IReadOnlyList<LoadedYamlPluginDefinition> LoadDefinitions() => definitions;
+
+    public IReadOnlyList<LoadedYamlPluginDefinition> LoadAllDefinitions() => definitions;
 }
 
 internal sealed class FakeApplicationSettingsService(string userAgent = "test-user-agent") : IApplicationSettingsService
@@ -396,4 +402,21 @@ internal static class TestHttp
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
+}
+
+internal sealed class StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
+{
+    public List<Uri> Requests { get; } = [];
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Requests.Add(request.RequestUri!);
+        return Task.FromResult(responder(request));
+    }
+}
+
+internal sealed class StubHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
+{
+    public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
 }

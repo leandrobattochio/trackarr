@@ -42,6 +42,69 @@ public class IntegrationsControllerTests
     }
 
     [Fact]
+    public async Task Sync_and_list_should_report_an_invalid_override()
+    {
+        var integrationId = Guid.NewGuid();
+        var repository = new InMemoryIntegrationRepository();
+        repository.Seed(new Integration
+        {
+            Id = integrationId,
+            PluginId = "asc",
+            Payload = """{"required_ratio":"1.0"}"""
+        });
+        var registry = new FakeTrackerPluginRegistry();
+        registry.InvalidOverrides["asc"] = "Invalid YAML syntax.";
+        var controller = CreateController(repository: repository, registry: registry);
+
+        var result = await controller.Sync(integrationId, CancellationToken.None);
+        var list = await controller.List(CancellationToken.None);
+
+        var body = TestHttp.ToJson(result.ShouldBeOfType<BadRequestObjectResult>().Value);
+        body.GetProperty("code").GetString().ShouldBe("invalidOverride");
+        body.GetProperty("error").GetString().ShouldNotBeNull().ShouldContain("Invalid override");
+        repository.Updated.ShouldBeEmpty();
+        var listed = TestHttp.ToJson(list.ShouldBeOfType<OkObjectResult>().Value).EnumerateArray().Single();
+        listed.GetProperty("configurationValid").GetBoolean().ShouldBeFalse();
+        listed.GetProperty("configurationErrorCode").GetString().ShouldBe("invalidOverride");
+        listed.GetProperty("configurationError").GetString().ShouldNotBeNull().ShouldContain("Invalid YAML syntax.");
+    }
+
+    [Fact]
+    public async Task Sync_and_list_should_explain_a_base_url_the_updated_plugin_no_longer_lists()
+    {
+        var integrationId = Guid.NewGuid();
+        var repository = new InMemoryIntegrationRepository();
+        repository.Seed(new Integration
+        {
+            Id = integrationId,
+            PluginId = "plugin",
+            Payload = """{"baseUrl":"https://old.tracker.test/","required_ratio":"1.0"}"""
+        });
+        var registry = new FakeTrackerPluginRegistry();
+        registry.Register(new FakeTrackerPlugin("plugin",
+            [new PluginField("required_ratio", "Required Ratio", null, "number", true, false)],
+            ["https://new.tracker.test/"]));
+        var controller = CreateController(repository, registry);
+
+        var result = await controller.Sync(integrationId, CancellationToken.None);
+        var list = await controller.List(CancellationToken.None);
+
+        const string expected =
+            "Invalid integration: base URL 'https://old.tracker.test/' is no longer listed by plugin 'plugin'. " +
+            "It now accepts: https://new.tracker.test/. " +
+            "To fix it, edit the integration and pick the new base URL.";
+        var body = TestHttp.ToJson(result.ShouldBeOfType<BadRequestObjectResult>().Value);
+        body.GetProperty("code").GetString().ShouldBe("baseUrlNotListed");
+        body.GetProperty("error").GetString().ShouldBe(expected);
+        repository.Updated.ShouldBeEmpty();
+        var listed = TestHttp.ToJson(list.ShouldBeOfType<OkObjectResult>().Value).EnumerateArray().Single();
+        listed.GetProperty("configurationValid").GetBoolean().ShouldBeFalse();
+        listed.GetProperty("configurationErrorCode").GetString().ShouldBe("baseUrlNotListed");
+        listed.GetProperty("configurationError").GetString().ShouldBe(expected);
+        listed.GetProperty("url").GetString().ShouldBe("https://old.tracker.test/");
+    }
+
+    [Fact]
     public async Task Sync_should_return_bad_request_when_configuration_is_invalid()
     {
         var integrationId = Guid.NewGuid();

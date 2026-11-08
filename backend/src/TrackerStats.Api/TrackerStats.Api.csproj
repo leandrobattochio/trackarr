@@ -26,12 +26,4 @@
     <PackageReference Include="Scalar.AspNetCore" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="..\..\plugins\*.yaml">
-      <Link>built-in-templates\%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-  </ItemGroup>
-
 </Project>

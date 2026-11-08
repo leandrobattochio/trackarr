@@ -83,20 +83,24 @@ public class IntegrationConfigurationValidatorTests
     }
 
     [Fact]
-    public void Validate_should_fail_when_base_url_is_not_in_plugin_options()
+    public void Validate_should_explain_a_base_url_the_plugin_no_longer_lists()
     {
         var registry = new FakeTrackerPluginRegistry();
         registry.Register(new FakeTrackerPlugin("plugin",
         [
             new PluginField("required_ratio", "Required Ratio", null, "number", true, false)
         ],
-        ["https://tracker.test/"]));
+        ["https://tracker.test/", "https://mirror.tracker.test/"]));
         var sut = new IntegrationConfigurationValidator(registry);
 
         var result = sut.Validate("plugin", """{"baseUrl":"https://other.test/","required_ratio":"1.0"}""");
 
         result.IsValid.ShouldBeFalse();
-        result.Error.ShouldBe("Field 'baseUrl' must match one of the plugin's configured base URLs.");
+        result.ErrorCode.ShouldBe(IntegrationConfigurationErrorCodes.BaseUrlNotListed);
+        result.Error.ShouldBe(
+            "Invalid integration: base URL 'https://other.test/' is no longer listed by plugin 'plugin'. " +
+            "It now accepts: https://tracker.test/, https://mirror.tracker.test/. " +
+            "To fix it, edit the integration and pick the new base URL.");
     }
 
     [Fact]

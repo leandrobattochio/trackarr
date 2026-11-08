@@ -22,6 +22,7 @@ backend/.tools/
 backend/TestResults/
 backend/CoverageReport/
 backend/.e2e/
+backend/.data/
 frontend/.e2e/
 frontend/coverage/
 frontend/cypress/screenshots/
@@ -33,8 +34,6 @@ scripts/ralph/
 logs
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 

@@ -1,5 +1,14 @@
 ARG APP_TIMEZONE=America/Sao_Paulo
 ARG APP_VERSION=1.0.0
+# Must end with "/".
+ARG PLUGIN_SOURCE_URL=https://raw.githubusercontent.com/leandrobattochio/trackarr-plugins/main/
+
+FROM node:22-bookworm-slim AS plugin-snapshot
+ARG PLUGIN_SOURCE_URL
+# ADD re-fetches the index on every build, so a new trackarr-plugins commit invalidates the cache.
+ADD ${PLUGIN_SOURCE_URL}index.json /tmp/plugin-source/index.json
+COPY docker/fetch-plugin-snapshot.mjs /tmp/fetch-plugin-snapshot.mjs
+RUN node /tmp/fetch-plugin-snapshot.mjs "${PLUGIN_SOURCE_URL}" /tmp/plugin-source/index.json /plugin-snapshot
 
 FROM node:22-bookworm-slim AS frontend-build
 ARG APP_TIMEZONE
@@ -34,10 +43,11 @@ USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
     && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /data /data/templates
+    && mkdir -p /data
 EXPOSE 3000
 COPY --from=backend-build /app/publish ./
 COPY --from=frontend-build /src/frontend/dist ./wwwroot
+COPY --from=plugin-snapshot /plugin-snapshot ./plugin-snapshot
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

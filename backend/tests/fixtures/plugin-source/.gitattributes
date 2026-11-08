@@ -1,0 +1,2 @@
+# index.json hashes the stored bytes of each plugin.
+plugins/*.yaml -text

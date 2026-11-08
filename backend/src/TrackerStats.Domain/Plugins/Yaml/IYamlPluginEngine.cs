@@ -7,4 +7,10 @@ public interface IYamlPluginEngine
         PluginConfiguration configuration,
         HttpClient httpClient,
         CancellationToken ct);
+
+    Task<PluginExecutionReport> ExecuteWithReportAsync(
+        PluginDefinition definition,
+        PluginConfiguration configuration,
+        HttpClient httpClient,
+        CancellationToken ct);
 }

@@ -1,6 +1,7 @@
 import { startTransition, useEffect, useMemo, useState, useTransition } from "react";
 import Editor from "@monaco-editor/react";
-import { AlertTriangle, FolderOpen, Loader2, Plus, Save } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { AlertTriangle, Loader2, Plus, Save } from "lucide-react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { usePageTitle } from "@/shared/hooks/use-page-title";
 import {
@@ -11,6 +12,18 @@ import {
 } from "@/features/plugins/hooks";
 import { NEW_PLUGIN_TEMPLATE } from "@/features/plugins/plugin-template";
 import { tryGetPluginId } from "@/features/plugins/plugin-id";
+import type { ApiPluginListItem } from "@/features/plugins/types";
+import {
+  getOutdatedMessage,
+  getOutdatedReviewPath,
+  getOutdatedToneClass,
+  getSaveHint,
+  isNotInstalled,
+  isOutdatedOverride,
+} from "@/features/plugins/plugin-status";
+import { PluginStatusBadges, PluginStatusNotices } from "@/features/plugins/components/PluginStatusBadges";
+import { PluginTestButton } from "@/features/plugins/components/PluginTestButton";
+import { DeleteCustomPluginButton } from "@/features/plugins/components/DeleteCustomPluginButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,11 +34,20 @@ import { cn } from "@/shared/lib/utils";
 
 const EDITOR_HEIGHT = "70vh";
 
+function getCatalogSummary(plugin: ApiPluginListItem) {
+  if (isNotInstalled(plugin)) {
+    return "Not installed";
+  }
+
+  return plugin.definitionValid ? `${plugin.fields.length + plugin.customFields.length} fields` : "Definition invalid";
+}
+
 export default function ManagePluginsPage() {
   usePageTitle("TrackArr | Manage Plugins");
 
   const { data: plugins = [], isLoading, error } = usePluginCatalog();
-  const [selectedPluginId, setSelectedPluginId] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [selectedPluginId, setSelectedPluginId] = useState<string | null>(() => searchParams.get("plugin"));
   const [editorValue, setEditorValue] = useState("");
   const [baselineValue, setBaselineValue] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -48,7 +70,11 @@ export default function ManagePluginsPage() {
     [plugins, selectedPluginId],
   );
 
-  const definitionQuery = usePluginDefinition(selectedPluginId ?? "", Boolean(selectedPluginId) && !isCreatingNew);
+  const selectedNotInstalled = !isCreatingNew && selectedPlugin !== null && isNotInstalled(selectedPlugin);
+  const definitionQuery = usePluginDefinition(
+    selectedPluginId ?? "",
+    Boolean(selectedPluginId) && !isCreatingNew && !selectedNotInstalled,
+  );
 
   useEffect(() => {
     if (!definitionQuery.data || isCreatingNew) {
@@ -60,7 +86,7 @@ export default function ManagePluginsPage() {
     setSubmitError(null);
   }, [definitionQuery.data, isCreatingNew]);
 
-  function handleSelectPlugin(pluginId: string) {
+  function handleSelectPlugin(pluginId: string | null) {
     startEditorTransition(() => {
       setIsCreatingNew(false);
       setSelectedPluginId(pluginId);
@@ -68,6 +94,10 @@ export default function ManagePluginsPage() {
       setBaselineValue("");
       setSubmitError(null);
     });
+  }
+
+  function handleDeleted(pluginId: string) {
+    handleSelectPlugin(plugins.find((plugin) => plugin.pluginId !== pluginId)?.pluginId ?? null);
   }
 
   function handleCreatePlugin() {
@@ -130,13 +160,15 @@ export default function ManagePluginsPage() {
     );
   }
 
-  const selectedPluginError = !isCreatingNew ? selectedPlugin?.definitionError ?? null : null;
+  const selectedPluginError = !isCreatingNew && !selectedNotInstalled ? selectedPlugin?.definitionError ?? null : null;
   const selectedFieldCount = selectedPlugin
     ? selectedPlugin.fields.length + selectedPlugin.customFields.length
     : 0;
   const isDirty = editorValue !== baselineValue;
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const isEditorBusy = definitionQuery.isLoading || isSaving || isSwitchingEditorState;
+  const testPluginId = isCreatingNew ? tryGetPluginId(editorValue) : selectedPluginId;
+  const canTest = isCreatingNew || (selectedPlugin !== null && !selectedNotInstalled);
 
   return (
     <DashboardLayout>
@@ -145,7 +177,8 @@ export default function ManagePluginsPage() {
           <div>
             <h1 className="font-display text-2xl font-bold">Manage Plugins</h1>
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Plugin templates are loaded from disk. Existing definitions are editable and new plugins are created as physical YAML files.
+              Official plugins come from the plugin repository; editing one keeps your own copy of it. New Plugin creates a custom
+              plugin from a blank template.
             </p>
           </div>
           <Button onClick={handleCreatePlugin} className="xl:self-start">
@@ -160,7 +193,7 @@ export default function ManagePluginsPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <CardTitle className="text-lg">Plugin Catalog</CardTitle>
-                  <CardDescription>Disk-backed YAML definitions.</CardDescription>
+                  <CardDescription>Official, edited and custom plugins.</CardDescription>
                 </div>
                 <div className="rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-right">
                   <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Loaded</p>
@@ -210,21 +243,19 @@ export default function ManagePluginsPage() {
                                 {plugin.pluginId}
                               </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                              {needsFixing && (
-                                <Badge variant="destructive" className="gap-1 rounded-full px-2 py-1">
-                                  <AlertTriangle className="h-3 w-3" />
-                                  Needs Fixing
-                                </Badge>
-                              )}
-                              <Badge variant="outline" className="gap-1 rounded-full px-2 py-1 border-border/70 bg-muted/40 text-muted-foreground">
-                                <FolderOpen className="h-3 w-3" />
-                                Disk
+                            {needsFixing && !isNotInstalled(plugin) && (
+                              <Badge variant="destructive" className="shrink-0 gap-1 rounded-full px-2 py-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                Needs Fixing
                               </Badge>
-                            </div>
+                            )}
                           </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <PluginStatusBadges plugin={plugin} />
+                          </div>
+                          <PluginStatusNotices plugin={plugin} className="mt-3" />
                           <div className="mt-4 flex items-center justify-end text-xs text-muted-foreground">
-                            <span>{plugin.definitionValid ? `${plugin.fields.length + plugin.customFields.length} fields` : "Definition invalid"}</span>
+                            <span>{getCatalogSummary(plugin)}</span>
                           </div>
                         </button>
                       );
@@ -245,7 +276,7 @@ export default function ManagePluginsPage() {
                         <div className="space-y-1">
                           <p className="font-display text-sm font-semibold">New Plugin Draft</p>
                           <p className="text-sm text-muted-foreground">
-                            Start from a commented YAML template and save it directly as a new disk plugin.
+                            Start a custom plugin from a commented YAML template.
                           </p>
                         </div>
                       </div>
@@ -265,17 +296,14 @@ export default function ManagePluginsPage() {
                       {isCreatingNew ? "New Plugin Draft" : selectedPlugin?.displayName ?? "Plugin Definition"}
                     </CardTitle>
                     {!isCreatingNew && selectedPlugin && (
-                      <Badge variant="outline" className="gap-1 rounded-full px-2 py-1 border-border/70 bg-muted/40 text-muted-foreground">
-                        <FolderOpen className="h-3 w-3" />
-                        Disk
-                      </Badge>
+                      <PluginStatusBadges plugin={selectedPlugin} />
                     )}
                   </div>
                   <CardDescription>
                     {isCreatingNew
                       ? "Start from the documented template and adjust metadata, fields, steps, mapping, and dashboard metrics."
                       : selectedPlugin
-                        ? `${selectedPlugin.pluginId} · editable`
+                        ? `${selectedPlugin.pluginId} · ${selectedNotInstalled ? "not installed" : "editable"}`
                         : "Select a plugin definition from the catalog to inspect it."}
                   </CardDescription>
                 </div>
@@ -301,6 +329,33 @@ export default function ManagePluginsPage() {
               {definitionQuery.error && !isCreatingNew && (
                 <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
                   Failed to load plugin YAML: {definitionQuery.error.message}
+                </div>
+              )}
+
+              {selectedNotInstalled && selectedPlugin && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4">
+                  <PluginStatusNotices plugin={selectedPlugin} />
+                </div>
+              )}
+
+              {!isCreatingNew && selectedPlugin && isOutdatedOverride(selectedPlugin) && (
+                <div
+                  data-testid="editor-outdated-warning"
+                  className={cn(
+                    "flex flex-col gap-2 rounded-xl border p-4 text-sm sm:flex-row sm:items-center sm:justify-between",
+                    getOutdatedToneClass(selectedPlugin.lastSyncFailed),
+                  )}
+                >
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <p>{getOutdatedMessage(selectedPlugin)}</p>
+                  </div>
+                  <Link
+                    to={getOutdatedReviewPath(selectedPlugin.pluginId)}
+                    className="shrink-0 font-medium text-foreground underline underline-offset-4 hover:text-primary"
+                  >
+                    Review update
+                  </Link>
                 </div>
               )}
 
@@ -353,10 +408,29 @@ export default function ManagePluginsPage() {
               <div className="flex flex-col gap-3 border-t border-border/60 pt-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="text-sm text-muted-foreground">
                   {isCreatingNew
-                    ? "Create writes a new physical YAML file into the plugin directory."
-                    : "Save writes the current YAML back to the physical plugin file on disk."}
+                    ? "Create saves a new custom plugin. Its pluginId must not belong to an official plugin."
+                    : getSaveHint(selectedPlugin?.origin)}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  {canTest && (
+                    <PluginTestButton
+                      label="Test"
+                      pluginId={testPluginId}
+                      pluginName={(isCreatingNew ? testPluginId : selectedPlugin?.displayName) ?? "this plugin"}
+                      source={{ yaml: editorValue }}
+                      disabledReason={
+                        isEditorBusy ? "Wait for the editor to finish." : !editorValue.trim() ? "The editor is empty." : null
+                      }
+                    />
+                  )}
+                  {!isCreatingNew && selectedPlugin?.origin === "custom" && (
+                    <DeleteCustomPluginButton
+                      pluginId={selectedPlugin.pluginId}
+                      pluginName={selectedPlugin.displayName}
+                      disabled={isEditorBusy}
+                      onDeleted={handleDeleted}
+                    />
+                  )}
                   <Button onClick={handleSave} disabled={isEditorBusy || !editorValue.trim() || (!isCreatingNew && !isDirty)}>
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : isCreatingNew ? <Plus className="h-4 w-4" /> : <Save className="h-4 w-4" />}
                     {isCreatingNew ? "Create Plugin" : "Save"}

@@ -20,9 +20,12 @@ jobs:
         run: |
           current_tag="${GITHUB_REF_NAME}"
           previous_tag=$(git tag --sort=-creatordate | grep -Fxv "$current_tag" | head -n 1 || true)
+          changelog_section=$(.github/scripts/changelog-section.sh CHANGELOG.md)
+          delimiter="EOF_$(openssl rand -hex 16)"
 
           {
-            echo "body<<EOF"
+            echo "body<<${delimiter}"
+            printf '%s\n\n' "$changelog_section"
             echo "Container image: \`ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/trackarr:${current_tag}\`"
             echo
 
@@ -31,7 +34,7 @@ jobs:
             else
               echo "Compare changes: first tagged release"
             fi
-            echo "EOF"
+            echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub release

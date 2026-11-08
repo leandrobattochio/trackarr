@@ -1,4 +1,6 @@
-import { CircleHelp, ChartLine, LayoutDashboard, Puzzle, Settings2 } from "lucide-react";
+import { CircleHelp, ChartLine, LayoutDashboard, Puzzle, Settings2, Sparkles } from "lucide-react";
+import { AppUpdateNotice } from "@/features/whats-new/components/AppUpdateNotice";
+import { useWhatsNewDialog } from "@/features/whats-new/whats-new-context";
 import { NavLink } from "@/layouts/NavLink";
 import {
   Sidebar,
@@ -23,6 +25,7 @@ const navItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const whatsNew = useWhatsNewDialog();
 
   return (
     <Sidebar collapsible="icon">
@@ -47,7 +50,14 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton type="button" onClick={whatsNew.open} className="hover:bg-accent">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  {!collapsed && <span>What's New</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
+            {!collapsed && <AppUpdateNotice app={whatsNew.report?.app} className="px-2 pt-3" />}
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

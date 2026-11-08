@@ -11,9 +11,13 @@ using TrackerStats.Domain.Repositories;
 using TrackerStats.Domain.Services;
 using TrackerStats.Infrastructure.Data;
 using TrackerStats.Infrastructure.Plugins;
+using TrackerStats.Infrastructure.Plugins.Source;
+using TrackerStats.Infrastructure.Plugins.Storage;
 using TrackerStats.Infrastructure.Plugins.Yaml;
+using TrackerStats.Infrastructure.Releases;
 using TrackerStats.Infrastructure.Repositories;
 using TrackerStats.Infrastructure.Services;
+using TrackerStats.Infrastructure.WhatsNew;
 using TrackerStats.PluginEngine;
 using TrackerStats.PluginEngine.Extraction;
 using TrackerStats.PluginEngine.Transforms;
@@ -64,6 +68,22 @@ builder.Services.AddSingleton<ITemplateInterpolator, TemplateInterpolator>();
 builder.Services.AddSingleton<IAuthFailureDetector, AuthFailureDetector>();
 builder.Services.AddSingleton<IResultMapper, ResultMapper>();
 builder.Services.AddSingleton<IYamlPluginEngine, YamlPluginEngine>();
+builder.Services.AddSingleton<PluginStorageLayout>();
+builder.Services.AddSingleton<PluginStateStore>();
+builder.Services.AddSingleton<LegacyPluginCleanup>();
+builder.Services.AddSingleton<PluginSnapshotSeeder>();
+builder.Services.AddSingleton<PluginOverrideService>();
+builder.Services.AddSingleton<PluginStatusService>();
+builder.Services.AddSingleton<PluginDryRunService>();
+builder.Services.AddHttpClient(PluginIndexClient.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddSingleton<PluginIndexClient>();
+builder.Services.AddSingleton<PluginDownloadService>();
+builder.Services.AddHostedService<PluginStartupDownloadService>();
+builder.Services.AddSingleton(InstalledAppVersion.FromEntryAssembly());
+builder.Services.AddHttpClient(AppReleaseService.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddSingleton<AppReleaseService>();
+builder.Services.AddHostedService<AppReleaseStartupCheckService>();
+builder.Services.AddScoped<WhatsNewService>();
 builder.Services.AddSingleton<IYamlPluginDefinitionLoader, YamlPluginDefinitionLoader>();
 builder.Services.AddSingleton<ITrackerPluginRegistry, TrackerPluginRegistry>();
 
@@ -74,6 +94,9 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
     await db.EnsureSeedDataAsync();
+    scope.ServiceProvider.GetRequiredService<LegacyPluginCleanup>().Run();
+    scope.ServiceProvider.GetRequiredService<PluginSnapshotSeeder>().Run();
+    scope.ServiceProvider.GetRequiredService<PluginOverrideService>().AdoptLocallyModifiedOfficials();
 }
 
 if (app.Environment.IsDevelopment())

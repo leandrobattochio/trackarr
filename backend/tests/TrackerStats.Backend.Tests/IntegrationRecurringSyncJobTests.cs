@@ -42,6 +42,30 @@ public class IntegrationRecurringSyncJobTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_should_skip_and_log_warning_when_the_override_is_invalid()
+    {
+        var integrationId = Guid.NewGuid();
+        var repository = new InMemoryIntegrationRepository();
+        repository.Seed(new Integration
+        {
+            Id = integrationId,
+            PluginId = "asc",
+            Payload = """{"required_ratio":"1.0"}"""
+        });
+        var registry = new FakeTrackerPluginRegistry();
+        registry.InvalidOverrides["asc"] = "Invalid YAML syntax.";
+        var logger = new ListLogger<IntegrationRecurringSyncJob>();
+        var job = new IntegrationRecurringSyncJob(CreateSyncService(repository, registry), logger);
+
+        await job.ExecuteAsync(integrationId);
+
+        repository.Updated.ShouldBeEmpty();
+        logger.Entries.ShouldContain(entry =>
+            entry.Level == Microsoft.Extensions.Logging.LogLevel.Warning
+            && entry.Message.Contains("invalid override", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task ExecuteAsync_should_log_warning_when_configuration_is_invalid()
     {
         var integrationId = Guid.NewGuid();

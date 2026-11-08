@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppRouter } from "@/app/router";
+import { WhatsNewProvider } from "@/features/whats-new/WhatsNewProvider";
 
 const queryClient = new QueryClient();
 
@@ -11,7 +12,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AppRouter />
+      <WhatsNewProvider>
+        <AppRouter />
+      </WhatsNewProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

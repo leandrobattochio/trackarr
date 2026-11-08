@@ -1,5 +1,4 @@
 using System.Net;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
 using TrackerStats.Domain.Plugins;
@@ -90,12 +89,9 @@ public class AscPluginIntegrationTests
 
     private static PluginDefinition LoadDefinition()
     {
-        var pluginsDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "plugins"));
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["Plugins:Directory"] = pluginsDirectory })
-            .Build();
+        using var dataDirectory = RepoPluginsDataDirectory.Create();
 
-        return new YamlPluginDefinitionLoader(configuration, new FakeApplicationSettingsService())
+        return new YamlPluginDefinitionLoader(dataDirectory.Layout, new FakeApplicationSettingsService())
             .LoadDefinitions()
             .Single(definition => definition.PluginId == "asc")
             .Definition!;
