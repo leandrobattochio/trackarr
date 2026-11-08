@@ -5,6 +5,27 @@ All notable changes to trackarr are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-11-08
+
+### Added
+
+- The dashboard can show the trackers as a compact list. The toggle next to **Add Tracker** switches
+  between cards and list, and the browser remembers the choice. Drag and the up/down buttons
+  reorder the trackers in both views.
+
+### Fixed
+
+- On phones, the dashboard no longer grows wider than the screen: tracker names truncate, cards and
+  list rows fit the screen, and the overview tiles keep their values on one line.
+- On wide screens with three cards per row, the stats on each tracker card were cut off.
+
+### Changed
+
+- The documentation moved from the README to the
+  [wiki](https://github.com/leandrobattochio/trackarr/wiki). The README shows the app in GIFs, on a
+  desktop and on an iPhone.
+- The Docker image build no longer downloads the Cypress binary, which it never used.
+
 ## [0.5.0] - 2026-11-08
 
 trackarr now runs as a single container: SQLite is the default database, and PostgreSQL is
@@ -102,5 +123,6 @@ Integrations, their settings and their snapshot history are kept.
 - When two files declared the same plugin id, the editor and the runtime used different files.
 - Saving a plugin in the editor rewrote the YAML and dropped its comments.
 
+[0.5.1]: https://github.com/leandrobattochio/trackarr/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/leandrobattochio/trackarr/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/leandrobattochio/trackarr/compare/v0.3.2...v0.4.0
