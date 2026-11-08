@@ -13,6 +13,8 @@ RUN node /tmp/fetch-plugin-snapshot.mjs "${PLUGIN_SOURCE_URL}" /tmp/plugin-sourc
 FROM node:22-bookworm-slim AS frontend-build
 ARG APP_TIMEZONE
 ENV VITE_APP_TIMEZONE=${APP_TIMEZONE}
+# vite build needs the devDependencies, but not the Cypress binary they would download.
+ENV CYPRESS_INSTALL_BINARY=0
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN npm install -g pnpm@12.11.2 && pnpm install --frozen-lockfile
