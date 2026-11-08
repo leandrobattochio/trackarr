@@ -37,6 +37,7 @@ describe("AboutTab", () => {
       dotNetVersion: "10.0.0",
       runningInDocker: true,
       databaseEngine: "PostgreSQL",
+      databasePath: null,
       appliedMigrations: 8,
       appDataDirectory: "/data",
       startupDirectory: "/app",
@@ -65,5 +66,46 @@ describe("AboutTab", () => {
     );
     expect(screen.getByText("No")).toBeInTheDocument();
   });
+
+  it("shows PostgreSQL without a database file row", () => {
+    render(
+      <AboutTab isLoading={false} error={null} aboutInfo={postgresAbout} />,
+    );
+
+    expect(screen.getByText("Database")).toBeInTheDocument();
+    expect(screen.getByText("PostgreSQL")).toBeInTheDocument();
+    expect(screen.queryByText("Database File")).not.toBeInTheDocument();
+  });
+
+  it("shows SQLite with the database file path", () => {
+    render(
+      <AboutTab
+        isLoading={false}
+        error={null}
+        aboutInfo={{
+          ...postgresAbout,
+          databaseEngine: "SQLite",
+          databasePath: "/data/trackarr.db",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("SQLite")).toBeInTheDocument();
+    expect(screen.getByText("Database File")).toBeInTheDocument();
+    expect(screen.getByText("/data/trackarr.db")).toBeInTheDocument();
+  });
 });
+
+const postgresAbout = {
+  version: "1.2.3",
+  dotNetVersion: "10.0.0",
+  runningInDocker: false,
+  databaseEngine: "PostgreSQL",
+  databasePath: null,
+  appliedMigrations: 2,
+  appDataDirectory: "/data",
+  startupDirectory: "/app",
+  environmentName: "Production",
+  uptime: "00:05",
+};
 

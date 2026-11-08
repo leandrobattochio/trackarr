@@ -1,7 +1,5 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -13,10 +11,12 @@ using TrackerStats.Infrastructure.Plugins.Storage;
 
 namespace TrackerStats.Api.EndToEndTests;
 
+[Trait("Database", "Postgres")]
 public sealed class LegacyUpgradeEndToEndTests : IAsyncLifetime
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private const string V03Migration = "20260406043447_Initial";
+    private const string V04Migration = "20261107231750_WhatsNewState";
     private const string Payload = """{"baseUrl":"https://seedpool.org/","apiKey":"legacy-api-key","cron":"0 0 1 1 *"}""";
 
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine")
@@ -86,10 +86,51 @@ public sealed class LegacyUpgradeEndToEndTests : IAsyncLifetime
         (await ReadDatabaseAsync()).ShouldBe(before);
     }
 
-    private async Task<(Guid Official, Guid Custom)> SeedV03DatabaseAsync()
+    [Fact]
+    public async Task A_v04_database_should_upgrade_with_no_new_migration_and_no_data_change()
+    {
+        var (official, custom) = await SeedV03DatabaseAsync(V04Migration);
+        var lastReadAt = new DateTime(2026, 11, 7, 23, 30, 0, DateTimeKind.Utc);
+        await using (var db = CreateDbContext())
+        {
+            db.ApplicationSettings.Add(new ApplicationSettings { Id = 1, UserAgent = "v0.4-user-agent" });
+            var whatsNew = await db.WhatsNewStates.SingleAsync();
+            whatsNew.LastReadAppVersion = "0.4.0";
+            whatsNew.LastReadPluginChangeId = 7;
+            whatsNew.LastReadAt = lastReadAt;
+            await db.SaveChangesAsync();
+        }
+
+        RepoPlugins.CopyToOfficial(_dataDirectory);
+        var historyBefore = await ReadMigrationHistoryAsync();
+        historyBefore.Select(row => row.Id).ShouldBe([V03Migration, V04Migration]);
+        var before = await ReadAllDataAsync();
+
+        await BootAsync(async client =>
+        {
+            var integrations = await client.GetFromJsonAsync<List<IntegrationResponse>>("/api/integrations", JsonOptions);
+            integrations.ShouldNotBeNull();
+            integrations.Select(integration => integration.Id).ShouldBe([official, custom], ignoreOrder: true);
+
+            var snapshots = await client.GetFromJsonAsync<SnapshotsResponse>($"/api/snapshots?integrationId={official}&range=24h", JsonOptions);
+            snapshots.ShouldNotBeNull();
+            snapshots.Items.Count.ShouldBe(2);
+
+            var settings = await client.GetFromJsonAsync<JsonElement>("/api/settings", JsonOptions);
+            settings.GetProperty("userAgent").GetString().ShouldBe("v0.4-user-agent");
+
+            var whatsNew = await client.GetFromJsonAsync<JsonElement>("/api/whats-new", JsonOptions);
+            whatsNew.GetProperty("lastReadAt").GetDateTime().ShouldBe(lastReadAt);
+        });
+
+        (await ReadMigrationHistoryAsync()).ShouldBe(historyBefore);
+        (await ReadAllDataAsync()).ShouldBe(before);
+    }
+
+    private async Task<(Guid Official, Guid Custom)> SeedV03DatabaseAsync(string targetMigration = V03Migration)
     {
         await using var db = CreateDbContext();
-        await db.GetService<IMigrator>().MigrateAsync(V03Migration);
+        await db.GetService<IMigrator>().MigrateAsync(targetMigration);
 
         var official = new Integration { Id = Guid.NewGuid(), PluginId = "seedpool", Payload = Payload, Ratio = 1.25m, RequiredRatio = 1.5m };
         var custom = new Integration { Id = Guid.NewGuid(), PluginId = "my-tracker", Payload = Payload, Ratio = 3m };
@@ -118,34 +159,27 @@ public sealed class LegacyUpgradeEndToEndTests : IAsyncLifetime
         return JsonSerializer.Serialize(new { integrations, snapshots });
     }
 
-    private AppDbContext CreateDbContext() =>
-        new(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(_postgres.GetConnectionString()).Options);
-
-    private async Task BootAsync(Func<HttpClient, Task> act)
+    private async Task<string> ReadAllDataAsync()
     {
-        var variables = new Dictionary<string, string>
-        {
-            ["ConnectionStrings__PostgresConnection"] = _postgres.GetConnectionString(),
-            ["ConnectionStrings__HangfireConnection"] = $"Data Source={Path.Combine(_dataDirectory, "hangfire-upgrade.db")}",
-            ["Data__Directory"] = _dataDirectory,
-            [RepoPlugins.SourceUrlEnvVar] = RepoPlugins.OfflineSourceUrl(_dataDirectory),
-            [RepoPlugins.AppReleasesUrlEnvVar] = RepoPlugins.OfflineAppReleasesUrl
-        };
-        foreach (var (name, value) in variables)
-            Environment.SetEnvironmentVariable(name, value);
-
-        try
-        {
-            await using var factory = new UpgradeBootFactory();
-            using var client = factory.CreateClient();
-            await act(client);
-        }
-        finally
-        {
-            foreach (var name in variables.Keys)
-                Environment.SetEnvironmentVariable(name, null);
-        }
+        await using var db = CreateDbContext();
+        var settings = await db.ApplicationSettings.AsNoTracking().OrderBy(s => s.Id).ToListAsync();
+        var whatsNew = await db.WhatsNewStates.AsNoTracking().OrderBy(w => w.Id).ToListAsync();
+        return JsonSerializer.Serialize(new { data = await ReadDatabaseAsync(), settings, whatsNew });
     }
+
+    private async Task<List<HistoryRow>> ReadMigrationHistoryAsync()
+    {
+        await using var db = CreateDbContext();
+        return await db.Database
+            .SqlQueryRaw<HistoryRow>("""SELECT "MigrationId" AS "Id", "ProductVersion" FROM "__EFMigrationsHistory" ORDER BY "MigrationId" """)
+            .ToListAsync();
+    }
+
+    private PostgresAppDbContext CreateDbContext() =>
+        new(new DbContextOptionsBuilder<PostgresAppDbContext>().UseNpgsql(_postgres.GetConnectionString()).Options);
+
+    private Task BootAsync(Func<HttpClient, Task> act) =>
+        TestApp.BootAsync(_dataDirectory, _postgres.GetConnectionString(), (_, client) => act(client));
 
     private string WriteDataFile(string relativePath)
     {
@@ -155,9 +189,10 @@ public sealed class LegacyUpgradeEndToEndTests : IAsyncLifetime
         return path;
     }
 
-    private sealed class UpgradeBootFactory : WebApplicationFactory<Program>
+    private sealed record HistoryRow
     {
-        protected override void ConfigureWebHost(IWebHostBuilder builder) => builder.UseEnvironment("Development");
+        public string Id { get; init; } = string.Empty;
+        public string ProductVersion { get; init; } = string.Empty;
     }
 
     private sealed class IntegrationResponse

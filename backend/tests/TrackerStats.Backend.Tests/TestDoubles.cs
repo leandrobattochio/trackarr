@@ -335,13 +335,14 @@ internal sealed class FakeApplicationSettingsService(string userAgent = "test-us
     }
 }
 
-internal sealed class FakeAboutService(string databaseEngine = "SQLite") : IAboutService
+internal sealed class FakeAboutService(string databaseEngine = "SQLite", string? databasePath = null) : IAboutService
 {
     public AboutSnapshot Get() => new(
         "1.0.0-test",
         "10.0.0",
         false,
         databaseEngine,
+        databasePath,
         3,
         "/data",
         "/app",

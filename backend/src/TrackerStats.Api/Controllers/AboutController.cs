@@ -19,6 +19,7 @@ public sealed class AboutController(IAboutService aboutService, PluginStateStore
             dotNetVersion = about.DotNetVersion,
             runningInDocker = about.RunningInDocker,
             databaseEngine = about.DatabaseEngine,
+            databasePath = about.DatabasePath,
             appliedMigrations = about.AppliedMigrations,
             appDataDirectory = about.AppDataDirectory,
             startupDirectory = about.StartupDirectory,

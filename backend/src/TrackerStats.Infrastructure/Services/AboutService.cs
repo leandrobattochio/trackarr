@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Hosting;
 using TrackerStats.Domain.Services;
 using TrackerStats.Infrastructure.Data;
@@ -15,10 +17,7 @@ public sealed class AboutService(
 {
     public AboutSnapshot Get()
     {
-        var providerName = dbContext.Database.ProviderName ?? string.Empty;
-        var databaseEngine = providerName.Contains("Npgsql", StringComparison.OrdinalIgnoreCase)
-            ? "PostgreSQL"
-            : "Unknown";
+        var (databaseEngine, databasePath) = DescribeDatabase(dbContext.Database);
 
         var version = InstalledAppVersion.FromEntryAssembly().Value;
         var appDataDirectory = pluginStorageLayout.DataDirectory;
@@ -35,11 +34,20 @@ public sealed class AboutService(
             Environment.Version.ToString(),
             runningInDocker,
             databaseEngine,
+            databasePath,
             appliedMigrations,
             appDataDirectory,
             startupDirectory,
             hostEnvironment.EnvironmentName,
             uptime);
+    }
+
+    public static (string Engine, string? FilePath) DescribeDatabase(DatabaseFacade database)
+    {
+        if (database.IsSqlite())
+            return ("SQLite", new SqliteConnectionStringBuilder(database.GetConnectionString()).DataSource);
+
+        return database.IsNpgsql() ? ("PostgreSQL", null) : ("Unknown", null);
     }
 
     private static string FormatUptime(TimeSpan uptime) =>

@@ -1,0 +1,58 @@
+# trackarr with its application data in PostgreSQL instead of SQLite:
+#
+#   docker compose -f docker-compose.postgres.yml up --build
+#
+# trackarr never creates the PostgreSQL database. The postgres image creates
+# POSTGRES_DB the first time it starts on an empty volume; with a server of your
+# own, create the database before starting trackarr. Hangfire and the plugins
+# stay in the trackarr_data volume either way.
+#
+# The service, container and volume names are the ones the v0.4
+# docker-compose.yml used, so a v0.4 stack started from this folder keeps its
+# PostgreSQL data.
+services:
+  trackarr:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
+    container_name: trackarr
+    ports:
+      - "3000:3000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__PostgresConnection: ${POSTGRES_CONNECTION_STRING:-Host=postgres;Port=5432;Database=${POSTGRES_DB:-trackarr};Username=${POSTGRES_USER:-trackarr};Password=${POSTGRES_PASSWORD:-trackarr}}
+      Hangfire__Directory: /data
+      Data__Directory: /data
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
+      TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - trackarr_data:/data
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: trackarr-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-trackarr}
+      POSTGRES_USER: ${POSTGRES_USER:-trackarr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trackarr}
+      TZ: ${APP_TIMEZONE:-America/Sao_Paulo}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - trackarr_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  trackarr_data:
+  trackarr_postgres:
