@@ -1,16 +1,16 @@
 using System.Diagnostics;
-using System.Reflection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using TrackerStats.Domain.Services;
 using TrackerStats.Infrastructure.Data;
+using TrackerStats.Infrastructure.Plugins.Storage;
+using TrackerStats.Infrastructure.Releases;
 
 namespace TrackerStats.Infrastructure.Services;
 
 public sealed class AboutService(
     AppDbContext dbContext,
-    IConfiguration configuration,
+    PluginStorageLayout pluginStorageLayout,
     IHostEnvironment hostEnvironment) : IAboutService
 {
     public AboutSnapshot Get()
@@ -20,16 +20,8 @@ public sealed class AboutService(
             ? "PostgreSQL"
             : "Unknown";
 
-        var entryAssembly = Assembly.GetEntryAssembly();
-        var informationalVersion = entryAssembly?
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion;
-        var version = informationalVersion
-            ?? entryAssembly?.GetName().Version?.ToString()
-            ?? "Unknown";
-        var appDataDirectory = configuration["Hangfire:Directory"]
-            ?? InferAppDataDirectory(configuration["Plugins:Directory"])
-            ?? "Not configured";
+        var version = InstalledAppVersion.FromEntryAssembly().Value;
+        var appDataDirectory = pluginStorageLayout.DataDirectory;
         var startupDirectory = AppContext.BaseDirectory;
         var appliedMigrations = dbContext.Database.GetAppliedMigrations().Count();
         var runningInDocker = string.Equals(
@@ -48,15 +40,6 @@ public sealed class AboutService(
             startupDirectory,
             hostEnvironment.EnvironmentName,
             uptime);
-    }
-
-    private static string? InferAppDataDirectory(string? pluginsDirectory)
-    {
-        if (string.IsNullOrWhiteSpace(pluginsDirectory))
-            return null;
-
-        var fullPath = Path.GetFullPath(pluginsDirectory);
-        return Path.GetDirectoryName(fullPath) ?? fullPath;
     }
 
     private static string FormatUptime(TimeSpan uptime) =>

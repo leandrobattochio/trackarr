@@ -18,6 +18,41 @@ export function usePluginDefinition(pluginId: string, enabled: boolean) {
   });
 }
 
+export function usePluginDiff(pluginId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...MANAGE_PLUGINS_KEY, pluginId, "diff"],
+    queryFn: () => pluginApi.getDiff(pluginId),
+    enabled,
+  });
+}
+
+export function useDeletePluginOverride() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (pluginId: string) => pluginApi.deleteOverride(pluginId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MANAGE_PLUGINS_KEY });
+    },
+  });
+}
+
+export function useDeleteCustomPlugin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (pluginId: string) => pluginApi.deleteCustom(pluginId),
+    onSuccess: (_, pluginId) => {
+      queryClient.removeQueries({ queryKey: [...MANAGE_PLUGINS_KEY, pluginId] });
+      queryClient.invalidateQueries({ queryKey: MANAGE_PLUGINS_KEY });
+    },
+  });
+}
+
+export function useTestPlugin() {
+  return useMutation({ mutationFn: pluginApi.test });
+}
+
 export function useCreatePluginDefinition() {
   const queryClient = useQueryClient();
 

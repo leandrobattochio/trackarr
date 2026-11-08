@@ -1,5 +1,11 @@
 pluginId: fearnopeer
 displayName: Fearnopeer
+version: 1.0.0
+schemaVersion: 1
+changelog:
+  - version: 1.0.0
+    date: "2026-11-07"
+    notes: First release in the trackarr-plugins repository.
 
 baseUrls:
   - https://fearnopeer.com/

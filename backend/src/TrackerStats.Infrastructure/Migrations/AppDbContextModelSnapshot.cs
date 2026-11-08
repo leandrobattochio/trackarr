@@ -140,6 +140,31 @@ namespace TrackerStats.Infrastructure.Migrations
 
                     b.ToTable("IntegrationSnapshots");
                 });
+
+            modelBuilder.Entity("TrackerStats.Domain.Entities.WhatsNewState", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LastReadAppVersion")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("LastReadPluginChangeId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WhatsNewState", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1
+                        });
+                });
 #pragma warning restore 612, 618
         }
     }

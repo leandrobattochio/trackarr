@@ -58,7 +58,8 @@ jobs:
         env:
           ConnectionStrings__PostgresConnection: Host=127.0.0.1;Port=5432;Database=trackarr;Username=trackarr;Password=trackarr
           ConnectionStrings__HangfireConnection: Data Source=${{ github.workspace }}/backend/.e2e/hangfire.db
-          Plugins__Directory: ${{ github.workspace }}/backend/plugins
+          Data__Directory: ${{ runner.temp }}/trackarr-data
+          PluginSource__Url: file://${{ github.workspace }}/backend/tests/fixtures/plugin-source/
         run: |
           mkdir -p backend/.e2e
           dotnet run --project backend/src/TrackerStats.Api/TrackerStats.Api.csproj --configuration Release --no-restore --urls http://127.0.0.1:5000 > backend/.e2e/backend.log 2>&1 &
@@ -75,8 +76,9 @@ jobs:
       - name: Wait for app startup
         shell: bash
         run: |
+          # The startup download installs the fixture plugins in the background.
           for i in {1..60}; do
-            if curl -fsS http://127.0.0.1:5000/api/plugins > /dev/null; then
+            if curl -fsS http://127.0.0.1:5000/api/plugins | jq -e 'length >= 4' > /dev/null; then
               break
             fi
             sleep 2
@@ -89,7 +91,7 @@ jobs:
             sleep 2
           done
 
-          curl -fsS http://127.0.0.1:5000/api/plugins > /dev/null
+          curl -fsS http://127.0.0.1:5000/api/plugins | jq -e 'length >= 4' > /dev/null
           curl -fsS http://127.0.0.1:8080 > /dev/null
 
       - name: Run Cypress browser end-to-end tests

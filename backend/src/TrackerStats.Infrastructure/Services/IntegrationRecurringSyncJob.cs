@@ -22,6 +22,15 @@ public class IntegrationRecurringSyncJob(
             return;
         }
 
+        if (outcome.ConfigurationErrorCode == IntegrationConfigurationErrorCodes.InvalidOverride)
+        {
+            logger.LogWarning(
+                "Plugin '{PluginId}' has an invalid override; skipping the sync of integration {IntegrationId}.",
+                outcome.Integration?.PluginId,
+                integrationId);
+            return;
+        }
+
         if (!outcome.ConfigurationIsValid)
         {
             logger.LogWarning(

@@ -3,15 +3,52 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { usePageTitle } from "@/shared/hooks/use-page-title";
 
+const pluginKinds = [
+  {
+    title: "Official",
+    badge: "Official v1.2.0",
+    description:
+      "Published in the trackarr-plugins repository and downloaded on every start. Only the download changes them.",
+  },
+  {
+    title: "Override",
+    badge: "Edited (base v1.1.0)",
+    description:
+      "Your edited copy of an official plugin. It records the official version it was based on and is never overwritten by the download.",
+  },
+  {
+    title: "Custom",
+    badge: "Custom v1.0.0",
+    description: "A plugin you created with New Plugin. The download never touches it.",
+  },
+];
+
+const changeSteps = [
+  "Open Manage Plugins and select the plugin. Plugins are changed only here: editing the files on disk is not supported.",
+  "Change the YAML, click Test to dry-run it with one of its integrations, then Save.",
+  "Saving an official plugin keeps your copy as an override; the official file is never changed. Saving with no change creates nothing.",
+  "To go back to the official version, edit your copy until it matches the official one and save: the override is discarded.",
+  "When a newer official version exists, a banner links to the review screen with both diffs, Use official (deletes your copy with no backup) and Keep mine.",
+  "New Plugin creates a custom plugin. Its id uses lowercase letters and digits separated by hyphens, must not be an official id, and the YAML needs schemaVersion: 1. A custom plugin cannot be deleted while an integration uses it.",
+];
+
+const statusBadges = [
+  { badge: "Outdated", description: "Your override is based on an older official version than the one installed." },
+  { badge: "Orphan", description: "The official plugin was removed upstream; your override keeps working." },
+  { badge: "Deprecated", description: "The official plugin was removed upstream but an integration still uses the cached copy." },
+  { badge: "Incompatible", description: "A newer official version needs a newer trackarr; the last compatible version is kept." },
+];
+
 const yamlFlow = [
   {
     id: "01",
     title: "Identity",
-    fields: ["pluginId", "displayName"],
+    fields: ["pluginId", "displayName", "version", "schemaVersion", "changelog"],
     details: [
       "`pluginId` is the stable identifier used by integrations, API routes, and the YAML file itself.",
       "`displayName` is the human-readable label shown in the UI.",
-      "These two values establish what the plugin is called and how it is referenced.",
+      "`version` is the plugin's semver version, and `schemaVersion` the YAML format it uses (`1`, required in custom plugins).",
+      "`changelog` lists what changed in each version and is shown in What's New.",
     ],
   },
   {
@@ -79,9 +116,55 @@ export default function HelpPage() {
         <div className="space-y-2">
           <h1 className="font-display text-2xl font-bold">Help</h1>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            This page shows the YAML structure as a visual build flow from top to bottom.
+            How plugins work, how to change them, and the YAML structure of a plugin.
           </p>
         </div>
+
+        <Card className="border-border/50 bg-card/95">
+          <CardHeader>
+            <CardTitle>Plugins</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6 text-sm text-muted-foreground">
+            <p className="max-w-4xl">
+              Every integration runs one plugin. trackarr downloads the official plugins on every start; the result is
+              shown in Settings &gt; About, and updated plugins appear in What&apos;s New. When an id has more than one
+              plugin, your override wins over a custom plugin, which wins over the official one.
+            </p>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              {pluginKinds.map((kind) => (
+                <div key={kind.title} className="space-y-2 rounded-2xl border border-border/60 bg-muted/10 p-4">
+                  <h3 className="font-display text-base font-semibold text-foreground">{kind.title}</h3>
+                  <span className="inline-block rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-medium text-foreground">
+                    {kind.badge}
+                  </span>
+                  <p>{kind.description}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-display text-base font-semibold text-foreground">Changing a plugin</h3>
+              <ol className="max-w-4xl list-decimal space-y-1 pl-5">
+                {changeSteps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-display text-base font-semibold text-foreground">Status badges</h3>
+              <dl className="grid max-w-4xl gap-2 sm:grid-cols-[auto_1fr] sm:gap-x-4">
+                {statusBadges.map((status) => (
+                  <Fragment key={status.badge}>
+                    <dt className="font-medium text-foreground">{status.badge}</dt>
+                    <dd>{status.description}</dd>
+                  </Fragment>
+                ))}
+              </dl>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="border-border/50 bg-card/95">
           <CardHeader>

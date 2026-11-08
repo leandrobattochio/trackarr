@@ -1,6 +1,6 @@
-using Microsoft.Extensions.Configuration;
 using Shouldly;
 using TrackerStats.Domain.Plugins.Yaml;
+using TrackerStats.Infrastructure.Plugins.Storage;
 using TrackerStats.Infrastructure.Plugins.Yaml;
 
 namespace TrackerStats.PluginEngine.IntegrationTests;
@@ -12,14 +12,8 @@ public class YamlPluginDefinitionLoaderIntegrationTests
     [Fact]
     public void LoadDefinitions_should_load_repo_plugin_files_and_apply_defaults()
     {
-        var pluginsDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "plugins"));
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Plugins:Directory"] = pluginsDirectory
-            })
-            .Build();
-        var sut = new YamlPluginDefinitionLoader(configuration, SettingsService);
+        using var dataDirectory = RepoPluginsDataDirectory.Create();
+        var sut = new YamlPluginDefinitionLoader(dataDirectory.Layout, SettingsService);
 
         var definitions = sut.LoadDefinitions();
 
@@ -44,7 +38,9 @@ public class YamlPluginDefinitionLoaderIntegrationTests
     [Fact]
     public void LoadDefinitions_should_surface_invalid_plugin_files_as_error_entries()
     {
-        var pluginsDirectory = Path.Combine(Path.GetTempPath(), $"trackerstats-plugin-tests-{Guid.NewGuid():N}");
+        var dataDirectory = Path.Combine(Path.GetTempPath(), $"trackerstats-plugin-tests-{Guid.NewGuid():N}");
+        var layout = PluginStorageLayout.ForDataDirectory(dataDirectory);
+        var pluginsDirectory = layout.CustomDirectory;
         Directory.CreateDirectory(pluginsDirectory);
 
         try
@@ -64,13 +60,7 @@ public class YamlPluginDefinitionLoaderIntegrationTests
                 steps: []
                 """);
 
-            var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["Plugins:Directory"] = pluginsDirectory
-                })
-                .Build();
-            var sut = new YamlPluginDefinitionLoader(configuration, SettingsService);
+            var sut = new YamlPluginDefinitionLoader(layout, SettingsService);
 
             var definitions = sut.LoadDefinitions();
 
@@ -84,7 +74,7 @@ public class YamlPluginDefinitionLoaderIntegrationTests
         }
         finally
         {
-            Directory.Delete(pluginsDirectory, recursive: true);
+            Directory.Delete(dataDirectory, recursive: true);
         }
     }
 }

@@ -3,6 +3,10 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import NotFoundPage from "@/pages/NotFoundPage";
 
+vi.mock("@/features/plugins/components/OutdatedOverridesBanner", () => ({
+  OutdatedOverridesBanner: () => <div data-testid="outdated-overrides-banner" />,
+}));
+
 describe("NotFoundPage", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -18,6 +22,7 @@ describe("NotFoundPage", () => {
     );
 
     expect(screen.getByText("404")).toBeInTheDocument();
+    expect(screen.getByTestId("outdated-overrides-banner")).toBeInTheDocument();
     expect(screen.getByText("Oops! Page not found")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Return to Home" })).toHaveAttribute("href", "/");
     expect(errorSpy).toHaveBeenCalledWith("404 Error: User attempted to access non-existent route:", "/does-not-exist");

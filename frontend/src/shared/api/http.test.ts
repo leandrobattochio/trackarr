@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { request, requestText } from "@/shared/api/http";
+import { ApiError, request, requestText } from "@/shared/api/http";
 
 describe("request", () => {
   afterEach(() => {
@@ -41,6 +41,21 @@ describe("request", () => {
     }));
 
     await expect(request("/integrations")).rejects.toThrow("Invalid payload");
+  });
+
+  it("keeps the status and the error body on the thrown ApiError", async () => {
+    const body = { error: "In use", integrations: [{ id: "1", url: "https://tracker.example/" }] };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 409,
+      statusText: "Conflict",
+      json: vi.fn().mockResolvedValue(body),
+    }));
+
+    const error = await request("/plugins/x", { method: "DELETE" }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ message: "In use", status: 409, body, name: "ApiError" });
   });
 
   it("falls back to status text when error json is missing", async () => {

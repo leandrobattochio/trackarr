@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ApplicationSettings> ApplicationSettings => Set<ApplicationSettings>();
     public DbSet<Integration> Integrations => Set<Integration>();
     public DbSet<IntegrationSnapshot> IntegrationSnapshots => Set<IntegrationSnapshot>();
+    public DbSet<WhatsNewState> WhatsNewStates => Set<WhatsNewState>();
 
     public async Task EnsureSeedDataAsync(CancellationToken ct = default)
     {
@@ -70,5 +71,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<ApplicationSettings>()
             .Property(settings => settings.UserAgent)
             .IsRequired();
+
+        var whatsNew = modelBuilder.Entity<WhatsNewState>();
+        whatsNew.ToTable("WhatsNewState");
+        whatsNew.Property(state => state.Id).ValueGeneratedNever();
+        whatsNew.Property(state => state.LastReadAt).HasConversion(nullableUtcDateTimeConverter);
+        whatsNew.HasData(new WhatsNewState { Id = WhatsNewState.SingletonId });
     }
 }

@@ -3,8 +3,10 @@ import { NEW_PLUGIN_TEMPLATE } from "@/features/plugins/plugin-template";
 
 describe("NEW_PLUGIN_TEMPLATE", () => {
   it("includes the required sections for a starter plugin definition", () => {
-    expect(NEW_PLUGIN_TEMPLATE).toContain("pluginId: custom-plugin");
-    expect(NEW_PLUGIN_TEMPLATE).toContain("displayName: Custom Plugin");
+    expect(NEW_PLUGIN_TEMPLATE).toContain("pluginId: <your-plugin-id>");
+    expect(NEW_PLUGIN_TEMPLATE).toContain("displayName: My Tracker");
+    expect(NEW_PLUGIN_TEMPLATE).toContain("version: 1.0.0");
+    expect(NEW_PLUGIN_TEMPLATE).toContain("schemaVersion: 1");
     expect(NEW_PLUGIN_TEMPLATE).toContain("baseUrls:");
     expect(NEW_PLUGIN_TEMPLATE).toContain("fields:");
     expect(NEW_PLUGIN_TEMPLATE).toContain("customFields:");

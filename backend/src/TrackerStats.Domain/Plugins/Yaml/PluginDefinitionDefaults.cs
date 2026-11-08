@@ -77,80 +77,9 @@ public static class PluginDefinitionDefaults
         }
     }
 
-    public static PluginDefinition CreateEditableDefinition(PluginDefinition definition)
-    {
-        return new PluginDefinition
-        {
-            PluginId = definition.PluginId,
-            DisplayName = definition.DisplayName,
-            BaseUrls = [.. definition.BaseUrls],
-            Fields = definition.Fields
-                .Where(field => !IsReservedField(field.Name))
-                .Select(field => new FieldDefinition
-                {
-                    Name = field.Name,
-                    Label = field.Label,
-                    Description = field.Description,
-                    Type = field.Type,
-                    Required = field.Required,
-                    Sensitive = field.Sensitive
-                })
-                .ToList(),
-            CustomFields = definition.CustomFields
-                .Select(field => new FieldDefinition
-                {
-                    Name = field.Name,
-                    Label = field.Label,
-                    Description = field.Description,
-                    Type = field.Type,
-                    Required = field.Required,
-                    Sensitive = field.Sensitive
-                })
-                .ToList(),
-            Http = CreateEditableHttp(definition.Http),
-            AuthFailure = CreateEditableAuthFailure(definition.AuthFailure),
-            Steps = definition.Steps,
-            Mapping = definition.Mapping,
-            Dashboard = definition.Dashboard
-        };
-    }
-
     public static IReadOnlyList<FieldDefinition> GetEffectiveFields(PluginDefinition definition) =>
         [.. definition.Fields, .. definition.CustomFields];
 
     private static IReadOnlyList<FieldDefinition> GetAllUserDefinedFields(PluginDefinition definition) =>
         [.. definition.Fields, .. definition.CustomFields];
-
-    private static HttpConfig? CreateEditableHttp(HttpConfig? http)
-    {
-        if (http is null)
-            return null;
-
-        var headers = http.Headers
-            .Where(header => !string.Equals(header.Key, "User-Agent", StringComparison.OrdinalIgnoreCase))
-            .ToDictionary(header => header.Key, header => header.Value, StringComparer.OrdinalIgnoreCase);
-
-        if (string.IsNullOrWhiteSpace(http.BaseUrl) && headers.Count == 0 && http.Cookies.Count == 0)
-            return null;
-
-        return new HttpConfig
-        {
-            Headers = headers,
-            Cookies = new Dictionary<string, string>(http.Cookies, StringComparer.OrdinalIgnoreCase)
-        };
-    }
-
-    private static AuthFailureConfig? CreateEditableAuthFailure(AuthFailureConfig? authFailure)
-    {
-        if (authFailure is null)
-            return null;
-
-        if (authFailure.HtmlPatterns.Count == 0)
-            return null;
-
-        return new AuthFailureConfig
-        {
-            HtmlPatterns = new List<string>(authFailure.HtmlPatterns)
-        };
-    }
 }

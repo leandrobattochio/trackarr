@@ -16,17 +16,61 @@ public sealed class IntegrationConfigurationValidator(ITrackerPluginRegistry reg
     {
         var plugin = registry.GetById(pluginId);
         if (plugin is null)
-            return new IntegrationConfigurationValidationResult(false, $"Plugin '{pluginId}' not found.", null);
+        {
+            var overrideError = registry.GetInvalidOverrideError(pluginId);
+            return overrideError is null
+                ? new IntegrationConfigurationValidationResult(
+                    false,
+                    $"Plugin '{pluginId}' not found.",
+                    null,
+                    IntegrationConfigurationErrorCodes.PluginNotFound)
+                : new IntegrationConfigurationValidationResult(
+                    false,
+                    $"Invalid override: your edited copy of plugin '{pluginId}' fails validation, so this integration does not sync. " +
+                    $"Fix it in the plugin editor or use the official version. {overrideError}",
+                    null,
+                    IntegrationConfigurationErrorCodes.InvalidOverride);
+        }
 
-        Dictionary<string, string?> payload;
+        var payloadResult = ValidatePayload(plugin, payloadJson, out var payload);
+        if (!payloadResult.IsValid)
+            return payloadResult;
+
         try
         {
-            payload = JsonSerializer.Deserialize<Dictionary<string, string?>>(payloadJson, JsonOptions) ?? [];
+            var configuredPlugin = registry.CreateById(pluginId, new PluginConfiguration(payload))
+                ?? throw new InvalidOperationException($"Plugin '{pluginId}' not found.");
+
+            using var httpClient = new HttpClient();
+            configuredPlugin.ConfigureHttpClient(httpClient);
+        }
+        catch (Exception ex)
+        {
+            return new IntegrationConfigurationValidationResult(false, ex.Message, plugin);
+        }
+
+        return new IntegrationConfigurationValidationResult(true, null, plugin);
+    }
+
+    public static IntegrationConfigurationValidationResult ValidatePayload(ITrackerPlugin plugin, string payloadJson) =>
+        ValidatePayload(plugin, payloadJson, out _);
+
+    private static IntegrationConfigurationValidationResult ValidatePayload(
+        ITrackerPlugin plugin,
+        string payloadJson,
+        out Dictionary<string, string?> parsedPayload)
+    {
+        try
+        {
+            parsedPayload = JsonSerializer.Deserialize<Dictionary<string, string?>>(payloadJson, JsonOptions) ?? [];
         }
         catch
         {
+            parsedPayload = [];
             return new IntegrationConfigurationValidationResult(false, "Payload is not valid JSON.", plugin);
         }
+
+        var payload = parsedPayload;
 
         var missingFields = plugin.Fields
             .Where(field => field.Required && string.IsNullOrWhiteSpace(payload.GetValueOrDefault(field.Name)))
@@ -84,22 +128,12 @@ public sealed class IntegrationConfigurationValidator(ITrackerPluginRegistry reg
             {
                 return new IntegrationConfigurationValidationResult(
                     false,
-                    "Field 'baseUrl' must match one of the plugin's configured base URLs.",
-                    plugin);
+                    $"Invalid integration: base URL '{baseUrl}' is no longer listed by plugin '{plugin.PluginId}'. " +
+                    $"It now accepts: {string.Join(", ", plugin.BaseUrls)}. " +
+                    "To fix it, edit the integration and pick the new base URL.",
+                    plugin,
+                    IntegrationConfigurationErrorCodes.BaseUrlNotListed);
             }
-        }
-
-        try
-        {
-            var configuredPlugin = registry.CreateById(pluginId, new PluginConfiguration(payload))
-                ?? throw new InvalidOperationException($"Plugin '{pluginId}' not found.");
-
-            using var httpClient = new HttpClient();
-            configuredPlugin.ConfigureHttpClient(httpClient);
-        }
-        catch (Exception ex)
-        {
-            return new IntegrationConfigurationValidationResult(false, ex.Message, plugin);
         }
 
         return new IntegrationConfigurationValidationResult(true, null, plugin);
@@ -119,4 +153,12 @@ public sealed class IntegrationConfigurationValidator(ITrackerPluginRegistry reg
 public sealed record IntegrationConfigurationValidationResult(
     bool IsValid,
     string? Error,
-    ITrackerPlugin? Plugin);
+    ITrackerPlugin? Plugin,
+    string? ErrorCode = null);
+
+public static class IntegrationConfigurationErrorCodes
+{
+    public const string InvalidOverride = "invalidOverride";
+    public const string PluginNotFound = "pluginNotFound";
+    public const string BaseUrlNotListed = "baseUrlNotListed";
+}

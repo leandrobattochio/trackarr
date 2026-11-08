@@ -39,6 +39,16 @@ describe("settingsApi", () => {
     });
   });
 
+  it("loads the plugin download status", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ lastDownload: null, lastSuccessfulIndex: null }), { status: 200 }));
+
+    await expect(settingsApi.getPluginDownload()).resolves.toEqual({ lastDownload: null, lastSuccessfulIndex: null });
+
+    expect(fetch).toHaveBeenCalledWith("/api/about/plugin-download", {
+      headers: { "Content-Type": "application/json" },
+    });
+  });
+
   it("updates settings", async () => {
     vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ userAgent: "agent-2" }), { status: 200 }));
 

@@ -46,10 +46,18 @@ public class IntegrationsController(
             return NotFound();
 
         if (!outcome.PluginExists || outcome.Integration is null)
-            return BadRequest(new { error = $"Plugin '{outcome.Integration?.PluginId ?? "unknown"}' not found." });
+            return BadRequest(new
+            {
+                error = $"Plugin '{outcome.Integration?.PluginId ?? "unknown"}' not found.",
+                code = outcome.ConfigurationErrorCode
+            });
 
         if (!outcome.ConfigurationIsValid)
-            return BadRequest(new { error = outcome.ConfigurationError ?? "Integration configuration is invalid." });
+            return BadRequest(new
+            {
+                error = outcome.ConfigurationError ?? "Integration configuration is invalid.",
+                code = outcome.ConfigurationErrorCode
+            });
 
         var validation = configurationValidator.Validate(outcome.Integration);
         return Ok(ToResponse(outcome.Integration, recurringJobScheduler.GetNextExecutionUtc(outcome.Integration.Id), validation));
@@ -197,6 +205,7 @@ public class IntegrationsController(
             lastSyncResult = i.LastSyncResult is null ? null : ToSyncResult(i.LastSyncResult.Value),
             configurationValid = validation.IsValid,
             configurationError = validation.Error,
+            configurationErrorCode = validation.ErrorCode,
             stats = hasStats
                 ? (object?)new
                 {

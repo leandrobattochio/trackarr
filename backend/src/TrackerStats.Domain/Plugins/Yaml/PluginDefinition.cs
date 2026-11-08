@@ -6,6 +6,9 @@ public class PluginDefinition
 {
     public required string PluginId { get; set; }
     public required string DisplayName { get; set; }
+    public string? Version { get; set; }
+    public int? SchemaVersion { get; set; }
+    public List<PluginChangelogEntry>? Changelog { get; set; }
     public List<string> BaseUrls { get; set; } = [];
     public List<FieldDefinition> Fields { get; set; } = [];
     public List<FieldDefinition> CustomFields { get; set; } = [];

@@ -1,0 +1,60 @@
+{
+  "plugins": [
+    {
+      "id": "asc",
+      "version": "1.0.0",
+      "schemaVersion": 1,
+      "path": "plugins/asc.yaml",
+      "sha256": "7ae46b1cd365660af57e21090fc6b1974bbb58658e44c10530d1dbb09581d2a1",
+      "changelog": [
+        {
+          "version": "1.0.0",
+          "date": "2026-11-07",
+          "notes": "First release in the trackarr-plugins repository."
+        }
+      ]
+    },
+    {
+      "id": "bj-share",
+      "version": "1.0.0",
+      "schemaVersion": 1,
+      "path": "plugins/bj-share.yaml",
+      "sha256": "ab1af6ca61fef35ace024a85b08b7982ccb966bfa8c7f9dd54c9190c50d92d09",
+      "changelog": [
+        {
+          "version": "1.0.0",
+          "date": "2026-11-07",
+          "notes": "First release in the trackarr-plugins repository."
+        }
+      ]
+    },
+    {
+      "id": "fearnopeer",
+      "version": "1.0.0",
+      "schemaVersion": 1,
+      "path": "plugins/fearnopeer.yaml",
+      "sha256": "57218a5484f33b5a5c4fa944d1ca698014b65c98f06e4db500251a2bfccabac1",
+      "changelog": [
+        {
+          "version": "1.0.0",
+          "date": "2026-11-07",
+          "notes": "First release in the trackarr-plugins repository."
+        }
+      ]
+    },
+    {
+      "id": "seedpool",
+      "version": "1.0.0",
+      "schemaVersion": 1,
+      "path": "plugins/seedpool.yaml",
+      "sha256": "f6d5a48b664a4c0992d92848f146e07cd4fb6089b018ff10c294fafc0353a943",
+      "changelog": [
+        {
+          "version": "1.0.0",
+          "date": "2026-11-07",
+          "notes": "First release in the trackarr-plugins repository."
+        }
+      ]
+    }
+  ]
+}

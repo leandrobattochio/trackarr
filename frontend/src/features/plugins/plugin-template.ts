@@ -1,8 +1,16 @@
 export const NEW_PLUGIN_TEMPLATE = `# Unique stable identifier used by integrations and API routes.
-pluginId: custom-plugin
+# Replace the placeholder: lowercase letters and digits separated by single hyphens,
+# for example my-tracker. Official plugin ids cannot be used.
+pluginId: <your-plugin-id>
 
 # Human-readable name shown in the UI.
-displayName: Custom Plugin
+displayName: My Tracker
+
+# Version of this plugin file (semver).
+version: 1.0.0
+
+# Plugin YAML format version this file is written for. Required in custom plugins.
+schemaVersion: 1
 
 # Allowed tracker hosts exposed as the engine-owned Base URL dropdown.
 baseUrls:

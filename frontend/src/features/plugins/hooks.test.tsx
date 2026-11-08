@@ -6,7 +6,11 @@ import { pluginApi } from "@/features/plugins/api";
 import {
   MANAGE_PLUGINS_KEY,
   useCreatePluginDefinition,
+  useDeleteCustomPlugin,
+  useDeletePluginOverride,
   usePluginCatalog,
+  useTestPlugin,
+  usePluginDiff,
   usePluginDefinition,
   useUpdatePluginDefinition,
 } from "@/features/plugins/hooks";
@@ -17,6 +21,10 @@ vi.mock("@/features/plugins/api", () => ({
     getDefinition: vi.fn(),
     createDefinition: vi.fn(),
     updateDefinition: vi.fn(),
+    getDiff: vi.fn(),
+    deleteOverride: vi.fn(),
+    deleteCustom: vi.fn(),
+    test: vi.fn(),
   },
 }));
 
@@ -70,5 +78,60 @@ describe("plugin hooks", () => {
     expect(pluginApi.updateDefinition).toHaveBeenCalledWith("plugin-1", "displayName: Updated Plugin");
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: MANAGE_PLUGINS_KEY });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: [...MANAGE_PLUGINS_KEY, "plugin-1"] });
+  });
+
+  it("loads a plugin diff only when enabled", async () => {
+    vi.mocked(pluginApi.getDiff).mockResolvedValueOnce({ pluginId: "plugin-1" } as never);
+
+    const { wrapper } = createWrapper();
+    const { result: disabled } = renderHook(() => usePluginDiff("plugin-0", false), { wrapper });
+    const { result: enabled } = renderHook(() => usePluginDiff("plugin-1", true), { wrapper });
+
+    await waitFor(() => expect(enabled.current.isSuccess).toBe(true));
+    expect(enabled.current.data).toEqual({ pluginId: "plugin-1" });
+    expect(disabled.current.fetchStatus).toBe("idle");
+    expect(pluginApi.getDiff).toHaveBeenCalledWith("plugin-1");
+    expect(pluginApi.getDiff).toHaveBeenCalledTimes(1);
+  });
+
+  it("invalidates every plugin query after deleting an override", async () => {
+    vi.mocked(pluginApi.deleteOverride).mockResolvedValueOnce(undefined);
+
+    const { queryClient, wrapper } = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useDeletePluginOverride(), { wrapper });
+
+    await result.current.mutateAsync("plugin-1");
+
+    expect(pluginApi.deleteOverride).toHaveBeenCalledWith("plugin-1");
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: MANAGE_PLUGINS_KEY });
+  });
+
+  it("deletes a custom plugin, drops its definition and refreshes the catalog", async () => {
+    vi.mocked(pluginApi.deleteCustom).mockResolvedValueOnce(undefined);
+
+    const { queryClient, wrapper } = createWrapper();
+    queryClient.setQueryData([...MANAGE_PLUGINS_KEY, "my-tracker"], "pluginId: my-tracker");
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useDeleteCustomPlugin(), { wrapper });
+
+    await result.current.mutateAsync("my-tracker");
+
+    expect(pluginApi.deleteCustom).toHaveBeenCalledWith("my-tracker");
+    expect(queryClient.getQueryData([...MANAGE_PLUGINS_KEY, "my-tracker"])).toBeUndefined();
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: MANAGE_PLUGINS_KEY });
+  });
+
+  it("runs a dry run without invalidating any plugin query", async () => {
+    vi.mocked(pluginApi.test).mockResolvedValueOnce({ outcome: "success" } as never);
+
+    const { queryClient, wrapper } = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useTestPlugin(), { wrapper });
+
+    await expect(result.current.mutateAsync({ integrationId: "integration-1", useOfficial: true })).resolves.toEqual({ outcome: "success" });
+
+    expect(pluginApi.test).toHaveBeenCalledWith({ integrationId: "integration-1", useOfficial: true }, expect.anything());
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 });

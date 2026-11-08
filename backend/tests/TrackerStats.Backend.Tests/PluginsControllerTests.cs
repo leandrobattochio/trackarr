@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
 using TrackerStats.Api.Controllers;
+using TrackerStats.Domain.Plugins.Yaml;
+using TrackerStats.Infrastructure.Plugins.Storage;
 using TrackerStats.Infrastructure.Plugins.Yaml;
 
 namespace TrackerStats.Backend.Tests;
@@ -29,6 +32,7 @@ public class PluginsControllerTests
         var yaml = """
             pluginId: test-plugin
             displayName: Test Plugin
+            schemaVersion: 1
             baseUrls:
               - https://tracker.test/
             fields:
@@ -53,18 +57,19 @@ public class PluginsControllerTests
 
         var created = result.ShouldBeOfType<CreatedAtActionResult>();
         created.RouteValues!["pluginId"].ShouldBe("test-plugin");
-        File.Exists(Path.Combine(fixture.PluginsDirectory, "test-plugin.yaml")).ShouldBeTrue();
+        File.Exists(Path.Combine(fixture.CustomDirectory, "test-plugin.yaml")).ShouldBeTrue();
     }
 
     [Fact]
     public async Task Create_should_return_conflict_when_plugin_already_exists()
     {
         using var fixture = new PluginsFixture();
-        File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "test-plugin.yaml"), "pluginId: test-plugin");
+        File.WriteAllText(Path.Combine(fixture.CustomDirectory, "test-plugin.yaml"), "pluginId: test-plugin");
         var controller = fixture.CreateController();
         TestHttp.SetYamlBody(controller, """
             pluginId: test-plugin
             displayName: Test Plugin
+            schemaVersion: 1
             baseUrls:
               - https://tracker.test/
             fields: []
@@ -93,6 +98,7 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: invalid-plugin
             displayName: Invalid Plugin
+            schemaVersion: 1
             baseUrls:
               - https://tracker.test/
             fields: []
@@ -111,6 +117,26 @@ public class PluginsControllerTests
 
         var badRequest = result.ShouldBeOfType<BadRequestObjectResult>();
         TestHttp.ToJson(badRequest.Value).GetProperty("error").GetString().ShouldBe("Dashboard metrics contain an unsupported 'stat' value.");
+    }
+
+    [Fact]
+    public async Task Create_should_reject_plugin_with_higher_schema_version()
+    {
+        using var fixture = new PluginsFixture();
+        var controller = fixture.CreateController();
+        TestHttp.SetYamlBody(controller, """
+            pluginId: future-plugin
+            displayName: Future Plugin
+            schemaVersion: 2
+            someFutureKey: true
+            """);
+
+        var result = await controller.Create(CancellationToken.None);
+
+        var badRequest = result.ShouldBeOfType<BadRequestObjectResult>();
+        TestHttp.ToJson(badRequest.Value).GetProperty("error").GetString()
+            .ShouldBe("Plugin requires schema version 2, but this trackarr supports up to 1. Update trackarr to use it.");
+        File.Exists(Path.Combine(fixture.CustomDirectory, "future-plugin.yaml")).ShouldBeFalse();
     }
 
     [Fact]
@@ -161,6 +187,7 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: invalid-plugin
             displayName: Invalid
+            schemaVersion: 1
             baseUrls:
               - https://tracker.test/
             fields: []
@@ -195,25 +222,65 @@ public class PluginsControllerTests
     }
 
     [Fact]
-    public void GetByPluginId_should_return_editable_yaml_without_engine_owned_defaults()
+    public void GetByPluginId_should_return_the_raw_file_content_without_reserializing()
     {
         using var fixture = new PluginsFixture();
-        File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "seedpool.yaml"), """
-            pluginId: seedpool
-            displayName: Seedpool
+        var rawYaml = CommentedPluginYaml("seedpool", "Seedpool");
+        fixture.WritePlugin(PluginOrigin.Custom, "seedpool", rawYaml);
+        var controller = fixture.CreateController();
+
+        var result = controller.GetByPluginId("seedpool");
+
+        var content = result.ShouldBeOfType<ContentResult>();
+        content.ContentType.ShouldBe("application/yaml");
+        content.Content.ShouldBe(rawYaml);
+    }
+
+    [Theory]
+    [InlineData(PluginOrigin.Official)]
+    [InlineData(PluginOrigin.Override)]
+    [InlineData(PluginOrigin.Custom)]
+    public async Task Get_then_update_should_leave_a_commented_file_byte_identical(PluginOrigin origin)
+    {
+        using var fixture = new PluginsFixture();
+        if (origin == PluginOrigin.Override)
+            fixture.WritePlugin(PluginOrigin.Official, "commented", MinimalPluginYaml("commented", "Official"));
+        var path = fixture.WritePlugin(origin, "commented", CommentedPluginYaml("commented", "Commented"));
+        var bytesBefore = File.ReadAllBytes(path);
+        var filesBefore = Directory.EnumerateFiles(fixture.RootDirectory, "*", SearchOption.AllDirectories).Order().ToList();
+        var editorContent = fixture.CreateController().GetByPluginId("commented")
+            .ShouldBeOfType<ContentResult>().Content.ShouldNotBeNull();
+        var controller = fixture.CreateController();
+        TestHttp.SetYamlBody(controller, editorContent);
+
+        var result = await controller.Update("commented", CancellationToken.None);
+
+        result.ShouldBeOfType<OkObjectResult>();
+        File.ReadAllBytes(path).ShouldBe(bytesBefore);
+        Directory.EnumerateFiles(fixture.RootDirectory, "*", SearchOption.AllDirectories).Order().ToList().ShouldBe(filesBefore);
+    }
+
+    [Fact]
+    public void GetByPluginId_should_keep_version_schema_version_and_changelog()
+    {
+        using var fixture = new PluginsFixture();
+        File.WriteAllText(Path.Combine(fixture.CustomDirectory, "versioned.yaml"), """
+            pluginId: versioned
+            displayName: Versioned
+            version: 1.2.0
+            schemaVersion: 1
+            changelog:
+              - version: 1.2.0
+                date: "2026-11-07"
+                notes: Fixed the ratio selector.
             baseUrls:
-              - https://seedpool.org/
-            fields:
-              - name: apiKey
-                label: API Key
-                type: password
-                required: true
-                sensitive: true
+              - https://tracker.test/
+            fields: []
             steps:
-              - name: user
+              - name: profile
                 method: GET
-                url: "api/user?api_token={{apiKey}}"
-                responseType: json
+                url: /
+                responseType: html
             dashboard:
               metrics:
                 - stat: ratio
@@ -221,16 +288,12 @@ public class PluginsControllerTests
             """);
         var controller = fixture.CreateController();
 
-        var result = controller.GetByPluginId("seedpool");
+        var result = controller.GetByPluginId("versioned");
 
-        var content = result.ShouldBeOfType<ContentResult>();
-        content.ContentType.ShouldBe("application/yaml");
-        content.Content.ShouldNotBeNull();
-        content.Content.ShouldContain("pluginId: seedpool");
-        content.Content.ShouldContain("baseUrls:");
-        content.Content.ShouldNotContain("name: baseUrl");
-        content.Content.ShouldNotContain("required_ratio");
-        content.Content.ShouldNotContain("User-Agent");
+        var content = result.ShouldBeOfType<ContentResult>().Content.ShouldNotBeNull();
+        content.ShouldContain("version: 1.2.0");
+        content.ShouldContain("schemaVersion: 1");
+        content.ShouldContain("notes: Fixed the ratio selector.");
     }
 
     [Fact]
@@ -246,7 +309,7 @@ public class PluginsControllerTests
               - name: baseUrl
                 label: Base URL
             """;
-        File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "broken.yaml"), rawYaml);
+        File.WriteAllText(Path.Combine(fixture.CustomDirectory, "broken.yaml"), rawYaml);
         var controller = fixture.CreateController();
 
         var result = controller.GetByPluginId("broken");
@@ -257,10 +320,10 @@ public class PluginsControllerTests
     }
 
     [Fact]
-    public void GetAll_should_return_validation_status_for_loaded_plugins()
+    public async Task GetAll_should_return_validation_status_for_loaded_plugins()
     {
         using var fixture = new PluginsFixture();
-        File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "valid.yaml"), """
+        File.WriteAllText(Path.Combine(fixture.CustomDirectory, "valid.yaml"), """
             pluginId: valid
             displayName: Valid
             baseUrls:
@@ -276,7 +339,7 @@ public class PluginsControllerTests
                 - stat: ratio
                   label: Ratio
             """);
-        File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "invalid.yaml"), """
+        File.WriteAllText(Path.Combine(fixture.CustomDirectory, "invalid.yaml"), """
             pluginId: invalid
             displayName: Invalid
             baseUrls:
@@ -296,7 +359,7 @@ public class PluginsControllerTests
             """);
         var controller = fixture.CreateController();
 
-        var result = controller.GetAll();
+        var result = await controller.GetAll(CancellationToken.None);
 
         var ok = result.ShouldBeOfType<OkObjectResult>();
         var json = TestHttp.ToJson(ok.Value);
@@ -306,10 +369,10 @@ public class PluginsControllerTests
     }
 
     [Fact]
-    public void GetAll_should_include_custom_fields_for_valid_plugins()
+    public async Task GetAll_should_include_custom_fields_for_valid_plugins()
     {
         using var fixture = new PluginsFixture();
-        File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "valid.yaml"), """
+        File.WriteAllText(Path.Combine(fixture.CustomDirectory, "valid.yaml"), """
             pluginId: valid
             displayName: Valid
             baseUrls:
@@ -334,7 +397,7 @@ public class PluginsControllerTests
             """);
         var controller = fixture.CreateController();
 
-        var result = controller.GetAll();
+        var result = await controller.GetAll(CancellationToken.None);
 
         var ok = result.ShouldBeOfType<OkObjectResult>();
         var json = TestHttp.ToJson(ok.Value);
@@ -344,10 +407,10 @@ public class PluginsControllerTests
     }
 
     [Fact]
-    public void GetAll_should_include_field_descriptions_for_valid_plugins()
+    public async Task GetAll_should_include_field_descriptions_for_valid_plugins()
     {
         using var fixture = new PluginsFixture();
-        File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "valid.yaml"), """
+        File.WriteAllText(Path.Combine(fixture.CustomDirectory, "valid.yaml"), """
             pluginId: valid
             displayName: Valid
             baseUrls:
@@ -372,7 +435,7 @@ public class PluginsControllerTests
             """);
         var controller = fixture.CreateController();
 
-        var result = controller.GetAll();
+        var result = await controller.GetAll(CancellationToken.None);
 
         var ok = result.ShouldBeOfType<OkObjectResult>();
         var json = TestHttp.ToJson(ok.Value);
@@ -385,6 +448,7 @@ public class PluginsControllerTests
     [Theory]
     [InlineData("""
         displayName: Invalid
+        schemaVersion: 1
         fields: []
         steps:
           - name: profile
@@ -400,6 +464,7 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        schemaVersion: 1
         baseUrls:
           - https://tracker.test/
         fields: []
@@ -414,6 +479,7 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        schemaVersion: 1
         baseUrls:
           - https://tracker.test/
         fields:
@@ -434,6 +500,7 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        schemaVersion: 1
         baseUrls:
           - https://tracker.test/
         fields:
@@ -454,6 +521,7 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        schemaVersion: 1
         baseUrls:
           - https://tracker.test/
         fields:
@@ -474,6 +542,7 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        schemaVersion: 1
         baseUrls:
           - https://tracker.test/
         fields: []
@@ -491,6 +560,7 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        schemaVersion: 1
         baseUrls:
           - https://tracker.test/
         fields: []
@@ -508,6 +578,7 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        schemaVersion: 1
         baseUrls:
           - https://tracker.test/
         fields: []
@@ -525,6 +596,7 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        schemaVersion: 1
         baseUrls:
           - https://tracker.test/
         fields: []
@@ -542,6 +614,7 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        schemaVersion: 1
         baseUrls:
           - https://tracker.test/
         fields: []
@@ -559,6 +632,7 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        schemaVersion: 1
         baseUrls:
           - https://tracker.test/
         fields: []
@@ -576,6 +650,7 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        schemaVersion: 1
         baseUrls:
           - https://tracker.test/
         fields: []
@@ -593,6 +668,7 @@ public class PluginsControllerTests
     [InlineData("""
         pluginId: invalid
         displayName: Invalid
+        schemaVersion: 1
         baseUrls:
           - https://tracker.test/
         fields: []
@@ -620,14 +696,45 @@ public class PluginsControllerTests
     }
 
     [Fact]
+    public async Task Create_should_reject_plugin_id_with_path_characters()
+    {
+        using var fixture = new PluginsFixture();
+        var controller = fixture.CreateController();
+        TestHttp.SetYamlBody(controller, """
+            pluginId: ../escaped
+            displayName: Escaped
+            schemaVersion: 1
+            baseUrls:
+              - https://tracker.test/
+            fields: []
+            steps:
+              - name: profile
+                method: GET
+                url: "/"
+                responseType: html
+            dashboard:
+              metrics:
+                - stat: ratio
+                  label: Ratio
+            """);
+
+        var result = await controller.Create(CancellationToken.None);
+
+        var badRequest = result.ShouldBeOfType<BadRequestObjectResult>();
+        TestHttp.ToJson(badRequest.Value).GetProperty("error").GetString().ShouldStartWith("Plugin id '../escaped' is invalid.");
+        Directory.EnumerateFiles(fixture.RootDirectory, "*", SearchOption.AllDirectories).ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task Update_should_reject_route_and_yaml_plugin_id_mismatch()
     {
         using var fixture = new PluginsFixture();
-        File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "seedpool.yaml"), "pluginId: seedpool");
+        File.WriteAllText(Path.Combine(fixture.CustomDirectory, "seedpool.yaml"), "pluginId: seedpool");
         var controller = fixture.CreateController();
         TestHttp.SetYamlBody(controller, """
             pluginId: other-plugin
             displayName: Other Plugin
+            schemaVersion: 1
             baseUrls:
               - https://tracker.test/
             fields: []
@@ -652,7 +759,7 @@ public class PluginsControllerTests
     public async Task Update_should_reject_invalid_yaml_syntax()
     {
         using var fixture = new PluginsFixture();
-        File.WriteAllText(Path.Combine(fixture.PluginsDirectory, "seedpool.yaml"), "pluginId: seedpool");
+        File.WriteAllText(Path.Combine(fixture.CustomDirectory, "seedpool.yaml"), "pluginId: seedpool");
         var controller = fixture.CreateController();
         TestHttp.SetYamlBody(controller, "pluginId: [");
 
@@ -692,88 +799,15 @@ public class PluginsControllerTests
     }
 
     [Fact]
-    public async Task Update_should_write_yaml_when_matching_plugin_exists_under_different_filename()
-    {
-        using var fixture = new PluginsFixture();
-        var existingPath = Path.Combine(fixture.PluginsDirectory, "custom-file.yaml");
-        File.WriteAllText(existingPath, """
-            pluginId: seedpool
-            displayName: Seedpool
-            baseUrls:
-              - https://tracker.test/
-            fields: []
-            steps:
-              - name: profile
-                method: GET
-                url: "/"
-                responseType: html
-            dashboard:
-              metrics:
-                - stat: ratio
-                  label: Ratio
-            """);
-        var controller = fixture.CreateController();
-        var updatedYaml = """
-            pluginId: seedpool
-            displayName: Updated Seedpool
-            baseUrls:
-              - https://tracker.test/
-            fields: []
-            steps:
-              - name: profile
-                method: GET
-                url: "/profile"
-                responseType: html
-            dashboard:
-              metrics:
-                - stat: ratio
-                  label: Ratio
-            """;
-        TestHttp.SetYamlBody(controller, updatedYaml);
-
-        var result = await controller.Update("seedpool", CancellationToken.None);
-
-        result.ShouldBeOfType<OkObjectResult>();
-        File.ReadAllText(existingPath).ShouldBe(updatedYaml);
-    }
-
-    [Fact]
-    public async Task Create_should_throw_when_plugins_directory_is_not_configured()
-    {
-        using var fixture = new PluginsFixture(usePluginsDirectory: false);
-        var controller = fixture.CreateController();
-        var yaml = """
-            pluginId: base-plugin
-            displayName: Base Plugin
-            baseUrls:
-              - https://tracker.test/
-            fields: []
-            steps:
-              - name: profile
-                method: GET
-                url: "/"
-                responseType: html
-            dashboard:
-              metrics:
-                - stat: ratio
-                  label: Ratio
-            """;
-        TestHttp.SetYamlBody(controller, yaml);
-
-        var ex = await Should.ThrowAsync<InvalidOperationException>(() => controller.Create(CancellationToken.None));
-
-        ex.Message.ShouldBe("Plugins directory is not configured. Set 'Plugins:Directory'.");
-    }
-
-    [Fact]
     public async Task Create_should_allow_missing_plugin_directory_and_create_it()
     {
         using var fixture = new PluginsFixture();
-        Directory.Delete(fixture.PluginsDirectory, recursive: true);
+        Directory.Delete(fixture.CustomDirectory, recursive: true);
         var controller = fixture.CreateController();
         TestHttp.SetYamlBody(controller, """
             pluginId: created-dir
             displayName: Created Dir
+            schemaVersion: 1
             baseUrls:
               - https://tracker.test/
             fields: []
@@ -792,7 +826,7 @@ public class PluginsControllerTests
         var result = await controller.Create(CancellationToken.None);
 
         result.ShouldBeOfType<CreatedAtActionResult>();
-        Directory.Exists(fixture.PluginsDirectory).ShouldBeTrue();
+        Directory.Exists(fixture.CustomDirectory).ShouldBeTrue();
     }
 
     [Fact]
@@ -803,6 +837,7 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: invalid
             displayName: Invalid
+            schemaVersion: 1
             baseUrls:
               - https://tracker.test/
             fields:
@@ -837,6 +872,7 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: invalid
             displayName: Invalid
+            schemaVersion: 1
             baseUrls:
               - https://tracker.test/
             fields: []
@@ -857,13 +893,14 @@ public class PluginsControllerTests
     }
 
     [Fact]
-    public async Task Create_should_write_plugin_yaml_to_relative_plugins_directory_from_content_root()
+    public async Task Create_should_write_plugin_yaml_under_relative_data_directory_from_content_root()
     {
-        using var fixture = new PluginsFixture(usePluginsDirectory: true, relativePluginsDirectory: "plugins");
+        using var fixture = new PluginsFixture(relativeDataDirectory: "data");
         var controller = fixture.CreateController();
         TestHttp.SetYamlBody(controller, """
             pluginId: relative-plugin
             displayName: Relative Plugin
+            schemaVersion: 1
             baseUrls:
               - https://tracker.test/
             fields: []
@@ -882,40 +919,215 @@ public class PluginsControllerTests
         var result = await controller.Create(CancellationToken.None);
 
         result.ShouldBeOfType<CreatedAtActionResult>();
-        File.Exists(Path.Combine(fixture.PluginsDirectory, "relative-plugin.yaml")).ShouldBeTrue();
+        File.Exists(Path.Combine(fixture.RootDirectory, "data", "plugins", "custom", "relative-plugin.yaml")).ShouldBeTrue();
     }
+
+    [Fact]
+    public async Task Update_should_return_not_found_when_plugin_only_exists_under_a_different_filename()
+    {
+        using var fixture = new PluginsFixture();
+        var existingPath = Path.Combine(fixture.CustomDirectory, "custom-file.yaml");
+        File.WriteAllText(existingPath, MinimalPluginYaml("seedpool", "Seedpool"));
+        var controller = fixture.CreateController();
+        TestHttp.SetYamlBody(controller, MinimalPluginYaml("seedpool", "Updated Seedpool"));
+
+        var result = await controller.Update("seedpool", CancellationToken.None);
+
+        result.ShouldBeOfType<NotFoundResult>();
+        File.ReadAllText(existingPath).ShouldBe(MinimalPluginYaml("seedpool", "Seedpool"));
+        File.Exists(Path.Combine(fixture.CustomDirectory, "seedpool.yaml")).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData(PluginOrigin.Official)]
+    [InlineData(PluginOrigin.Override)]
+    [InlineData(PluginOrigin.Custom)]
+    public async Task Create_should_return_conflict_when_id_exists_in_any_plugin_folder(PluginOrigin origin)
+    {
+        using var fixture = new PluginsFixture();
+        fixture.WritePlugin(origin, "taken", MinimalPluginYaml("taken", "Taken"));
+        var controller = fixture.CreateController();
+        TestHttp.SetYamlBody(controller, MinimalPluginYaml("taken", "Mine"));
+
+        var result = await controller.Create(CancellationToken.None);
+
+        result.ShouldBeOfType<ConflictObjectResult>();
+        File.ReadAllText(fixture.Layout.GetPluginPath(origin, "taken")).ShouldBe(MinimalPluginYaml("taken", "Taken"));
+    }
+
+    [Fact]
+    public async Task Create_should_write_new_plugins_to_the_custom_folder_only()
+    {
+        using var fixture = new PluginsFixture();
+        var controller = fixture.CreateController();
+        TestHttp.SetYamlBody(controller, MinimalPluginYaml("brand-new", "Brand New"));
+
+        await controller.Create(CancellationToken.None);
+
+        Directory.EnumerateFiles(fixture.RootDirectory, "*", SearchOption.AllDirectories)
+            .ShouldBe([fixture.Layout.GetPluginPath(PluginOrigin.Custom, "brand-new")]);
+    }
+
+    [Theory]
+    [InlineData("..%2Fescaped")]
+    [InlineData("../escaped")]
+    [InlineData("Seedpool")]
+    [InlineData("bad_id")]
+    public async Task Get_and_update_should_reject_route_ids_failing_the_plugin_id_rule(string pluginId)
+    {
+        using var fixture = new PluginsFixture();
+        var controller = fixture.CreateController();
+        TestHttp.SetYamlBody(controller, MinimalPluginYaml("escaped", "Escaped"));
+
+        var getResult = controller.GetByPluginId(pluginId);
+        var updateResult = await controller.Update(pluginId, CancellationToken.None);
+
+        TestHttp.ToJson(getResult.ShouldBeOfType<BadRequestObjectResult>().Value).GetProperty("error").GetString()
+            .ShouldStartWith($"Plugin id '{pluginId}' is invalid.");
+        updateResult.ShouldBeOfType<BadRequestObjectResult>();
+        Directory.EnumerateFiles(fixture.RootDirectory, "*", SearchOption.AllDirectories).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void GetByPluginId_should_return_the_override_when_it_shadows_an_official_plugin()
+    {
+        using var fixture = new PluginsFixture();
+        fixture.WritePlugin(PluginOrigin.Official, "asc", MinimalPluginYaml("asc", "Official ASC"));
+        fixture.WritePlugin(PluginOrigin.Override, "asc", MinimalPluginYaml("asc", "My ASC"));
+        var controller = fixture.CreateController();
+
+        var content = controller.GetByPluginId("asc").ShouldBeOfType<ContentResult>().Content.ShouldNotBeNull();
+
+        content.ShouldContain("displayName: My ASC");
+    }
+
+    [Fact]
+    public void GetByPluginId_should_return_the_custom_when_it_shadows_an_official_plugin()
+    {
+        using var fixture = new PluginsFixture();
+        fixture.WritePlugin(PluginOrigin.Official, "shared", MinimalPluginYaml("shared", "Official"));
+        fixture.WritePlugin(PluginOrigin.Custom, "shared", MinimalPluginYaml("shared", "Custom"));
+        var controller = fixture.CreateController();
+
+        var content = controller.GetByPluginId("shared").ShouldBeOfType<ContentResult>().Content.ShouldNotBeNull();
+
+        content.ShouldContain("displayName: Custom");
+    }
+
+    [Theory]
+    [InlineData(PluginOrigin.Override)]
+    [InlineData(PluginOrigin.Custom)]
+    public async Task Update_should_write_the_effective_file_and_leave_the_official_untouched(PluginOrigin effectiveOrigin)
+    {
+        using var fixture = new PluginsFixture();
+        var officialPath = fixture.WritePlugin(PluginOrigin.Official, "asc", MinimalPluginYaml("asc", "Official"));
+        var effectivePath = fixture.WritePlugin(effectiveOrigin, "asc", MinimalPluginYaml("asc", "Before"));
+        var controller = fixture.CreateController();
+        TestHttp.SetYamlBody(controller, MinimalPluginYaml("asc", "After"));
+
+        var result = await controller.Update("asc", CancellationToken.None);
+
+        result.ShouldBeOfType<OkObjectResult>();
+        File.ReadAllText(effectivePath).ShouldBe(MinimalPluginYaml("asc", "After"));
+        File.ReadAllText(officialPath).ShouldBe(MinimalPluginYaml("asc", "Official"));
+    }
+
+    [Fact]
+    public async Task Editor_and_runtime_should_agree_when_two_files_declare_the_same_id()
+    {
+        using var fixture = new PluginsFixture();
+        fixture.WritePlugin(PluginOrigin.Custom, "dup", MinimalPluginYaml("dup", "First"));
+        File.WriteAllText(Path.Combine(fixture.CustomDirectory, "dup-copy.yaml"), MinimalPluginYaml("dup", "Second"));
+        var controller = fixture.CreateController();
+
+        var plugins = TestHttp.ToJson((await controller.GetAll(CancellationToken.None)).ShouldBeOfType<OkObjectResult>().Value).EnumerateArray().ToList();
+        var editorContent = controller.GetByPluginId("dup").ShouldBeOfType<ContentResult>().Content;
+
+        var dup = plugins.Single(plugin => plugin.GetProperty("pluginId").GetString() == "dup");
+        dup.GetProperty("definitionValid").GetBoolean().ShouldBeFalse();
+        dup.GetProperty("definitionError").GetString().ShouldNotBeNull().ShouldContain("declared by more than one file");
+        editorContent.ShouldBe(MinimalPluginYaml("dup", "First"));
+    }
+
+    private static string CommentedPluginYaml(string pluginId, string displayName) => $$"""
+        # Maintained by hand; keep the comments.
+        pluginId: {{pluginId}}
+        displayName: '{{displayName}}'   # quoted on purpose
+        version: 1.0.0
+        schemaVersion: 1
+
+        baseUrls:
+          - https://tracker.test/ # main mirror
+        fields: []
+        steps:
+          # profile page holds every stat
+          - name: profile
+            method: GET
+            url: "/"
+            responseType: html
+        dashboard:
+          metrics:
+            - { stat: ratio, label: Ratio }
+
+        """;
+
+    private static string MinimalPluginYaml(string pluginId, string displayName) => $"""
+        pluginId: {pluginId}
+        displayName: {displayName}
+        schemaVersion: 1
+        baseUrls:
+          - https://tracker.test/
+        fields: []
+        steps:
+          - name: profile
+            method: GET
+            url: "/"
+            responseType: html
+        dashboard:
+          metrics:
+            - stat: ratio
+              label: Ratio
+        """;
 
     private sealed class PluginsFixture : IDisposable
     {
-        public PluginsFixture(bool usePluginsDirectory = true, string? relativePluginsDirectory = null)
+        private readonly string? _relativeDataDirectory;
+
+        public PluginsFixture(string? relativeDataDirectory = null)
         {
             RootDirectory = Path.Combine(Path.GetTempPath(), $"trackerstats-plugins-{Guid.NewGuid():N}");
-            PluginsDirectory = relativePluginsDirectory is null
-                ? Path.Combine(RootDirectory, "plugins")
-                : Path.Combine(RootDirectory, relativePluginsDirectory);
-            Directory.CreateDirectory(PluginsDirectory);
-            UsePluginsDirectory = usePluginsDirectory;
-            RelativePluginsDirectory = relativePluginsDirectory;
+            _relativeDataDirectory = relativeDataDirectory;
+            Layout = PluginStorageLayout.ForDataDirectory(Path.Combine(RootDirectory, relativeDataDirectory ?? ""));
+            Directory.CreateDirectory(CustomDirectory);
         }
 
         public string RootDirectory { get; }
-        public string PluginsDirectory { get; }
-        private bool UsePluginsDirectory { get; }
-        private string? RelativePluginsDirectory { get; }
+        public PluginStorageLayout Layout { get; }
+        public InMemoryIntegrationRepository Integrations { get; } = new();
+
+        public string CustomDirectory => Layout.CustomDirectory;
+
+        public string WritePlugin(PluginOrigin origin, string pluginId, string content)
+        {
+            var path = Layout.GetPluginPath(origin, pluginId);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, content);
+            return path;
+        }
 
         public PluginsController CreateController()
         {
-            var values = new Dictionary<string, string?>();
-
-            if (UsePluginsDirectory)
-                values["Plugins:Directory"] = RelativePluginsDirectory ?? PluginsDirectory;
-
             var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(values)
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    [PluginStorageLayout.DataDirectoryKey] = _relativeDataDirectory ?? Layout.DataDirectory
+                })
                 .Build();
-            var hostEnvironment = new FakeHostEnvironment(RootDirectory);
-            var loader = new YamlPluginDefinitionLoader(configuration, new FakeApplicationSettingsService(), hostEnvironment);
-            return new PluginsController(loader, configuration, hostEnvironment);
+            var layout = new PluginStorageLayout(configuration, new FakeHostEnvironment(RootDirectory));
+            var loader = new YamlPluginDefinitionLoader(layout, new FakeApplicationSettingsService());
+            var overrides = new PluginOverrideService(layout, new PluginStateStore(layout), NullLogger<PluginOverrideService>.Instance);
+            var stateStore = new PluginStateStore(layout);
+            return new PluginsController(loader, layout, overrides, stateStore, new PluginStatusService(loader, layout, stateStore), Integrations);
         }
 
         public void Dispose()

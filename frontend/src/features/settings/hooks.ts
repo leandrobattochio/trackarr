@@ -3,6 +3,7 @@ import { settingsApi } from "@/features/settings/api";
 
 export const SETTINGS_KEY = ["settings"] as const;
 export const SETTINGS_ABOUT_KEY = ["settings", "about"] as const;
+export const SETTINGS_PLUGIN_DOWNLOAD_KEY = ["settings", "about", "plugin-download"] as const;
 
 export function useSettings() {
   return useQuery({
@@ -26,5 +27,12 @@ export function useAboutInfo() {
   return useQuery({
     queryKey: SETTINGS_ABOUT_KEY,
     queryFn: settingsApi.getAbout,
+  });
+}
+
+export function usePluginDownloadStatus() {
+  return useQuery({
+    queryKey: SETTINGS_PLUGIN_DOWNLOAD_KEY,
+    queryFn: settingsApi.getPluginDownload,
   });
 }

@@ -5,6 +5,7 @@ import { AppRouter } from "@/app/router";
 vi.mock("@/features/integrations", () => ({ DashboardPage: () => <div>Dashboard Page</div> }));
 vi.mock("@/features/help/HelpPage", () => ({ default: () => <div>Help Page</div> }));
 vi.mock("@/features/plugins/ManagePluginsPage", () => ({ default: () => <div>Plugins Page</div> }));
+vi.mock("@/features/plugins/PluginUpdatePage", () => ({ default: () => <div>Plugin Update Page</div> }));
 vi.mock("@/features/settings/SettingsPage", () => ({ default: () => <div>Settings Page</div> }));
 vi.mock("@/features/snapshots/SnapshotsPage", () => ({ default: () => <div>Snapshots Page</div> }));
 vi.mock("@/pages/NotFoundPage", () => ({ default: () => <div>Not Found Page</div> }));
@@ -20,6 +21,13 @@ describe("AppRouter", () => {
     render(<AppRouter />);
 
     expect(screen.getByText("Plugins Page")).toBeInTheDocument();
+  });
+
+  it("renders the outdated override review route", () => {
+    window.history.pushState({}, "", "/plugins/seedpool/update");
+    render(<AppRouter />);
+
+    expect(screen.getByText("Plugin Update Page")).toBeInTheDocument();
   });
 
   it("renders the not found route for unknown paths", () => {

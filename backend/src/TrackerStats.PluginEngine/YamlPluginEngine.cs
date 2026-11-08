@@ -17,8 +17,21 @@ public class YamlPluginEngine(
         PluginDefinition definition,
         PluginConfiguration configuration,
         HttpClient httpClient,
+        CancellationToken ct) =>
+        (await ExecuteWithReportAsync(definition, configuration, httpClient, ct)).ToFetchResult();
+
+    public async Task<PluginExecutionReport> ExecuteWithReportAsync(
+        PluginDefinition definition,
+        PluginConfiguration configuration,
+        HttpClient httpClient,
         CancellationToken ct)
     {
+        var redactor = PluginSecretRedactor.Create(definition, configuration);
+        var steps = new List<PluginStepReport>();
+
+        PluginExecutionReport Failure(PluginProcessResult result, string error, PluginFieldFailure? field = null) =>
+            new(result, null, steps, field, redactor.Redact(error));
+
         try
         {
             ValidateDefinition(definition);
@@ -39,35 +52,68 @@ public class YamlPluginEngine(
 
                 using var request = new HttpRequestMessage(method, url);
                 using var response = await httpClient.SendAsync(request, ct);
+                var statusCode = (int)response.StatusCode;
+                var path = redactor.Redact(GetPathWithoutQuery(request.RequestUri));
+                steps.Add(new PluginStepReport(step.Name, method.Method, path, statusCode));
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    logger.LogWarning(
+                        "Plugin '{PluginId}' step '{StepName}' got HTTP {StatusCode} from {Method} {Path}.",
+                        definition.PluginId,
+                        step.Name,
+                        statusCode,
+                        method.Method,
+                        path);
+                }
+
                 var responseBody = await response.Content.ReadAsStringAsync(ct);
 
                 var authResult = authFailureDetector.Detect(response, responseBody, definition.AuthFailure);
                 if (authResult is not null)
-                    return authResult;
+                {
+                    return Failure(authResult.Result, response.IsSuccessStatusCode
+                        ? $"Step '{step.Name}' matched an authentication failure pattern."
+                        : $"Step '{step.Name}' got HTTP {statusCode}, which means authentication failed.");
+                }
 
                 if (!response.IsSuccessStatusCode)
-                    return new TrackerFetchResult(PluginProcessResult.UnknownError);
+                    return Failure(PluginProcessResult.UnknownError, $"Step '{step.Name}' got HTTP {statusCode}.");
 
-                var extractedValues = ExtractValues(step, responseBody);
-                stepResults[step.Name] = extractedValues;
+                stepResults[step.Name] = ExtractValues(step, responseBody);
             }
 
-            return resultMapper.BuildResult(definition, configuration, stepResults);
+            var result = resultMapper.BuildResult(definition, configuration, stepResults);
+            return new PluginExecutionReport(result.Result, result.Stats, steps);
         }
-        catch (YamlPluginValidationException validationEx)
+        catch (PluginFieldException fieldEx)
         {
-            logger.LogWarning(
-                validationEx,
-                "YAML plugin validation failed for plugin '{PluginId}' with result '{Result}'.",
+            logger.Log(
+                fieldEx.InnerException is null ? LogLevel.Warning : LogLevel.Error,
+                fieldEx,
+                "YAML plugin '{PluginId}' failed on field '{Field}' of step '{StepName}' with result '{Result}'.",
                 definition.PluginId,
-                validationEx.Result);
-            return new TrackerFetchResult(validationEx.Result);
+                fieldEx.Field,
+                fieldEx.Step ?? "mapping",
+                fieldEx.Result);
+            var error = redactor.Redact(fieldEx.Message);
+            return Failure(fieldEx.Result, error, new PluginFieldFailure(fieldEx.Step, fieldEx.Field, error));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "YAML plugin engine failed for plugin '{PluginId}'.", definition.PluginId);
-            return new TrackerFetchResult(PluginProcessResult.UnknownError);
+            return Failure(PluginProcessResult.UnknownError, ex.Message);
         }
+    }
+
+    private static string GetPathWithoutQuery(Uri? uri)
+    {
+        if (uri is null)
+            return string.Empty;
+
+        return uri.IsAbsoluteUri
+            ? uri.AbsolutePath
+            : uri.OriginalString.Split('?', '#')[0];
     }
 
     private static void ValidateDefinition(PluginDefinition definition)
@@ -92,12 +138,19 @@ public class YamlPluginEngine(
 
         foreach (var (fieldName, rule) in step.Extract)
         {
-            var strategy = extractionStrategies.FirstOrDefault(s => s.CanHandle(rule))
-                ?? throw new InvalidOperationException(
-                    $"Extract rule '{fieldName}' in step '{step.Name}' must define regex or path.");
+            try
+            {
+                var strategy = extractionStrategies.FirstOrDefault(s => s.CanHandle(rule))
+                    ?? throw new InvalidOperationException(
+                        $"Extract rule '{fieldName}' in step '{step.Name}' must define regex or path.");
 
-            var value = strategy.Extract(step, fieldName, rule, responseBody, jsonRoot);
-            extractedValues[fieldName] = ApplyTransform(value, rule.Transform);
+                var value = strategy.Extract(step, fieldName, rule, responseBody, jsonRoot);
+                extractedValues[fieldName] = ApplyTransform(value, rule.Transform);
+            }
+            catch (Exception ex)
+            {
+                throw new PluginFieldException(PluginProcessResult.UnknownError, step.Name, fieldName, ex.Message, ex);
+            }
         }
 
         ValidateExtractedValues(step, extractedValues);
@@ -124,22 +177,21 @@ public class YamlPluginEngine(
             if (validation.Rule.Equals("notEmpty", StringComparison.OrdinalIgnoreCase)
                 && string.IsNullOrWhiteSpace(value))
             {
-                throw CreateValidationFailure(validation);
+                throw CreateValidationFailure(step, validation);
             }
         }
     }
 
-    private static YamlPluginValidationException CreateValidationFailure(ValidationRule validation)
+    private static PluginFieldException CreateValidationFailure(StepDefinition step, ValidationRule validation)
     {
         var result = validation.OnFail.Equals("authFailed", StringComparison.OrdinalIgnoreCase)
             ? PluginProcessResult.AuthFailed
             : PluginProcessResult.UnknownError;
 
-        return new YamlPluginValidationException(result);
+        return new PluginFieldException(
+            result,
+            step.Name,
+            validation.Field,
+            $"Field '{validation.Field}' in step '{step.Name}' failed validation rule '{validation.Rule}'.");
     }
-}
-
-internal sealed class YamlPluginValidationException(PluginProcessResult result) : Exception
-{
-    public PluginProcessResult Result { get; } = result;
 }

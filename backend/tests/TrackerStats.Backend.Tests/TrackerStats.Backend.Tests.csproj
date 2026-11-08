@@ -21,6 +21,11 @@
     <ProjectReference Include="..\..\src\TrackerStats.Api\TrackerStats.Api.csproj" />
     <ProjectReference Include="..\..\src\TrackerStats.Domain\TrackerStats.Domain.csproj" />
     <ProjectReference Include="..\..\src\TrackerStats.Infrastructure\TrackerStats.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\tools\TrackerStats.PluginValidator\TrackerStats.PluginValidator.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\fixtures\plugin-source\**\*.yaml;..\fixtures\plugin-source\index.json" LinkBase="plugin-source" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

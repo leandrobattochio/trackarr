@@ -41,6 +41,15 @@ public class TrackerPluginRegistry(
             })
             .ToList();
 
+    public string? GetInvalidOverrideError(string pluginId)
+    {
+        var effective = loader.LoadDefinitions()
+            .FirstOrDefault(definition => string.Equals(definition.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
+        return effective is { Origin: PluginOrigin.Override, IsValid: false }
+            ? effective.Error ?? "The override could not be loaded."
+            : null;
+    }
+
     private IReadOnlyDictionary<string, PluginRegistration> LoadRegistrations() =>
         loader.LoadDefinitions()
             .Where(definition => definition.IsValid)

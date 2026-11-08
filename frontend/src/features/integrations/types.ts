@@ -152,7 +152,7 @@ function deriveStatus(integration: ApiIntegration): IntegrationStatus {
   return "pending";
 }
 
-function getStatusLabel(status: IntegrationStatus): string {
+export function getStatusLabel(status: IntegrationStatus): string {
   switch (status) {
     case "success":
       return "success";

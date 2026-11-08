@@ -3,12 +3,21 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { settingsApi } from "@/features/settings/api";
-import { SETTINGS_ABOUT_KEY, SETTINGS_KEY, useAboutInfo, useSettings, useUpdateSettings } from "@/features/settings/hooks";
+import {
+  SETTINGS_ABOUT_KEY,
+  SETTINGS_KEY,
+  SETTINGS_PLUGIN_DOWNLOAD_KEY,
+  useAboutInfo,
+  usePluginDownloadStatus,
+  useSettings,
+  useUpdateSettings,
+} from "@/features/settings/hooks";
 
 vi.mock("@/features/settings/api", () => ({
   settingsApi: {
     get: vi.fn(),
     getAbout: vi.fn(),
+    getPluginDownload: vi.fn(),
     update: vi.fn(),
   },
 }));
@@ -54,6 +63,17 @@ describe("settings hooks", () => {
     expect(aboutResult.current.data?.version).toBe("1.0.0");
     expect(SETTINGS_KEY).toEqual(["settings"]);
     expect(SETTINGS_ABOUT_KEY).toEqual(["settings", "about"]);
+  });
+
+  it("loads the plugin download status", async () => {
+    vi.mocked(settingsApi.getPluginDownload).mockResolvedValueOnce({ lastDownload: null, lastSuccessfulIndex: null });
+
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => usePluginDownloadStatus(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual({ lastDownload: null, lastSuccessfulIndex: null });
+    expect(SETTINGS_PLUGIN_DOWNLOAD_KEY).toEqual(["settings", "about", "plugin-download"]);
   });
 
   it("invalidates settings after a successful update", async () => {

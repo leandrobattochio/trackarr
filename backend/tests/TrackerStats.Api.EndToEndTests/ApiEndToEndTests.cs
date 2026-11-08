@@ -71,6 +71,26 @@ public sealed class ApiEndToEndTests : IClassFixture<ApiEndToEndFactory>
         persisted.ConfigurationValid.ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task Whats_new_should_store_its_read_state_in_a_fresh_database()
+    {
+        using var client = _factory.CreateClient();
+
+        var before = await client.GetFromJsonAsync<JsonElement>("/api/whats-new", JsonOptions);
+
+        before.GetProperty("lastReadAt").ValueKind.ShouldBe(JsonValueKind.Null);
+        before.GetProperty("lastReadPluginChangeId").ValueKind.ShouldBe(JsonValueKind.Null);
+        before.GetProperty("app").GetProperty("status").GetString().ShouldBe("unavailable");
+        before.GetProperty("pluginUpdates").GetArrayLength().ShouldBe(0);
+
+        (await client.PostAsync("/api/whats-new/read", null)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var after = await client.GetFromJsonAsync<JsonElement>("/api/whats-new", JsonOptions);
+        after.GetProperty("shouldAutoOpen").GetBoolean().ShouldBeFalse();
+        after.GetProperty("lastReadAt").ValueKind.ShouldBe(JsonValueKind.String);
+        after.GetProperty("lastReadPluginChangeId").GetInt64().ShouldBe(0);
+    }
+
     public sealed class PluginResponse
     {
         public string PluginId { get; init; } = string.Empty;
@@ -91,7 +111,7 @@ public sealed class ApiEndToEndFactory : WebApplicationFactory<Program>, IAsyncL
 {
     private const string PostgresConnectionEnvVar = "ConnectionStrings__PostgresConnection";
     private const string HangfireConnectionEnvVar = "ConnectionStrings__HangfireConnection";
-    private const string PluginsDirectoryEnvVar = "Plugins__Directory";
+    private const string DataDirectoryEnvVar = "Data__Directory";
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine")
         .WithDatabase("trackerstats")
         .WithUsername("postgres")
@@ -104,14 +124,16 @@ public sealed class ApiEndToEndFactory : WebApplicationFactory<Program>, IAsyncL
     {
         Directory.CreateDirectory(_dataDirectory);
 
-        var pluginsDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "plugins"));
+        RepoPlugins.CopyToOfficial(_dataDirectory);
         var hangfireConnection = $"Data Source={Path.Combine(_dataDirectory, "hangfire-e2e.db")}";
 
         await _postgres.StartAsync();
 
         Environment.SetEnvironmentVariable(PostgresConnectionEnvVar, _postgres.GetConnectionString());
         Environment.SetEnvironmentVariable(HangfireConnectionEnvVar, hangfireConnection);
-        Environment.SetEnvironmentVariable(PluginsDirectoryEnvVar, pluginsDirectory);
+        Environment.SetEnvironmentVariable(DataDirectoryEnvVar, _dataDirectory);
+        Environment.SetEnvironmentVariable(RepoPlugins.SourceUrlEnvVar, RepoPlugins.OfflineSourceUrl(_dataDirectory));
+        Environment.SetEnvironmentVariable(RepoPlugins.AppReleasesUrlEnvVar, RepoPlugins.OfflineAppReleasesUrl);
     }
 
     async Task IAsyncLifetime.DisposeAsync()
@@ -119,7 +141,9 @@ public sealed class ApiEndToEndFactory : WebApplicationFactory<Program>, IAsyncL
         base.Dispose();
         Environment.SetEnvironmentVariable(PostgresConnectionEnvVar, null);
         Environment.SetEnvironmentVariable(HangfireConnectionEnvVar, null);
-        Environment.SetEnvironmentVariable(PluginsDirectoryEnvVar, null);
+        Environment.SetEnvironmentVariable(DataDirectoryEnvVar, null);
+        Environment.SetEnvironmentVariable(RepoPlugins.SourceUrlEnvVar, null);
+        Environment.SetEnvironmentVariable(RepoPlugins.AppReleasesUrlEnvVar, null);
         await _postgres.DisposeAsync();
 
         if (Directory.Exists(_dataDirectory))

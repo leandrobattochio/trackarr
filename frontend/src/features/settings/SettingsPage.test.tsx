@@ -18,6 +18,12 @@ const aboutQuery = {
   error: null as Error | null,
 };
 
+const pluginDownloadQuery = {
+  data: undefined as unknown,
+  isLoading: false,
+  error: null as Error | null,
+};
+
 const updateMutation = {
   mutate: (...args: unknown[]) => mutateSpy(...args),
   isPending: false,
@@ -48,6 +54,7 @@ vi.mock("@/shared/hooks/use-page-title", () => ({
 vi.mock("@/features/settings/hooks", () => ({
   useSettings: () => settingsQuery,
   useAboutInfo: () => aboutQuery,
+  usePluginDownloadStatus: () => pluginDownloadQuery,
   useUpdateSettings: () => updateMutation,
 }));
 
@@ -72,6 +79,13 @@ vi.mock("@/features/settings/components", () => ({
       <span>{`about-version:${props.aboutInfo?.version ?? "none"}`}</span>
     </div>
   ),
+  PluginDownloadStatus: (props: unknown) => (
+    <div data-testid="plugin-download-status">
+      <span>{`download-loading:${String(props.isLoading)}`}</span>
+      <span>{`download-error:${props.error?.message ?? "none"}`}</span>
+      <span>{`download-source:${props.status?.lastDownload?.source ?? "none"}`}</span>
+    </div>
+  ),
 }));
 
 import SettingsPage from "@/features/settings/SettingsPage";
@@ -84,6 +98,9 @@ describe("SettingsPage", () => {
     aboutQuery.data = undefined;
     aboutQuery.isLoading = true;
     aboutQuery.error = new Error("about failed");
+    pluginDownloadQuery.data = undefined;
+    pluginDownloadQuery.isLoading = true;
+    pluginDownloadQuery.error = new Error("download status failed");
     updateMutation.isPending = true;
     mutateSpy.mockReset();
 
@@ -97,6 +114,9 @@ describe("SettingsPage", () => {
     expect(screen.getByText("about-loading:true")).toBeInTheDocument();
     expect(screen.getByText("about-error:about failed")).toBeInTheDocument();
     expect(screen.getByText("about-version:none")).toBeInTheDocument();
+    expect(screen.getByText("download-loading:true")).toBeInTheDocument();
+    expect(screen.getByText("download-error:download status failed")).toBeInTheDocument();
+    expect(screen.getByText("download-source:none")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("set-empty"));
     fireEvent.click(screen.getByText("save-settings"));
@@ -114,6 +134,9 @@ describe("SettingsPage", () => {
     aboutQuery.data = { version: "1.0.0" };
     aboutQuery.isLoading = false;
     aboutQuery.error = null;
+    pluginDownloadQuery.data = { lastDownload: { source: "https://plugins.example/" }, lastSuccessfulIndex: null };
+    pluginDownloadQuery.isLoading = false;
+    pluginDownloadQuery.error = null;
     updateMutation.isPending = false;
     mutateSpy.mockReset();
 
@@ -126,6 +149,7 @@ describe("SettingsPage", () => {
     expect(screen.getByText("ua:TrackArr/1.0")).toBeInTheDocument();
     expect(screen.getByText("dirty:false")).toBeInTheDocument();
     expect(screen.getByText("about-version:1.0.0")).toBeInTheDocument();
+    expect(screen.getByText("download-source:https://plugins.example/")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("set-valid"));
     expect(screen.getByText("dirty:true")).toBeInTheDocument();
