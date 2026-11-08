@@ -17,6 +17,7 @@ public sealed class LegacyUpgradeEndToEndTests : IAsyncLifetime
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private const string V03Migration = "20260406043447_Initial";
     private const string V04Migration = "20261107231750_WhatsNewState";
+    private const string V05Migration = "20261108064312_AddProxies";
     private const string Payload = """{"baseUrl":"https://seedpool.org/","apiKey":"legacy-api-key","cron":"0 0 1 1 *"}""";
 
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine")
@@ -87,7 +88,7 @@ public sealed class LegacyUpgradeEndToEndTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task A_v04_database_should_upgrade_with_no_new_migration_and_no_data_change()
+    public async Task A_v04_database_should_upgrade_with_only_the_new_migrations_and_no_data_change()
     {
         var (official, custom) = await SeedV03DatabaseAsync(V04Migration);
         var lastReadAt = new DateTime(2026, 11, 7, 23, 30, 0, DateTimeKind.Utc);
@@ -123,8 +124,10 @@ public sealed class LegacyUpgradeEndToEndTests : IAsyncLifetime
             whatsNew.GetProperty("lastReadAt").GetDateTime().ShouldBe(lastReadAt);
         });
 
-        (await ReadMigrationHistoryAsync()).ShouldBe(historyBefore);
+        (await ReadMigrationHistoryAsync()).Select(row => row.Id).ShouldBe([V03Migration, V04Migration, V05Migration]);
         (await ReadAllDataAsync()).ShouldBe(before);
+        await using (var db = CreateDbContext())
+            (await db.Integrations.AsNoTracking().Select(integration => integration.ProxyId).ToListAsync()).ShouldAllBe(proxyId => proxyId == null);
     }
 
     private async Task<(Guid Official, Guid Custom)> SeedV03DatabaseAsync(string targetMigration = V03Migration)
@@ -132,30 +135,31 @@ public sealed class LegacyUpgradeEndToEndTests : IAsyncLifetime
         await using var db = CreateDbContext();
         await db.GetService<IMigrator>().MigrateAsync(targetMigration);
 
-        var official = new Integration { Id = Guid.NewGuid(), PluginId = "seedpool", Payload = Payload, Ratio = 1.25m, RequiredRatio = 1.5m };
-        var custom = new Integration { Id = Guid.NewGuid(), PluginId = "my-tracker", Payload = Payload, Ratio = 3m };
-        db.Integrations.AddRange(official, custom);
-        foreach (var (integration, hoursAgo) in new[] { (official, 2), (official, 1), (custom, 1) })
+        // Plain SQL with the columns the old schema had: the current model has more.
+        var official = Guid.NewGuid();
+        var custom = Guid.NewGuid();
+        await db.Database.ExecuteSqlAsync($"""
+            INSERT INTO "Integrations" ("Id", "PluginId", "Payload", "Ratio", "RequiredRatio")
+            VALUES ({official}, 'seedpool', {Payload}, 1.25, 1.5), ({custom}, 'my-tracker', {Payload}, 3, NULL)
+            """);
+        foreach (var (integrationId, ratio, hoursAgo) in new[] { (official, 1.25m, 2), (official, 1.25m, 1), (custom, 3m, 1) })
         {
-            db.IntegrationSnapshots.Add(new IntegrationSnapshot
-            {
-                Id = Guid.NewGuid(),
-                IntegrationId = integration.Id,
-                CapturedAt = DateTime.UtcNow.AddHours(-hoursAgo),
-                Ratio = integration.Ratio,
-                UploadedBytes = 1024L * hoursAgo
-            });
+            await db.Database.ExecuteSqlAsync($"""
+                INSERT INTO "IntegrationSnapshots" ("Id", "IntegrationId", "CapturedAt", "Ratio", "UploadedBytes")
+                VALUES ({Guid.NewGuid()}, {integrationId}, {DateTime.UtcNow.AddHours(-hoursAgo)}, {ratio}, {1024L * hoursAgo})
+                """);
         }
 
-        await db.SaveChangesAsync();
-        return (official.Id, custom.Id);
+        return (official, custom);
     }
 
     private async Task<string> ReadDatabaseAsync()
     {
         await using var db = CreateDbContext();
-        var integrations = await db.Integrations.AsNoTracking().OrderBy(i => i.Id).ToListAsync();
-        var snapshots = await db.IntegrationSnapshots.AsNoTracking().OrderBy(s => s.Id).ToListAsync();
+        var integrations = await db.Database.SqlQueryRaw<IntegrationRow>(
+            """SELECT "Id", "PluginId", "Payload", "Ratio", "RequiredRatio" FROM "Integrations" ORDER BY "Id" """).ToListAsync();
+        var snapshots = await db.Database.SqlQueryRaw<SnapshotRow>(
+            """SELECT "Id", "IntegrationId", "CapturedAt", "Ratio", "UploadedBytes" FROM "IntegrationSnapshots" ORDER BY "Id" """).ToListAsync();
         return JsonSerializer.Serialize(new { integrations, snapshots });
     }
 
@@ -193,6 +197,24 @@ public sealed class LegacyUpgradeEndToEndTests : IAsyncLifetime
     {
         public string Id { get; init; } = string.Empty;
         public string ProductVersion { get; init; } = string.Empty;
+    }
+
+    private sealed record IntegrationRow
+    {
+        public Guid Id { get; init; }
+        public string PluginId { get; init; } = string.Empty;
+        public string Payload { get; init; } = string.Empty;
+        public decimal? Ratio { get; init; }
+        public decimal? RequiredRatio { get; init; }
+    }
+
+    private sealed record SnapshotRow
+    {
+        public Guid Id { get; init; }
+        public Guid IntegrationId { get; init; }
+        public DateTime CapturedAt { get; init; }
+        public decimal? Ratio { get; init; }
+        public long? UploadedBytes { get; init; }
     }
 
     private sealed class IntegrationResponse
