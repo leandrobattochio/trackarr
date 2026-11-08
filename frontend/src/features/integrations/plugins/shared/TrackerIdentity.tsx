@@ -14,7 +14,7 @@ export function TrackerIdentity({ tracker, titleTestId, compact = false }: Track
   return (
     <div className="flex min-w-0 items-center gap-3">
       <div
-        className={`flex shrink-0 items-center justify-center rounded-md bg-primary/10 font-display font-bold text-primary ${
+        className={`hidden shrink-0 items-center justify-center rounded-md bg-primary/10 font-display font-bold text-primary sm:flex ${
           compact ? "h-8 w-8 text-xs" : "h-10 w-10 text-sm"
         }`}
       >
@@ -23,7 +23,7 @@ export function TrackerIdentity({ tracker, titleTestId, compact = false }: Track
       <div className="flex min-w-0 items-center gap-1.5">
         {compact
           ? <span className="truncate text-sm font-semibold" data-testid={titleTestId}>{tracker.name}</span>
-          : <CardTitle className="text-base" data-testid={titleTestId}>{tracker.name}</CardTitle>}
+          : <CardTitle className="min-w-0 truncate text-base" data-testid={titleTestId}>{tracker.name}</CardTitle>}
         {isBelowRequiredRatio(tracker.ratio, tracker.requiredRatio) && (
           <MetricTooltip
             label="Ratio Warning"

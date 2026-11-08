@@ -87,7 +87,7 @@ function renderMetricTile(metric: ApiDashboardMetric, tracker: TrackerIntegratio
 function resolveGridClassName(metricCount: number) {
   if (metricCount <= 1) return "grid grid-cols-1 gap-3";
   if (metricCount === 2) return "grid grid-cols-2 gap-3";
-  if (metricCount <= 3) return "grid grid-cols-3 gap-3";
+  if (metricCount <= 3) return "grid grid-cols-2 gap-3 sm:grid-cols-3";
   return "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5";
 }
 

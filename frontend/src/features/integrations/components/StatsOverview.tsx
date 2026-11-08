@@ -90,10 +90,10 @@ export function StatsOverview({ integrations }: StatsOverviewProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       {stats.map((stat) => (
         <Card key={stat.label} className="border-border/50">
-          <CardContent className="flex items-center gap-4 p-4">
+          <CardContent className="flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
             <MetricTooltip
               label={stat.label}
               eyebrow={stat.tooltip.eyebrow}
@@ -108,9 +108,9 @@ export function StatsOverview({ integrations }: StatsOverviewProps) {
                 <span className="sr-only">{stat.label}</span>
               </button>
             </MetricTooltip>
-            <div>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="font-display text-xl font-bold">{stat.value}</p>
+            <div className="min-w-0">
+              <p className="truncate text-xs text-muted-foreground">{stat.label}</p>
+              <p className="whitespace-nowrap font-display text-lg font-bold sm:text-xl">{stat.value}</p>
             </div>
           </CardContent>
         </Card>

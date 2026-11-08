@@ -11,11 +11,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <div className="flex-1 flex flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-12 items-center border-b border-border/50 px-4">
             <SidebarTrigger />
           </header>
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-4 sm:p-6">
             <OutdatedOverridesBanner className="mb-6" />
             {children}
           </main>

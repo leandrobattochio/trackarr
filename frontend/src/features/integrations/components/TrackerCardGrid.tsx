@@ -4,7 +4,7 @@ import type { TrackerCollectionProps } from "@/features/integrations/components/
 
 export function TrackerCardGrid({ order }: TrackerCollectionProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="dashboard-cards-grid">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="dashboard-cards-grid">
       {order.orderedIntegrations.map((tracker, index) => (
         <ReorderableTracker key={tracker.id} tracker={tracker} order={order} testId="tracker-card">
           <TrackerCard

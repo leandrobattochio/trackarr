@@ -21,7 +21,7 @@ interface ListCellProps {
 
 function ListCell({ label, children }: ListCellProps) {
   return (
-    <div className="flex flex-col text-sm md:block">
+    <div className="flex min-w-0 flex-col text-sm md:block">
       <span className="text-[11px] uppercase tracking-wide text-muted-foreground md:hidden">{label}</span>
       {children}
     </div>
@@ -51,8 +51,8 @@ export function TrackerListRow({ tracker, reorderControls }: TrackerListRowProps
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5 transition-colors hover:bg-muted/30",
-        "md:col-span-full md:grid md:grid-cols-subgrid",
+        "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-3 py-2.5 transition-colors hover:bg-muted/30",
+        "md:col-span-full md:grid-cols-subgrid md:gap-x-4",
         isBelowRequiredRatio(tracker.ratio, tracker.requiredRatio) && "bg-destructive/5",
       )}
     >
@@ -60,34 +60,39 @@ export function TrackerListRow({ tracker, reorderControls }: TrackerListRowProps
         <TrackerDragHandle trackerName={tracker.name} />
         {reorderControls}
       </div>
-      <div className="min-w-0 flex-1 basis-48">
+      <div className="col-span-2 min-w-0 md:col-span-1">
         <TrackerIdentity tracker={tracker} titleTestId="tracker-row-title" compact />
         {!tracker.configurationValid && (
-          <p className="mt-0.5 truncate pl-11 text-xs text-warning" title={tracker.configurationError ?? undefined}>
+          <p className="mt-0.5 truncate text-xs text-warning sm:pl-11" title={tracker.configurationError ?? undefined}>
             {tracker.configurationError ?? "Integration needs fixing"}
           </p>
         )}
       </div>
-      <ListCell label="Ratio">
-        <RatioValue ratio={tracker.ratio} requiredRatio={tracker.requiredRatio} />
-      </ListCell>
-      <ListCell label="Uploaded">{formatOptionalBytes(tracker.uploaded, tracker.byteUnitSystem)}</ListCell>
-      <ListCell label="Downloaded">{formatOptionalBytes(tracker.downloaded, tracker.byteUnitSystem)}</ListCell>
-      <ListCell label="Last sync">
-        <span title={tracker.lastSyncExact ?? undefined}>{tracker.lastSync ?? "Never"}</span>
-      </ListCell>
-      <div>
+      {/* On phones the values get a row of their own; from md up they are cells of the list's columns. */}
+      <div className="col-span-full grid grid-cols-2 gap-3 min-[480px]:grid-cols-4 md:contents">
+        <ListCell label="Ratio">
+          <RatioValue ratio={tracker.ratio} requiredRatio={tracker.requiredRatio} />
+        </ListCell>
+        <ListCell label="Uploaded">{formatOptionalBytes(tracker.uploaded, tracker.byteUnitSystem)}</ListCell>
+        <ListCell label="Downloaded">{formatOptionalBytes(tracker.downloaded, tracker.byteUnitSystem)}</ListCell>
+        <ListCell label="Last sync">
+          <span title={tracker.lastSyncExact ?? undefined}>{tracker.lastSync ?? "Never"}</span>
+        </ListCell>
+      </div>
+      <div className="col-span-2 md:col-span-1">
         <TrackerStatusBadge tracker={tracker} isSyncing={actions.isSyncing} />
       </div>
-      <TrackerActions
-        tracker={tracker}
-        actionsDisabled={actions.actionsDisabled}
-        isSyncing={actions.isSyncing}
-        isDeleting={actions.isDeleting}
-        onSync={actions.handleSync}
-        onDelete={actions.handleDelete}
-        compact
-      />
+      <div className="justify-self-end md:justify-self-start">
+        <TrackerActions
+          tracker={tracker}
+          actionsDisabled={actions.actionsDisabled}
+          isSyncing={actions.isSyncing}
+          isDeleting={actions.isDeleting}
+          onSync={actions.handleSync}
+          onDelete={actions.handleDelete}
+          compact
+        />
+      </div>
     </div>
   );
 }
