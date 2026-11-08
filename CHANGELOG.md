@@ -5,7 +5,7 @@ All notable changes to trackarr are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.3] - 2026-11-08
 
 ### Added
 
@@ -17,13 +17,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `<Data__Directory>/plugins/bases/` and ship in the image snapshot. A base update reaches every
   plugin that extends it, overrides and custom plugins included, and shows in What's New and in
   **Settings > About**. Custom plugins can extend the official bases too.
+- 45 more UNIT3D trackers in `trackarr-plugins`, built on its new `unit3d` base: the trackers
+  Prowlarr lists as unmodified UNIT3D 8.3.5 or later, such as Aither, Blutopia and ReelFLiX. They
+  have not been tested with an account yet. Fearnopeer, Seedpool and CapybaraBR move to the base.
 - `TrackerStats.PluginValidator` takes `--bases <folder>`, validates every base in it and resolves
   `extends` with them.
 
 ### Changed
 
 - Plugin schema version 2, needed by `extends` and by plugin bases. Plugins on schema version 1 keep
-  working unchanged. trackarr 0.5 and earlier keep the last schema 1 version of an official plugin
+  working unchanged. trackarr 0.5.2 and earlier keep the last schema 1 version of an official plugin
   that moves to schema 2, and ignore the bases.
 - The Help page no longer explains how to edit plugins or the YAML format, and the new plugin
   template has no comments: both link to the [wiki](https://github.com/leandrobattochio/trackarr/wiki)
@@ -165,6 +168,7 @@ Integrations, their settings and their snapshot history are kept.
 - When two files declared the same plugin id, the editor and the runtime used different files.
 - Saving a plugin in the editor rewrote the YAML and dropped its comments.
 
+[0.5.3]: https://github.com/leandrobattochio/trackarr/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/leandrobattochio/trackarr/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/leandrobattochio/trackarr/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/leandrobattochio/trackarr/compare/v0.4.0...v0.5.0
