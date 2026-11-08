@@ -71,7 +71,7 @@ There is no plugin migration and no backup. To get a custom plugin back:
 
 To bring back an edit you made to an official plugin, open the official plugin, apply the change and **Save**: trackarr
 keeps it as an override and warns you when a newer official version is released. See
-[Plugins](../README.md#plugins) in the README.
+[Plugins](https://github.com/leandrobattochio/trackarr/wiki/Plugins) in the wiki.
 
 Plugins are now changed only in the UI. Editing the files under `<Data__Directory>/plugins` by hand is not supported.
 
