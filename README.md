@@ -67,7 +67,7 @@ TrackArr runs as a single container and keeps its data in a SQLite file in the d
 ```yaml
 services:
   trackarr:
-    image: ghcr.io/leandrobattochio/trackarr:v0.5.0
+    image: ghcr.io/leandrobattochio/trackarr:v0.5.1
     container_name: trackarr
     restart: unless-stopped
     ports:
