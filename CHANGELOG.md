@@ -5,7 +5,7 @@ All notable changes to trackarr are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - Unreleased
+## [0.5.0] - 2026-11-08
 
 trackarr now runs as a single container: SQLite is the default database, and PostgreSQL is
 optional. This is not a breaking change for existing installs: if you set
@@ -35,7 +35,8 @@ and finds your data.
   you to create it, or to remove the setting to use SQLite. Tables inside an existing database are
   still created.
 - When PostgreSQL cannot be reached, startup retries 3 times, 5 seconds apart, then stops with a
-  clear message. Other PostgreSQL errors stop startup at once.
+  clear message; during those retries any PostgreSQL error is retried, since a server that is
+  still starting refuses connections for a moment. Other PostgreSQL errors stop startup at once.
 - A corrupt `trackarr.db` stops startup with a message saying to restore it from a backup or
   delete it.
 
