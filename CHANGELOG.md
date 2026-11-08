@@ -52,6 +52,8 @@ Integrations, their settings and their snapshot history are kept.
 
 - The frontend is built with pnpm instead of yarn, and its dependencies are updated to clear the
   audit warnings.
+- `Microsoft.AspNetCore.OpenApi` is updated to 10.0.14, which pulls a `Microsoft.OpenApi` without
+  the circular-reference parsing vulnerability (GHSA-v5pm-xwqc-g5wc).
 
 ### Fixed
 
