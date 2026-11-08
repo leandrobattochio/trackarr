@@ -80,7 +80,7 @@ public sealed class ProviderMigrationsTests : IDisposable
         using var db = new SqliteAppDbContextFactory().CreateDbContext([]);
 
         db.Database.HasPendingModelChanges().ShouldBeFalse(
-            "Add a migration: dotnet ef migrations add <Name> --context SqliteAppDbContext (see README, Local development).");
+            "Add a migration: dotnet ef migrations add <Name> --context SqliteAppDbContext (see the Development page of the wiki).");
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public sealed class ProviderMigrationsTests : IDisposable
         using var db = new PostgresAppDbContextFactory().CreateDbContext([]);
 
         db.Database.HasPendingModelChanges().ShouldBeFalse(
-            "Add a migration: dotnet ef migrations add <Name> --context PostgresAppDbContext (see README, Local development).");
+            "Add a migration: dotnet ef migrations add <Name> --context PostgresAppDbContext (see the Development page of the wiki).");
     }
 
     public void Dispose()

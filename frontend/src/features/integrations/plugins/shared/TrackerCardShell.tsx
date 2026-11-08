@@ -26,18 +26,20 @@ export function TrackerCardShell({ tracker, metrics, ratio, reorderControls }: T
           : ""
       }`}
     >
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <CardHeader className="p-4 pb-3 sm:p-6 sm:pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <TrackerDragHandle trackerName={tracker.name} />
             {reorderControls}
             <TrackerIdentity tracker={tracker} titleTestId="tracker-card-title" />
           </div>
-          <TrackerStatusBadge tracker={tracker} isSyncing={actions.isSyncing} />
+          <div className="shrink-0">
+            <TrackerStatusBadge tracker={tracker} isSyncing={actions.isSyncing} />
+          </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
         <div>{ratio}</div>
 
         {metrics}

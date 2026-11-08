@@ -87,8 +87,8 @@ function renderMetricTile(metric: ApiDashboardMetric, tracker: TrackerIntegratio
 function resolveGridClassName(metricCount: number) {
   if (metricCount <= 1) return "grid grid-cols-1 gap-3";
   if (metricCount === 2) return "grid grid-cols-2 gap-3";
-  if (metricCount <= 3) return "grid grid-cols-3 gap-3";
-  return "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5";
+  // Follows the card's width: one card per row below md, two from md, three from xl.
+  return "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-2 2xl:grid-cols-3";
 }
 
 function resolveNumberMetricValue(tracker: TrackerIntegration, stat: ApiDashboardMetric["stat"]) {
