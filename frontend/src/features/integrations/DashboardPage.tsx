@@ -1,14 +1,22 @@
-import { useMemo } from "react";
-import { ArrowDown, ArrowUp, Loader2, AlertCircle } from "lucide-react";
+import { useMemo, type ComponentType } from "react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
-import { TrackerCard } from "@/features/integrations/components/TrackerCard";
 import { StatsOverview } from "@/features/integrations/components/StatsOverview";
 import { AddIntegrationDialog } from "@/features/integrations/components/AddIntegrationDialog";
+import { DashboardViewToggle } from "@/features/integrations/components/DashboardViewToggle";
+import { TrackerCardGrid } from "@/features/integrations/components/TrackerCardGrid";
+import { TrackerList } from "@/features/integrations/components/TrackerList";
+import type { TrackerCollectionProps } from "@/features/integrations/components/tracker-collection";
 import { useDashboardCardOrder } from "@/features/integrations/dashboard-order";
+import { useDashboardViewMode, type DashboardViewMode } from "@/features/integrations/dashboard-view-mode";
 import { useIntegrations, usePlugins } from "@/features/integrations/hooks";
 import { mapIntegration } from "@/features/integrations/types";
 import { usePageTitle } from "@/shared/hooks/use-page-title";
-import { Button } from "@/components/ui/button";
+
+const TRACKER_VIEWS: Record<DashboardViewMode, ComponentType<TrackerCollectionProps>> = {
+  cards: TrackerCardGrid,
+  list: TrackerList,
+};
 
 const DashboardPage = () => {
   usePageTitle("TrackArr | Dashboard");
@@ -22,28 +30,24 @@ const DashboardPage = () => {
   );
 
   const addedPluginIds = integrations.map((i) => i.pluginId);
-  const {
-    orderedIntegrations,
-    draggedCardId,
-    dropTargetCardId,
-    handleCardDragStart,
-    handleCardDragOver,
-    handleCardDrop,
-    handleCardDragEnd,
-    moveCard,
-  } = useDashboardCardOrder(integrations);
+  const order = useDashboardCardOrder(integrations);
+  const [viewMode, setViewMode] = useDashboardViewMode();
+  const TrackerView = TRACKER_VIEWS[viewMode];
 
   const isLoading = intLoading || pluginsLoading;
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="font-display text-2xl font-bold">Dashboard</h1>
             <p className="text-sm text-muted-foreground">Monitor your private tracker ratios</p>
           </div>
-          <AddIntegrationDialog addedPluginIds={addedPluginIds} />
+          <div className="flex items-center gap-2">
+            <DashboardViewToggle value={viewMode} onChange={setViewMode} />
+            <AddIntegrationDialog addedPluginIds={addedPluginIds} />
+          </div>
         </div>
 
         {isLoading && (
@@ -68,83 +72,7 @@ const DashboardPage = () => {
                 No integrations yet. Add a tracker to get started.
               </p>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="dashboard-cards-grid">
-                {orderedIntegrations.map((tracker, index) => (
-                  <div
-                    key={tracker.id}
-                    draggable
-                    data-testid="tracker-card"
-                    data-tracker-id={tracker.id}
-                    data-plugin-id={tracker.pluginId}
-                    onDragStart={(event) => {
-                      event.dataTransfer.effectAllowed = "move";
-                      event.dataTransfer.setData("text/plain", tracker.id);
-                      handleCardDragStart(tracker.id);
-                    }}
-                    onDragOver={(event) => handleCardDragOver(event, tracker.id)}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      handleCardDrop(tracker.id, event.dataTransfer.getData("text/plain"));
-                    }}
-                    onDragEnd={handleCardDragEnd}
-                    className={[
-                      "group relative transition-transform duration-200 ease-out",
-                      draggedCardId === tracker.id
-                        ? "tracker-card-dragging z-20 cursor-grabbing"
-                        : "cursor-grab",
-                      dropTargetCardId === tracker.id
-                        ? "tracker-card-drop-target"
-                        : "",
-                    ].join(" ")}
-                  >
-                    <TrackerCard
-                      tracker={tracker}
-                      reorderControls={(
-                        <div className="flex items-center gap-1" data-testid="tracker-card-reorder-controls">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            aria-label={`Move ${tracker.name} up`}
-                            data-testid="tracker-card-move-up"
-                            disabled={index === 0}
-                            onMouseDown={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                            }}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              moveCard(tracker.id, -1);
-                            }}
-                          >
-                            <ArrowUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            aria-label={`Move ${tracker.name} down`}
-                            data-testid="tracker-card-move-down"
-                            disabled={index === orderedIntegrations.length - 1}
-                            onMouseDown={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                            }}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              moveCard(tracker.id, 1);
-                            }}
-                          >
-                            <ArrowDown className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    />
-                  </div>
-                ))}
-              </div>
+              <TrackerView order={order} />
             )}
           </>
         )}

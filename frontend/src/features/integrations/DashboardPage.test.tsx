@@ -1,13 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DASHBOARD_VIEW_MODE_STORAGE_KEY } from "@/features/integrations/dashboard-view-mode";
+import type { DashboardViewMode } from "@/features/integrations/dashboard-view-mode";
+import type { TrackerCollectionProps } from "@/features/integrations/components/tracker-collection";
 
 const pageTitleSpy = vi.fn();
-const mapIntegrationSpy = vi.fn();
-const moveCardSpy = vi.fn();
-const dragStartSpy = vi.fn();
-const dragOverSpy = vi.fn();
-const dropSpy = vi.fn();
-const dragEndSpy = vi.fn();
 
 const integrationsQuery = {
   data: [] as unknown[],
@@ -20,43 +17,41 @@ const pluginsQuery = {
   isLoading: false,
 };
 
-const orderState = {
-  orderedIntegrations: [] as unknown[],
-  draggedCardId: null as string | null,
-  dropTargetCardId: null as string | null,
-  handleCardDragStart: (id: string) => dragStartSpy(id),
-  handleCardDragOver: (event: unknown, id: string) => dragOverSpy(event, id),
-  handleCardDrop: (targetId: string, sourceId?: string) => dropSpy(targetId, sourceId),
-  handleCardDragEnd: () => dragEndSpy(),
-  moveCard: (id: string, direction: -1 | 1) => moveCardSpy(id, direction),
-};
+const orderState = { orderedIntegrations: [] as unknown[] };
 
 vi.mock("lucide-react", () => ({
-  ArrowDown: () => <svg data-testid="icon-down" />,
-  ArrowUp: () => <svg data-testid="icon-up" />,
   Loader2: () => <svg data-testid="icon-loader" />,
   AlertCircle: () => <svg data-testid="icon-alert-circle" />,
 }));
 
 vi.mock("@/layouts/DashboardLayout", () => ({
-  DashboardLayout: ({ children }: unknown) => <div data-testid="dashboard-layout">{children}</div>,
+  DashboardLayout: ({ children }: { children: React.ReactNode }) => <div data-testid="dashboard-layout">{children}</div>,
 }));
 
-vi.mock("@/features/integrations/components/TrackerCard", () => ({
-  TrackerCard: ({ tracker, reorderControls }: unknown) => (
-    <div data-testid="tracker-card-inner">
-      <span>{tracker.name}</span>
-      {reorderControls}
+vi.mock("@/features/integrations/components/TrackerCardGrid", () => ({
+  TrackerCardGrid: ({ order }: TrackerCollectionProps) => <div>{`cards:${order.orderedIntegrations.length}`}</div>,
+}));
+
+vi.mock("@/features/integrations/components/TrackerList", () => ({
+  TrackerList: ({ order }: TrackerCollectionProps) => <div>{`list:${order.orderedIntegrations.length}`}</div>,
+}));
+
+vi.mock("@/features/integrations/components/DashboardViewToggle", () => ({
+  DashboardViewToggle: ({ value, onChange }: { value: DashboardViewMode; onChange: (mode: DashboardViewMode) => void }) => (
+    <div>
+      <span>{`view:${value}`}</span>
+      <button type="button" onClick={() => onChange("list")}>show-list</button>
+      <button type="button" onClick={() => onChange("cards")}>show-cards</button>
     </div>
   ),
 }));
 
 vi.mock("@/features/integrations/components/StatsOverview", () => ({
-  StatsOverview: ({ integrations }: unknown) => <div>{`stats-count:${integrations.length}`}</div>,
+  StatsOverview: ({ integrations }: { integrations: unknown[] }) => <div>{`stats-count:${integrations.length}`}</div>,
 }));
 
 vi.mock("@/features/integrations/components/AddIntegrationDialog", () => ({
-  AddIntegrationDialog: ({ addedPluginIds }: unknown) => <div>{`add-dialog:${addedPluginIds.join(",")}`}</div>,
+  AddIntegrationDialog: ({ addedPluginIds }: { addedPluginIds: string[] }) => <div>{`add-dialog:${addedPluginIds.join(",")}`}</div>,
 }));
 
 vi.mock("@/features/integrations/dashboard-order", () => ({
@@ -69,30 +64,32 @@ vi.mock("@/features/integrations/hooks", () => ({
 }));
 
 vi.mock("@/features/integrations/types", () => ({
-  mapIntegration: (...args: unknown[]) => mapIntegrationSpy(...args),
+  mapIntegration: (raw: { id: string; pluginId: string }) => ({ id: raw.id, pluginId: raw.pluginId, name: raw.id }),
 }));
 
 vi.mock("@/shared/hooks/use-page-title", () => ({
   usePageTitle: (...args: unknown[]) => pageTitleSpy(...args),
 }));
 
-vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, onMouseDown, disabled, ...props }: unknown) => (
-    <button type="button" onClick={onClick} onMouseDown={onMouseDown} disabled={disabled} {...props}>
-      {children}
-    </button>
-  ),
-}));
-
 import DashboardPage from "@/features/integrations/DashboardPage";
 
+function withIntegrations() {
+  integrationsQuery.data = [{ id: "int-1", pluginId: "p1" }, { id: "int-2", pluginId: "p2" }];
+  orderState.orderedIntegrations = integrationsQuery.data;
+}
+
 describe("DashboardPage", () => {
-  it("renders loading and error states", () => {
+  afterEach(() => {
+    window.localStorage.clear();
     integrationsQuery.data = [];
-    integrationsQuery.isLoading = true;
+    integrationsQuery.isLoading = false;
     integrationsQuery.error = null;
     pluginsQuery.isLoading = false;
     orderState.orderedIntegrations = [];
+  });
+
+  it("renders loading and error states", () => {
+    integrationsQuery.isLoading = true;
 
     const { rerender } = render(<DashboardPage />);
     expect(pageTitleSpy).toHaveBeenCalledWith("TrackArr | Dashboard");
@@ -105,74 +102,40 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Failed to load integrations: api down")).toBeInTheDocument();
   });
 
-  it("renders empty dashboard state when no integrations exist", () => {
-    integrationsQuery.data = [];
-    integrationsQuery.isLoading = false;
-    integrationsQuery.error = null;
-    pluginsQuery.data = [];
-    pluginsQuery.isLoading = false;
-    orderState.orderedIntegrations = [];
-
+  it("renders the empty state when no integrations exist", () => {
     render(<DashboardPage />);
 
     expect(screen.getByText("No integrations yet. Add a tracker to get started.")).toBeInTheDocument();
     expect(screen.getByText("stats-count:0")).toBeInTheDocument();
     expect(screen.getByText("add-dialog:")).toBeInTheDocument();
+    expect(screen.queryByText(/^cards:/)).not.toBeInTheDocument();
   });
 
-  it("renders ordered cards and handles drag/drop and move controls", () => {
-    integrationsQuery.data = [{ id: "int-1", pluginId: "p1" }, { id: "int-2", pluginId: "p2" }];
-    integrationsQuery.error = null;
-    integrationsQuery.isLoading = false;
-    pluginsQuery.data = [{ pluginId: "p1" }, { pluginId: "p2" }];
-    pluginsQuery.isLoading = false;
-
-    mapIntegrationSpy.mockImplementation((raw: unknown) => ({
-      id: raw.id,
-      pluginId: raw.pluginId,
-      name: raw.id === "int-1" ? "First Tracker" : "Second Tracker",
-    }));
-
-    orderState.orderedIntegrations = [
-      { id: "int-1", pluginId: "p1", name: "First Tracker" },
-      { id: "int-2", pluginId: "p2", name: "Second Tracker" },
-    ];
-    orderState.draggedCardId = "int-1";
-    orderState.dropTargetCardId = "int-2";
+  it("shows the trackers as cards by default", () => {
+    withIntegrations();
 
     render(<DashboardPage />);
 
-    expect(screen.getByTestId("dashboard-cards-grid")).toBeInTheDocument();
-    expect(screen.getAllByTestId("tracker-card")).toHaveLength(2);
+    expect(screen.getByText("view:cards")).toBeInTheDocument();
+    expect(screen.getByText("cards:2")).toBeInTheDocument();
     expect(screen.getByText("add-dialog:p1,p2")).toBeInTheDocument();
-    expect(screen.getByLabelText("Move First Tracker up")).toBeDisabled();
-    expect(screen.getByLabelText("Move Second Tracker down")).toBeDisabled();
+  });
 
-    const card = screen.getAllByTestId("tracker-card")[0];
-    const fakeDataTransfer = {
-      effectAllowed: "",
-      dropEffect: "",
-      setData: vi.fn(),
-      getData: vi.fn(() => "int-1"),
-    };
+  it("switches between cards and list, and remembers the choice", () => {
+    withIntegrations();
 
-    fireEvent.dragStart(card, { dataTransfer: fakeDataTransfer });
-    fireEvent.dragOver(card, { dataTransfer: fakeDataTransfer });
-    fireEvent.drop(card, { dataTransfer: fakeDataTransfer });
-    fireEvent.dragEnd(card);
+    const { unmount } = render(<DashboardPage />);
+    fireEvent.click(screen.getByText("show-list"));
 
-    fireEvent.mouseDown(screen.getByLabelText("Move Second Tracker up"));
-    fireEvent.mouseDown(screen.getByLabelText("Move First Tracker down"));
-    fireEvent.click(screen.getByLabelText("Move Second Tracker up"));
-    fireEvent.click(screen.getByLabelText("Move First Tracker down"));
+    expect(screen.getByText("list:2")).toBeInTheDocument();
+    expect(screen.queryByText("cards:2")).not.toBeInTheDocument();
+    expect(window.localStorage.getItem(DASHBOARD_VIEW_MODE_STORAGE_KEY)).toBe(JSON.stringify("list"));
 
-    expect(fakeDataTransfer.setData).toHaveBeenCalledWith("text/plain", "int-1");
-    expect(dragStartSpy).toHaveBeenCalledWith("int-1");
-    expect(dragOverSpy).toHaveBeenCalled();
-    expect(dropSpy).toHaveBeenCalledWith("int-1", "int-1");
-    expect(dragEndSpy).toHaveBeenCalled();
-    expect(moveCardSpy).toHaveBeenCalledWith("int-2", -1);
-    expect(moveCardSpy).toHaveBeenCalledWith("int-1", 1);
+    unmount();
+    render(<DashboardPage />);
+    expect(screen.getByText("view:list")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("show-cards"));
+    expect(screen.getByText("cards:2")).toBeInTheDocument();
   });
 });
-

@@ -1,36 +1,15 @@
 import { useEffect, useMemo, useState, type DragEvent } from "react";
 import type { TrackerIntegration } from "@/features/integrations/types";
+import { readLocalStorage, writeLocalStorage } from "@/shared/lib/local-storage";
 
 export const DASHBOARD_CARD_ORDER_STORAGE_KEY = "trackarr.dashboard.card-order";
 
-function readStoredCardOrder() {
-  /* c8 ignore next 2 */
-  if (typeof window === "undefined")
-    return [];
-
-  try {
-    const rawValue = window.localStorage.getItem(DASHBOARD_CARD_ORDER_STORAGE_KEY);
-    if (!rawValue)
-      return [];
-
-    const parsed = JSON.parse(rawValue);
-    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : [];
-  } catch {
-    return [];
-  }
+function parseStoredCardOrder(value: unknown) {
+  return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : undefined;
 }
 
-function writeStoredCardOrder(order: string[]) {
-  /* c8 ignore next 2 */
-  if (typeof window === "undefined")
-    return;
-
-  try {
-    window.localStorage.setItem(DASHBOARD_CARD_ORDER_STORAGE_KEY, JSON.stringify(order));
-  } catch (error) {
-    console.warn(`Failed to persist dashboard card order for ${DASHBOARD_CARD_ORDER_STORAGE_KEY}.`, error);
-    return;
-  }
+function readStoredCardOrder() {
+  return readLocalStorage(DASHBOARD_CARD_ORDER_STORAGE_KEY, parseStoredCardOrder) ?? [];
 }
 
 export function normalizeDashboardCardOrder(integrations: TrackerIntegration[], order: string[]) {
@@ -87,7 +66,7 @@ export function useDashboardCardOrder(integrations: TrackerIntegration[]) {
     if (integrations.length === 0)
       return;
 
-    writeStoredCardOrder(normalizeDashboardCardOrder(integrations, cardOrder));
+    writeLocalStorage(DASHBOARD_CARD_ORDER_STORAGE_KEY, normalizeDashboardCardOrder(integrations, cardOrder));
   }, [cardOrder, integrations]);
 
   const orderedIntegrations = useMemo(() => {
@@ -106,7 +85,7 @@ export function useDashboardCardOrder(integrations: TrackerIntegration[]) {
     setDropTargetCardId(null);
   }
 
-  function handleCardDragOver(event: DragEvent<HTMLDivElement>, targetCardId: string) {
+  function handleCardDragOver(event: DragEvent<HTMLElement>, targetCardId: string) {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
 
@@ -161,3 +140,5 @@ export function useDashboardCardOrder(integrations: TrackerIntegration[]) {
     moveCard,
   };
 }
+
+export type DashboardCardOrder = ReturnType<typeof useDashboardCardOrder>;
