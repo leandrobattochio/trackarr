@@ -75,7 +75,7 @@ describe("PluginTestButton", () => {
     expect(dialog).toHaveTextContent("Runs the YAML in the editor, saved or not");
     expect(dialog).toHaveTextContent("No snapshot is saved and the integration is not changed.");
     expect(within(dialog).getAllByRole("radio")).toHaveLength(1);
-    expect(within(dialog).getByRole("radio", { name: /seedpool\.org/ })).toBeChecked();
+    expect(within(dialog).getByRole("radio", { name: /^https:\/\/seedpool\.org\// })).toBeChecked();
     expect(dialog).not.toHaveTextContent("asc.example");
     expect(testMutation.reset).toHaveBeenCalled();
 
