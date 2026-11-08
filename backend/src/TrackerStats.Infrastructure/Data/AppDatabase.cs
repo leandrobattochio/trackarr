@@ -41,7 +41,7 @@ public sealed class AppDatabase
             return new AppDatabase(DatabaseEngine.PostgreSql, postgresConnectionString, null);
 
         var dataDirectory = new PluginStorageLayout(configuration, hostEnvironment).DataDirectory;
-        var filePath = Path.Combine(dataDirectory, SqliteFileName);
+        var filePath = Path.Join(dataDirectory, SqliteFileName);
         var connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = filePath,
