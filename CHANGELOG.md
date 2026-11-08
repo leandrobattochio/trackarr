@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.5.5] - 2026-11-08
 
+### Added
+
+- Prometheus metrics at `GET /metrics`. Every tracker's latest stats are gauges labelled with the
+  tracker's name and plugin id: `trackarr_tracker_ratio`, `_required_ratio`, `_uploaded_bytes`,
+  `_downloaded_bytes`, `_buffer_bytes`, `_seed_bonus`, `_hit_and_runs`, `_seeding_torrents`,
+  `_leeching_torrents`, `_active_torrents` and `_last_sync_timestamp_seconds`, plus
+  `trackarr_tracker_last_sync_result{result}`. Buffer and seed bonus, stored as text, are converted
+  to numbers. A stat the tracker did not report is left out instead of written as 0.
+
 ### Fixed
 
 - The `decimal` and `bytesize` transforms read English thousands separators. `84,500.25` was read

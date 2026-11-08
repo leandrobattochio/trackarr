@@ -227,7 +227,7 @@ public class IntegrationsController(
             requiredRatio = i.RequiredRatio,
             lastSyncAt = NormalizeUtc(i.LastSyncAt),
             nextAutomaticSyncAt = NormalizeUtc(nextAutomaticSyncAt),
-            lastSyncResult = i.LastSyncResult is null ? null : ToSyncResult(i.LastSyncResult.Value),
+            lastSyncResult = i.LastSyncResult is null ? null : SyncResultNames.From(i.LastSyncResult.Value),
             configurationValid = validation.IsValid,
             configurationError = validation.Error,
             configurationErrorCode = validation.ErrorCode,
@@ -265,15 +265,6 @@ public class IntegrationsController(
 
         return requiredRatio;
     }
-
-    private static string ToSyncResult(PluginProcessResult result) =>
-        result switch
-        {
-            PluginProcessResult.Success => "success",
-            PluginProcessResult.AuthFailed => "authFailed",
-            PluginProcessResult.UnknownError => "unknownError",
-            _ => "unknownError"
-        };
 
     private static Dictionary<string, string?> ParsePayload(string payload)
     {

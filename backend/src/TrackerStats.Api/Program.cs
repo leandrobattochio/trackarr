@@ -4,6 +4,7 @@ using Hangfire;
 using Hangfire.Storage.SQLite;
 using Scalar.AspNetCore;
 using TrackerStats.Api.Controllers;
+using TrackerStats.Api.Metrics;
 using TrackerStats.Domain.Plugins;
 using TrackerStats.Domain.Plugins.Yaml;
 using TrackerStats.Domain.Repositories;
@@ -83,6 +84,7 @@ builder.Services.AddHttpClient(AppReleaseService.HttpClientName, client => clien
 builder.Services.AddSingleton<AppReleaseService>();
 builder.Services.AddHostedService<AppReleaseStartupCheckService>();
 builder.Services.AddScoped<WhatsNewService>();
+builder.Services.AddScoped<TrackerMetricsWriter>();
 builder.Services.AddSingleton<IYamlPluginDefinitionLoader, YamlPluginDefinitionLoader>();
 builder.Services.AddSingleton<ITrackerPluginRegistry, TrackerPluginRegistry>();
 

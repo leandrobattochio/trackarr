@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace TrackerStats.PluginEngine;
 
-internal static class NumericParser
+public static class NumericParser
 {
     public const string Infinity = "∞";
 
