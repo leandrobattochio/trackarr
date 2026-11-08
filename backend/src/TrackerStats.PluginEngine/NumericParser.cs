@@ -27,7 +27,12 @@ internal static class NumericParser
             else if (last == 'B') { multiplier = 1_000_000_000m; trimmed = trimmed[..^1]; }
         }
 
-        if (trimmed.Contains(','))
+        if (trimmed.Contains(',') && trimmed.LastIndexOf('.') > trimmed.LastIndexOf(','))
+        {
+            if (decimal.TryParse(trimmed.Replace(",", string.Empty), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsedDot))
+                return parsedDot * multiplier;
+        }
+        else if (trimmed.Contains(','))
         {
             var normalized = trimmed.Replace(".", string.Empty).Replace(",", ".");
             if (decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsedComma))

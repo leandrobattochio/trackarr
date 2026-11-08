@@ -5,6 +5,14 @@ All notable changes to trackarr are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2026-11-08
+
+### Fixed
+
+- The `decimal` and `bytesize` transforms read English thousands separators. `84,500.25` was read
+  as `84.50025` and `1,024.5 GiB` as about 1 GiB; when a value has both `,` and `.`, the last one
+  is now the decimal point. `1.234,56` and `1,5` read as before.
+
 ## [0.5.4] - 2026-11-08
 
 ### Fixed
@@ -176,6 +184,7 @@ Integrations, their settings and their snapshot history are kept.
 - When two files declared the same plugin id, the editor and the runtime used different files.
 - Saving a plugin in the editor rewrote the YAML and dropped its comments.
 
+[0.5.5]: https://github.com/leandrobattochio/trackarr/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/leandrobattochio/trackarr/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/leandrobattochio/trackarr/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/leandrobattochio/trackarr/compare/v0.5.1...v0.5.2

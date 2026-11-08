@@ -16,6 +16,30 @@ public class TransformStrategyTests
     }
 
     [Theory]
+    [InlineData("84,500.25", "84500.25")]
+    [InlineData("1,234,567.5", "1234567.5")]
+    [InlineData("1.234.567,5", "1234567.5")]
+    [InlineData("1,5", "1.5")]
+    public void DecimalTransform_should_treat_the_last_separator_as_the_decimal_point(string input, string expected)
+    {
+        var strategy = new DecimalTransformStrategy();
+
+        var result = strategy.Transform(input);
+
+        result.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void ByteSizeTransform_should_accept_thousands_separators()
+    {
+        var strategy = new ByteSizeTransformStrategy();
+
+        var result = strategy.Transform("1,024.5 GiB");
+
+        result.ShouldBe("1100048498688");
+    }
+
+    [Theory]
     [InlineData("∞")]
     [InlineData("Inf")]
     [InlineData(" infinity ")]
