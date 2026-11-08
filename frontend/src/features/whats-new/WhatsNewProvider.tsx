@@ -14,7 +14,12 @@ export function WhatsNewProvider({ children }: { children: ReactNode }) {
     if (next) return;
     setOpenedFromMenu(false);
     setAutoOpenDismissed(true);
-    if (report) markRead.mutate(Math.max(0, ...report.pluginUpdates.map((update) => update.id)));
+    if (report) {
+      markRead.mutate({
+        pluginChangeId: Math.max(0, ...report.pluginUpdates.map((update) => update.id)),
+        appVersion: report.app.installedVersion,
+      });
+    }
   };
 
   return (

@@ -3,9 +3,10 @@ import type { ApiWhatsNew } from "@/features/whats-new/types";
 
 export const whatsNewApi = {
   get: () => request<ApiWhatsNew>("/whats-new"),
-  markRead: (pluginChangeId?: number) =>
+  // appVersion is the installed version of the report shown, so a release installed while it was open stays unread.
+  markRead: (seen?: { pluginChangeId: number; appVersion: string }) =>
     request<void>("/whats-new/read", {
       method: "POST",
-      ...(pluginChangeId === undefined ? {} : { body: JSON.stringify({ pluginChangeId }) }),
+      ...(seen === undefined ? {} : { body: JSON.stringify(seen) }),
     }),
 };

@@ -19,15 +19,15 @@ describe("whatsNewApi", () => {
     });
   });
 
-  it("marks the plugin updates up to the one shown as read", async () => {
+  it("marks the plugin updates and the app version shown as read", async () => {
     vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
 
-    await whatsNewApi.markRead(7);
+    await whatsNewApi.markRead({ pluginChangeId: 7, appVersion: "0.5.2" });
 
     expect(fetch).toHaveBeenCalledWith("/api/whats-new/read", {
       headers: { "Content-Type": "application/json" },
       method: "POST",
-      body: JSON.stringify({ pluginChangeId: 7 }),
+      body: JSON.stringify({ pluginChangeId: 7, appVersion: "0.5.2" }),
     });
   });
 
