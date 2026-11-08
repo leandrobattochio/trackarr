@@ -13,4 +13,9 @@
     <ProjectReference Include="..\..\src\TrackerStats.Infrastructure\TrackerStats.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Hangfire pulls in 11.0.1, which has a known vulnerability. -->
+    <PackageReference Include="Newtonsoft.Json" />
+  </ItemGroup>
+
 </Project>
