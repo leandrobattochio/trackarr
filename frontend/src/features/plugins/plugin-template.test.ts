@@ -9,18 +9,15 @@ describe("NEW_PLUGIN_TEMPLATE", () => {
     expect(NEW_PLUGIN_TEMPLATE).toContain("schemaVersion: 1");
     expect(NEW_PLUGIN_TEMPLATE).toContain("baseUrls:");
     expect(NEW_PLUGIN_TEMPLATE).toContain("fields:");
-    expect(NEW_PLUGIN_TEMPLATE).toContain("customFields:");
-    expect(NEW_PLUGIN_TEMPLATE).toContain("authFailure:");
     expect(NEW_PLUGIN_TEMPLATE).toContain("steps:");
-    expect(NEW_PLUGIN_TEMPLATE).toContain("mapping:");
+    expect(NEW_PLUGIN_TEMPLATE).toContain('requiredRatio: "fields.required_ratio"');
     expect(NEW_PLUGIN_TEMPLATE).toContain("dashboard:");
   });
 
-  it("documents both JSON and HTML extraction examples", () => {
-    expect(NEW_PLUGIN_TEMPLATE).toContain('responseType: json');
-    expect(NEW_PLUGIN_TEMPLATE).toContain('path: data.ratio');
-    expect(NEW_PLUGIN_TEMPLATE).toContain('responseType: html');
-    expect(NEW_PLUGIN_TEMPLATE).toContain('countMatches: true');
-    expect(NEW_PLUGIN_TEMPLATE).toContain('requiredRatio: "fields.required_ratio"');
+  it("points to the wiki instead of explaining the format in comments", () => {
+    expect(NEW_PLUGIN_TEMPLATE.split("\n")[0]).toBe(
+      "# How to write a plugin: https://github.com/leandrobattochio/trackarr/wiki/Writing-a-Plugin",
+    );
+    expect(NEW_PLUGIN_TEMPLATE.match(/^\s*#/gm)).toHaveLength(1);
   });
 });

@@ -276,7 +276,7 @@ export default function ManagePluginsPage() {
                         <div className="space-y-1">
                           <p className="font-display text-sm font-semibold">New Plugin Draft</p>
                           <p className="text-sm text-muted-foreground">
-                            Start a custom plugin from a commented YAML template.
+                            Start a custom plugin from a YAML template.
                           </p>
                         </div>
                       </div>
