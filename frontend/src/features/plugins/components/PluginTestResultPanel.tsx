@@ -1,3 +1,4 @@
+import { isInfiniteRatio } from "@/features/integrations/ratio";
 import type { ApiIntegrationStats, ApiSyncResult } from "@/features/integrations/types";
 import type { ApiPluginTestResult } from "@/features/plugins/types";
 import { formatBytes } from "@/shared/lib/formatters";
@@ -35,8 +36,9 @@ function isSuccessStatus(statusCode: number) {
 export function PluginTestResultPanel({ result }: { result: ApiPluginTestResult }) {
   const outcome = OUTCOMES[result.outcome];
   const error = result.error !== result.failedField?.error ? result.error : null;
+  const infiniteRatio = result.stats !== null && isInfiniteRatio(result.stats.ratio, result.stats.downloadedBytes);
   const stats = (Object.keys(STAT_LABELS) as (keyof ApiIntegrationStats)[]).flatMap((key) => {
-    const value = result.stats?.[key];
+    const value = key === "ratio" && infiniteRatio ? "∞" : result.stats?.[key];
     return value === null || value === undefined ? [] : [{ key, value }];
   });
 

@@ -17,6 +17,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   be deleted. Like Sonarr, SOCKS4 resolves the tracker's host name locally, while SOCKS5 lets the
   proxy resolve it.
 
+### Fixed
+
+- A tracker that reports an infinite ratio (`∞`, `inf` or `infinity`), as MyAnonamouse does before
+  an account's first download, no longer fails the sync. The `decimal` transform keeps the value,
+  and the dashboard, the list and the plugin Test show the ratio as ∞.
+
 ## [0.5.1] - 2026-11-08
 
 ### Added

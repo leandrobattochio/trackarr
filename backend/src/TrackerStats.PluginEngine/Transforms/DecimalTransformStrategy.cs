@@ -9,5 +9,7 @@ public class DecimalTransformStrategy : ITransformStrategy
         transformName.Equals("decimal", StringComparison.OrdinalIgnoreCase);
 
     public string Transform(string value) =>
-        NumericParser.ParseDecimal(value).ToString(CultureInfo.InvariantCulture);
+        NumericParser.IsInfinity(value)
+            ? NumericParser.Infinity
+            : NumericParser.ParseDecimal(value).ToString(CultureInfo.InvariantCulture);
 }

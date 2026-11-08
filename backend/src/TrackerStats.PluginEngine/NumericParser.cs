@@ -4,6 +4,16 @@ namespace TrackerStats.PluginEngine;
 
 internal static class NumericParser
 {
+    public const string Infinity = "∞";
+
+    public static bool IsInfinity(string value)
+    {
+        var trimmed = value.Trim();
+        return trimmed == Infinity
+            || trimmed.Equals("inf", StringComparison.OrdinalIgnoreCase)
+            || trimmed.Equals("infinity", StringComparison.OrdinalIgnoreCase);
+    }
+
     public static decimal ParseDecimal(string value)
     {
         var trimmed = value.Trim();

@@ -49,6 +49,37 @@ public class ResultMapperTests
     }
 
     [Fact]
+    public void BuildResult_should_map_an_infinite_ratio_to_no_ratio()
+    {
+        var definition = TestData.CreatePluginDefinition();
+        var configuration = new PluginConfiguration(new Dictionary<string, string?>
+        {
+            ["requiredRatio"] = "1",
+            ["bufferLabel"] = "VIP"
+        });
+        var stepResults = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["stats"] = new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ratio"] = "∞",
+                ["uploaded"] = "10737418240",
+                ["downloaded"] = "0",
+                ["seeding"] = "0",
+                ["leeching"] = "0",
+                ["bonus"] = "0",
+                ["hnr"] = "0"
+            }
+        };
+
+        var result = _sut.BuildResult(definition, configuration, stepResults);
+
+        result.Result.ShouldBe(PluginProcessResult.Success);
+        result.Stats.ShouldNotBeNull();
+        result.Stats.Ratio.ShouldBeNull();
+        result.Stats.DownloadedBytes.ShouldBe(0L);
+    }
+
+    [Fact]
     public void BuildResult_should_throw_when_mapping_is_missing()
     {
         var definition = TestData.CreatePluginDefinition();

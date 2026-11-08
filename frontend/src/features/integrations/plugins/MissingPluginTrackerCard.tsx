@@ -14,7 +14,7 @@ export function MissingPluginTrackerCard({ tracker, reorderControls }: MissingPl
     <TrackerCardShell
       tracker={tracker}
       reorderControls={reorderControls}
-      ratio={<RatioThresholdCard ratio={tracker.ratio} requiredRatio={tracker.requiredRatio} />}
+      ratio={<RatioThresholdCard ratio={tracker.ratio} requiredRatio={tracker.requiredRatio} downloaded={tracker.downloaded} />}
       metrics={(
         <div className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm">
           <div className="flex items-start gap-3">

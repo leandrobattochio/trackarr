@@ -34,7 +34,7 @@ export function ConfiguredTrackerCard({ tracker, reorderControls }: ConfiguredTr
     <TrackerCardShell
       tracker={tracker}
       reorderControls={reorderControls}
-      ratio={<RatioThresholdCard ratio={tracker.ratio} requiredRatio={tracker.requiredRatio} />}
+      ratio={<RatioThresholdCard ratio={tracker.ratio} requiredRatio={tracker.requiredRatio} downloaded={tracker.downloaded} />}
       metrics={(
         <div className={resolveGridClassName(metrics.length)}>
           {metrics.map((metric) => renderMetricTile(metric, tracker))}
