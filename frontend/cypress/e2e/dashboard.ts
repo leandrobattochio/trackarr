@@ -1,6 +1,14 @@
 import { Given, Then, When } from "@badeball/cypress-cucumber-preprocessor";
 
 const DASHBOARD_CARD_ORDER_STORAGE_KEY = "trackarr.dashboard.card-order";
+const DASHBOARD_VIEW_MODE_STORAGE_KEY = "trackarr.dashboard.view-mode";
+
+const TRACKER_ITEMS = {
+  card: { container: "dashboard-cards-grid", item: "tracker-card", title: "tracker-card-title" },
+  row: { container: "dashboard-list", item: "tracker-row", title: "tracker-row-title" },
+} as const;
+
+type TrackerItemKind = keyof typeof TRACKER_ITEMS;
 
 function createIntegration(pluginId: string, payload: Record<string, string>) {
   cy.request("POST", `${Cypress.env("apiUrl")}/api/integrations`, {
@@ -23,6 +31,7 @@ Given("I open the dashboard", () => {
   cy.visit("/", {
     onBeforeLoad(window) {
       window.localStorage.removeItem(DASHBOARD_CARD_ORDER_STORAGE_KEY);
+      window.localStorage.removeItem(DASHBOARD_VIEW_MODE_STORAGE_KEY);
     },
   });
   cy.contains("Dashboard").should("be.visible");
@@ -70,65 +79,84 @@ Then("I should see the Seedpool integration on the dashboard", () => {
   cy.contains("No integrations yet. Add a tracker to get started.").should("not.exist");
 });
 
-Then("the dashboard cards should be ordered as {string}", (expectedOrder: string) => {
-  const expectedTitles = expectedOrder.split(",").map((title) => title.trim());
+function expectTrackerOrder(kind: TrackerItemKind, expectedOrder: string) {
+  const { container, title } = TRACKER_ITEMS[kind];
+  const expectedTitles = expectedOrder.split(",").map((name) => name.trim());
 
-  cy.get('[data-testid="dashboard-cards-grid"] [data-testid="tracker-card-title"]')
+  cy.get(`[data-testid="${container}"] [data-testid="${title}"]`)
     .should(($titles) => {
-      expect([...$titles].map((title) => title.textContent?.trim() ?? "")).to.deep.equal(expectedTitles);
+      expect([...$titles].map((element) => element.textContent?.trim() ?? "")).to.deep.equal(expectedTitles);
     });
-});
+}
 
-When("I drag the {string} card onto the {string} card", (sourceTitle: string, targetTitle: string) => {
-  cy.contains('[data-testid="tracker-card"]', sourceTitle)
+function dragTracker(kind: TrackerItemKind, sourceTitle: string, targetTitle: string) {
+  const itemSelector = `[data-testid="${TRACKER_ITEMS[kind].item}"]`;
+
+  cy.contains(itemSelector, sourceTitle)
     .should("exist")
-    .then(($sourceCard) => {
-      const sourceCard = $sourceCard[0];
+    .then(($source) => {
+      const source = $source[0];
 
-      if (!sourceCard)
-        throw new Error(`Expected to find source card for ${sourceTitle}.`);
+      if (!source)
+        throw new Error(`Expected to find the ${kind} for ${sourceTitle}.`);
 
-      const sourceCardId = sourceCard.getAttribute("data-tracker-id");
-      expect(sourceCardId, `data-tracker-id for ${sourceTitle}`).to.be.a("string").and.not.equal("");
+      const sourceId = source.getAttribute("data-tracker-id");
+      expect(sourceId, `data-tracker-id for ${sourceTitle}`).to.be.a("string").and.not.equal("");
 
-      if (!sourceCardId)
-        throw new Error(`Expected source card ${sourceTitle} to have a data-tracker-id attribute.`);
+      if (!sourceId)
+        throw new Error(`Expected the ${kind} for ${sourceTitle} to have a data-tracker-id attribute.`);
 
-      cy.contains('[data-testid="tracker-card"]', targetTitle)
+      cy.contains(itemSelector, targetTitle)
         .should("exist")
-        .then(($targetCard) => {
-          const targetCard = $targetCard[0];
+        .then(($target) => {
+          const target = $target[0];
 
-          if (!targetCard)
-            throw new Error(`Expected to find target card for ${targetTitle}.`);
+          if (!target)
+            throw new Error(`Expected to find the ${kind} for ${targetTitle}.`);
 
           cy.window().then((window) => {
             const dataTransfer = new window.DataTransfer();
-            dataTransfer.setData("text/plain", sourceCardId);
+            dataTransfer.setData("text/plain", sourceId);
+            const dispatch = (element: Element, type: string) =>
+              element.dispatchEvent(new window.DragEvent(type, { bubbles: true, cancelable: true, dataTransfer }));
 
-            sourceCard.dispatchEvent(new window.DragEvent("dragstart", {
-              bubbles: true,
-              cancelable: true,
-              dataTransfer,
-            }));
-            targetCard.dispatchEvent(new window.DragEvent("dragover", {
-              bubbles: true,
-              cancelable: true,
-              dataTransfer,
-            }));
-            targetCard.dispatchEvent(new window.DragEvent("drop", {
-              bubbles: true,
-              cancelable: true,
-              dataTransfer,
-            }));
-            sourceCard.dispatchEvent(new window.DragEvent("dragend", {
-              bubbles: true,
-              cancelable: true,
-              dataTransfer,
-            }));
+            dispatch(source, "dragstart");
+            dispatch(target, "dragover");
+            dispatch(target, "drop");
+            dispatch(source, "dragend");
           });
         });
     });
+}
+
+Then("the dashboard cards should be ordered as {string}", (expectedOrder: string) => {
+  expectTrackerOrder("card", expectedOrder);
+});
+
+Then("the dashboard rows should be ordered as {string}", (expectedOrder: string) => {
+  expectTrackerOrder("row", expectedOrder);
+});
+
+When("I drag the {string} card onto the {string} card", (sourceTitle: string, targetTitle: string) => {
+  dragTracker("card", sourceTitle, targetTitle);
+});
+
+When("I drag the {string} row onto the {string} row", (sourceTitle: string, targetTitle: string) => {
+  dragTracker("row", sourceTitle, targetTitle);
+});
+
+When("I switch the dashboard to the {word} view", (mode: string) => {
+  cy.get(`[data-testid="dashboard-view-${mode}"]`).click();
+});
+
+Then("the dashboard should show the trackers as cards", () => {
+  cy.get('[data-testid="dashboard-cards-grid"]').should("be.visible");
+  cy.get('[data-testid="dashboard-list"]').should("not.exist");
+});
+
+Then("the dashboard should show the trackers as a list", () => {
+  cy.get('[data-testid="dashboard-list"]').should("be.visible");
+  cy.get('[data-testid="dashboard-cards-grid"]').should("not.exist");
 });
 
 When("I reload the dashboard", () => {

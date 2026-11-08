@@ -1,13 +1,7 @@
 import { useEffect, useState } from "react";
 import { MetricTooltip } from "@/features/integrations/components/shared/MetricTooltip";
+import { getRatioColor } from "@/features/integrations/ratio";
 import { useAnimatedNumber } from "@/shared/hooks/use-animated-number";
-
-function getRatioColor(ratio: number): string {
-  if (ratio >= 2) return "text-success";
-  if (ratio >= 1) return "text-primary";
-  if (ratio >= 0.8) return "text-warning";
-  return "text-destructive";
-}
 
 function formatRatioDelta(ratio: number | null, requiredRatio: number | null): string {
   if (ratio === null || requiredRatio === null) return "Set a required ratio to compare against";
