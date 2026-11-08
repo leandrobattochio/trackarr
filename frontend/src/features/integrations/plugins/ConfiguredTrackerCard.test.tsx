@@ -104,7 +104,7 @@ describe("ConfiguredTrackerCard", () => {
     expect(screen.getByTestId("bytes-metric")).toHaveTextContent("Unknown|text-primary|null|decimal");
   });
 
-  it("covers grid layout branches for 1, 2, and 4+ metrics", () => {
+  it("covers grid layout branches for 1, 2, and 3+ metrics", () => {
     const { rerender } = render(
       <ConfiguredTrackerCard
         tracker={buildTracker([{ stat: "buffer", label: "Buffer", format: "text", icon: "coins", tone: "muted" }])}
@@ -136,7 +136,7 @@ describe("ConfiguredTrackerCard", () => {
       />,
     );
     metricsContainer = screen.getByTestId("metrics-slot").firstElementChild as HTMLElement;
-    expect(metricsContainer.className).toContain("xl:grid-cols-4");
+    expect(metricsContainer.className).toBe("grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-2 2xl:grid-cols-3");
   });
 
   it("formats text tiles for torrent counters and hit-and-runs", () => {
