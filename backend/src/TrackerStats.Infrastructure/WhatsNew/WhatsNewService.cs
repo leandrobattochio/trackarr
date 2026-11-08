@@ -52,18 +52,33 @@ public sealed class WhatsNewService(
     }
 
     /// <param name="seenPluginChangeId">Newest plugin update the reader was shown; null marks every update read.</param>
-    public async Task MarkReadAsync(long? seenPluginChangeId = null, CancellationToken cancellationToken = default)
+    /// <param name="seenAppVersion">Installed version of the report shown; null marks the installed version read.</param>
+    public async Task MarkReadAsync(
+        long? seenPluginChangeId = null,
+        string? seenAppVersion = null,
+        CancellationToken cancellationToken = default)
     {
         var read = await LoadAsync(cancellationToken);
-        var installed = releaseService.InstalledVersion;
-        if (IsAppUnread(installed, read.LastReadAppVersion))
-            read.LastReadAppVersion = installed;
+        var appVersion = GetReadAppVersion(releaseService.InstalledVersion, seenAppVersion);
+        if (IsAppUnread(appVersion, read.LastReadAppVersion))
+            read.LastReadAppVersion = appVersion;
         var lastUpdateId = stateStore.Load().LastUpdateId;
         read.LastReadPluginChangeId = seenPluginChangeId is { } seen
             ? Math.Max(GetLastReadChangeId(read, lastUpdateId), Math.Min(seen, lastUpdateId))
             : lastUpdateId;
         read.LastReadAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static string GetReadAppVersion(string installed, string? seen)
+    {
+        if (seen is null || !AppReleaseService.IsValidVersion(seen))
+            return installed;
+
+        var normalized = InstalledAppVersion.Normalize(seen);
+        return PluginSchema.IsSemanticVersion(installed) && PluginSchema.CompareVersions(normalized, installed) < 0
+            ? normalized
+            : installed;
     }
 
     // A stored id above the last issued one means state.json was reset, so its ids start over.

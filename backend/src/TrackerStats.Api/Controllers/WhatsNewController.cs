@@ -28,9 +28,9 @@ public sealed class WhatsNewController(WhatsNewService whatsNewService) : Contro
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] WhatsNewReadRequest? body,
         CancellationToken ct)
     {
-        await whatsNewService.MarkReadAsync(body?.PluginChangeId, ct);
+        await whatsNewService.MarkReadAsync(body?.PluginChangeId, body?.AppVersion, ct);
         return NoContent();
     }
 }
 
-public sealed record WhatsNewReadRequest(long? PluginChangeId);
+public sealed record WhatsNewReadRequest(long? PluginChangeId, string? AppVersion = null);

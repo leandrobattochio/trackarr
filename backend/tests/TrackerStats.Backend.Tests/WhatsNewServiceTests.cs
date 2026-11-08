@@ -141,6 +141,28 @@ public sealed class WhatsNewServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_report_shown_before_an_upgrade_should_not_mark_the_new_release_read()
+    {
+        await MarkReadAsync("0.4.0");
+
+        await using (var db = CreateDbContext())
+            await CreateService(db, "0.4.1").MarkReadAsync(seenAppVersion: "0.4.0");
+
+        var report = await GetAsync("0.4.1");
+        report.ShouldAutoOpen.ShouldBeTrue();
+        report.LastReadAppVersion.ShouldBe("0.4.0");
+        report.App.Releases.Select(release => release.Version).ShouldBe(["0.4.1"]);
+
+        await using (var db = CreateDbContext())
+            await CreateService(db, "0.4.1").MarkReadAsync(seenAppVersion: "0.4.1");
+        (await GetAsync("0.4.1")).LastReadAppVersion.ShouldBe("0.4.1");
+
+        await using (var db = CreateDbContext())
+            await CreateService(db, "0.4.1").MarkReadAsync(seenAppVersion: "9.9.9");
+        (await GetAsync("0.4.1")).LastReadAppVersion.ShouldBe("0.4.1", "never past the installed version");
+    }
+
+    [Fact]
     public async Task App_and_plugin_updates_should_open_with_both_sections()
     {
         await MarkReadAsync("0.4.0");

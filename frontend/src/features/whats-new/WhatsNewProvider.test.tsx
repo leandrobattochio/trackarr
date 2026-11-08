@@ -61,6 +61,7 @@ describe("WhatsNewProvider", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(screen.queryByTestId("whats-new-dialog")).not.toBeInTheDocument();
     expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate.mock.calls[0][0]).toMatchObject({ appVersion: queryState.data?.app.installedVersion });
 
     // A stale report that still says shouldAutoOpen does not reopen it.
     rerender(
