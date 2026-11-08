@@ -2,9 +2,12 @@ import { Given, Then, When } from "@badeball/cypress-cucumber-preprocessor";
 
 const apiUrl = () => Cypress.env("apiUrl") as string;
 
+// Radix gives focus back to the trigger when the list closes; typing before that lands in the select.
 function pickOption(triggerTestId: string, option: string) {
   cy.get(`[data-testid="${triggerTestId}"]`).click();
   cy.contains('[role="option"]', option).click();
+  cy.get('[role="listbox"]').should("not.exist");
+  cy.focused().should("have.attr", "data-testid", triggerTestId);
 }
 
 function proxyRow(name: string) {
