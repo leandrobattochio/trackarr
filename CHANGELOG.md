@@ -5,7 +5,7 @@ All notable changes to trackarr are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2026-11-07
+## [0.4.0] - 2026-11-08
 
 **This release has breaking changes.** Read the
 [upgrade guide](https://github.com/leandrobattochio/trackarr/blob/main/docs/upgrade-0.4.md) before
@@ -13,8 +13,9 @@ upgrading from v0.3.
 
 ### Breaking changes
 
-- Every v0.3 plugin file is deleted on the first v0.4 boot, custom plugins included. There is no
-  migration and no backup: recreate your custom plugins after upgrading.
+- Every v0.3 plugin file (a YAML file with a top-level `pluginId` in the data folder or in
+  `templates/`) is deleted on the first v0.4 boot, custom plugins included. There is no migration
+  and no backup: recreate your custom plugins after upgrading.
 - `Plugins__Directory` is removed. Plugins now live under `<Data__Directory>/plugins`, in the
   `official/`, `overrides/` and `custom/` folders plus a `state.json` file.
 - An integration whose plugin no longer exists shows **Plugin not found**. Creating a custom plugin
@@ -47,8 +48,15 @@ Integrations, their settings and their snapshot history are kept.
 - The About tab shows the result of the last plugin download.
 - The engine logs the HTTP status of every non-2xx step response. Secrets are never logged.
 
+### Changed
+
+- The frontend is built with pnpm instead of yarn, and its dependencies are updated to clear the
+  audit warnings.
+
 ### Fixed
 
+- The Amigos Share Club plugin reads the stats from the rebuilt site. Its base URL is now
+  `https://amigos-share.club/`: edit an existing ASC integration to pick it.
 - A plugin id could be used to write files outside the plugins folder.
 - When two files declared the same plugin id, the editor and the runtime used different files.
 - Saving a plugin in the editor rewrote the YAML and dropped its comments.
