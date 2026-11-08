@@ -5,6 +5,11 @@ export function getRatioColor(ratio: number): string {
   return "text-destructive";
 }
 
+// The backend stores no ratio when the tracker reports an infinite one, which happens before the first download.
+export function isInfiniteRatio(ratio: number | null, downloaded: number | null): boolean {
+  return ratio === null && downloaded === 0;
+}
+
 export function isBelowRequiredRatio(ratio: number | null, requiredRatio: number | null): boolean {
   return ratio !== null && requiredRatio !== null && ratio < requiredRatio;
 }

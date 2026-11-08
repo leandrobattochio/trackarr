@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { getRatioColor, isBelowRequiredRatio } from "@/features/integrations/ratio";
+import { getRatioColor, isBelowRequiredRatio, isInfiniteRatio } from "@/features/integrations/ratio";
 import type { TrackerIntegration } from "@/features/integrations/types";
 import { TrackerActions } from "@/features/integrations/plugins/shared/TrackerActions";
 import { TrackerDragHandle } from "@/features/integrations/plugins/shared/TrackerDragHandle";
@@ -32,11 +32,13 @@ function formatOptionalBytes(value: number | null, unitSystem: ByteUnitSystem) {
   return value === null ? "--" : formatBytes(value, unitSystem);
 }
 
-function RatioValue({ ratio, requiredRatio }: Pick<TrackerIntegration, "ratio" | "requiredRatio">) {
+function RatioValue({ ratio, requiredRatio, downloaded }: Pick<TrackerIntegration, "ratio" | "requiredRatio" | "downloaded">) {
+  const infinite = isInfiniteRatio(ratio, downloaded);
+
   return (
     <span className="whitespace-nowrap">
-      <span className={cn("font-display font-semibold", ratio === null ? "text-muted-foreground" : getRatioColor(ratio))}>
-        {ratio === null ? "--" : ratio.toFixed(2)}
+      <span className={cn("font-display font-semibold", infinite ? "text-success" : ratio === null ? "text-muted-foreground" : getRatioColor(ratio))}>
+        {infinite ? "∞" : ratio === null ? "--" : ratio.toFixed(2)}
       </span>
       {requiredRatio !== null && (
         <span className="text-xs text-muted-foreground"> / {requiredRatio.toFixed(2)}</span>
@@ -71,7 +73,7 @@ export function TrackerListRow({ tracker, reorderControls }: TrackerListRowProps
       {/* On phones the values get a row of their own; from md up they are cells of the list's columns. */}
       <div className="col-span-full grid grid-cols-2 gap-3 min-[480px]:grid-cols-4 md:contents">
         <ListCell label="Ratio">
-          <RatioValue ratio={tracker.ratio} requiredRatio={tracker.requiredRatio} />
+          <RatioValue ratio={tracker.ratio} requiredRatio={tracker.requiredRatio} downloaded={tracker.downloaded} />
         </ListCell>
         <ListCell label="Uploaded">{formatOptionalBytes(tracker.uploaded, tracker.byteUnitSystem)}</ListCell>
         <ListCell label="Downloaded">{formatOptionalBytes(tracker.downloaded, tracker.byteUnitSystem)}</ListCell>

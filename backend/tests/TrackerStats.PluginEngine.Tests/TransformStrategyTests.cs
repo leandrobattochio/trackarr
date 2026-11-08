@@ -15,6 +15,19 @@ public class TransformStrategyTests
         result.ShouldBe("1234.56");
     }
 
+    [Theory]
+    [InlineData("∞")]
+    [InlineData("Inf")]
+    [InlineData(" infinity ")]
+    public void DecimalTransform_should_keep_an_infinite_ratio(string value)
+    {
+        var strategy = new DecimalTransformStrategy();
+
+        var result = strategy.Transform(value);
+
+        result.ShouldBe("∞");
+    }
+
     [Fact]
     public void IntegerTransform_should_strip_grouping_separators()
     {

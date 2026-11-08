@@ -17,7 +17,7 @@ public class ResultMapper : IResultMapper
             $"Plugin '{definition.PluginId}' is missing a mapping definition.");
 
         var stats = new PluginTrackerStats(
-            Ratio: ResolveField(nameof(mapping.Ratio), () => ResolveRequiredDecimal(mapping.Ratio, configuration, stepResults, nameof(mapping.Ratio))),
+            Ratio: ResolveField(nameof(mapping.Ratio), () => ResolveRatio(mapping.Ratio, configuration, stepResults)),
             UploadedBytes: ResolveField(nameof(mapping.UploadedBytes), () => ResolveRequiredLong(mapping.UploadedBytes, configuration, stepResults, nameof(mapping.UploadedBytes))),
             DownloadedBytes: ResolveField(nameof(mapping.DownloadedBytes), () => ResolveRequiredLong(mapping.DownloadedBytes, configuration, stepResults, nameof(mapping.DownloadedBytes))),
             SeedBonus: ResolveField(nameof(mapping.SeedBonus), () => ResolveOptionalString(mapping.SeedBonus, configuration, stepResults)),
@@ -52,6 +52,22 @@ public class ResultMapper : IResultMapper
     {
         if (string.IsNullOrWhiteSpace(expression))
             throw new InvalidOperationException($"Mapping field '{fieldName}' is required.");
+
+        return EvaluateDecimalExpression(expression, configuration, stepResults);
+    }
+
+    // A tracker reports an infinite ratio while nothing was downloaded; it is stored as no ratio.
+    private static decimal? ResolveRatio(
+        string? expression,
+        PluginConfiguration configuration,
+        Dictionary<string, Dictionary<string, string>> stepResults)
+    {
+        if (string.IsNullOrWhiteSpace(expression))
+            throw new InvalidOperationException("Mapping field 'Ratio' is required.");
+
+        var terms = expression.Split('+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (terms.Any(term => NumericParser.IsInfinity(ResolveOperandValue(term, configuration, stepResults))))
+            return null;
 
         return EvaluateDecimalExpression(expression, configuration, stepResults);
     }

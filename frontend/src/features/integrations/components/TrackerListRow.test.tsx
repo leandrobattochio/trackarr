@@ -75,6 +75,13 @@ describe("TrackerListRow", () => {
     expect(screen.getByText("never synced")).toBeInTheDocument();
   });
 
+  it("shows an infinite ratio before the first download without flagging it", () => {
+    const { container } = renderRow(buildTracker({ ratio: null, requiredRatio: 1, uploaded: 2048, downloaded: 0 }));
+
+    expect(screen.getByText("∞")).toHaveClass("text-success");
+    expect(container.firstElementChild).not.toHaveClass("bg-destructive/5");
+  });
+
   it("flags a ratio below the required one", () => {
     const { container } = renderRow(buildTracker({ ratio: 0.5, requiredRatio: 1 }));
 

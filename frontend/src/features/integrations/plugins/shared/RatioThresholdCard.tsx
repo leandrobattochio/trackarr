@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { MetricTooltip } from "@/features/integrations/components/shared/MetricTooltip";
-import { getRatioColor } from "@/features/integrations/ratio";
+import { getRatioColor, isInfiniteRatio } from "@/features/integrations/ratio";
 import { useAnimatedNumber } from "@/shared/hooks/use-animated-number";
 
-function formatRatioDelta(ratio: number | null, requiredRatio: number | null): string {
+function formatRatioDelta(ratio: number | null, requiredRatio: number | null, infinite: boolean): string {
+  if (infinite) return "Nothing downloaded yet";
   if (ratio === null || requiredRatio === null) return "Set a required ratio to compare against";
 
   const delta = ratio - requiredRatio;
@@ -26,14 +27,16 @@ function buildThresholdGradient(thresholdPercent: number): string {
 interface RatioThresholdCardProps {
   ratio: number | null;
   requiredRatio: number | null;
+  downloaded: number | null;
 }
 
-export function RatioThresholdCard({ ratio, requiredRatio }: RatioThresholdCardProps) {
+export function RatioThresholdCard({ ratio, requiredRatio, downloaded }: RatioThresholdCardProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const infinite = isInfiniteRatio(ratio, downloaded);
   const currentRatio = ratio ?? 0;
   const minimumRatio = requiredRatio ?? 1;
   const displayMax = Math.max(minimumRatio * 2, currentRatio, 2);
-  const fillPercent = Math.min((currentRatio / displayMax) * 100, 100);
+  const fillPercent = infinite ? 100 : Math.min((currentRatio / displayMax) * 100, 100);
   const thresholdPercent = Math.min((minimumRatio / displayMax) * 100, 100);
   const thresholdGradient = buildThresholdGradient(thresholdPercent);
   const animatedRatio = useAnimatedNumber(ratio ?? 0, { duration: 1200, decimals: 2, easing: "easeOutCubic" });
@@ -65,11 +68,11 @@ export function RatioThresholdCard({ ratio, requiredRatio }: RatioThresholdCardP
             >
               <button
                 type="button"
-                className={`inline-flex cursor-default rounded-full border border-transparent px-3 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${ratio !== null ? getRatioColor(ratio) : "text-muted-foreground"}`}
+                className={`inline-flex cursor-default rounded-full border border-transparent px-3 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${infinite ? "text-success" : ratio !== null ? getRatioColor(ratio) : "text-muted-foreground"}`}
                 aria-label="Current ratio details"
               >
                 <span className="font-display text-4xl font-bold">
-                  {ratio !== null ? animatedRatio.toFixed(2) : "--"}
+                  {infinite ? "∞" : ratio !== null ? animatedRatio.toFixed(2) : "--"}
                 </span>
               </button>
             </MetricTooltip>
@@ -103,8 +106,8 @@ export function RatioThresholdCard({ ratio, requiredRatio }: RatioThresholdCardP
             <span>{displayMax.toFixed(2)}</span>
           </div>
           <div className="text-center">
-            <div className={`text-xs font-medium ${ratio !== null && requiredRatio !== null ? (currentRatio >= minimumRatio ? "text-success" : "text-warning") : "text-muted-foreground"}`}>
-              {formatRatioDelta(ratio, requiredRatio)}
+            <div className={`text-xs font-medium ${infinite ? "text-success" : ratio !== null && requiredRatio !== null ? (currentRatio >= minimumRatio ? "text-success" : "text-warning") : "text-muted-foreground"}`}>
+              {formatRatioDelta(ratio, requiredRatio, infinite)}
             </div>
           </div>
         </div>

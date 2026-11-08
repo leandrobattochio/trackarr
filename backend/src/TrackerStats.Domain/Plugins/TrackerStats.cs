@@ -1,7 +1,7 @@
 namespace TrackerStats.Domain.Plugins;
 
 public record TrackerStats(
-    decimal Ratio,
+    decimal? Ratio,
     long UploadedBytes,
     long DownloadedBytes,
     string? SeedBonus,

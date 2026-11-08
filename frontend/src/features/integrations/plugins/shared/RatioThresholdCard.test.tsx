@@ -24,7 +24,7 @@ describe("RatioThresholdCard", () => {
   });
 
   it("renders success ratio state and above-minimum message", () => {
-    render(<RatioThresholdCard ratio={2.2} requiredRatio={1.1} />);
+    render(<RatioThresholdCard ratio={2.2} requiredRatio={1.1} downloaded={1024} />);
 
     expect(screen.getAllByText("2.20").length).toBeGreaterThan(0);
     expect(screen.getByText("+1.10 above minimum")).toBeInTheDocument();
@@ -33,22 +33,30 @@ describe("RatioThresholdCard", () => {
   });
 
   it("renders warning and destructive ratio states plus null fallback copy", () => {
-    const { rerender } = render(<RatioThresholdCard ratio={0.9} requiredRatio={1} />);
+    const { rerender } = render(<RatioThresholdCard ratio={0.9} requiredRatio={1} downloaded={1024} />);
     expect(screen.getByText("-0.10 below minimum")).toBeInTheDocument();
 
-    rerender(<RatioThresholdCard ratio={0.5} requiredRatio={1} />);
+    rerender(<RatioThresholdCard ratio={0.5} requiredRatio={1} downloaded={1024} />);
     expect(screen.getByText("-0.50 below minimum")).toBeInTheDocument();
 
-    rerender(<RatioThresholdCard ratio={null} requiredRatio={null} />);
+    rerender(<RatioThresholdCard ratio={null} requiredRatio={null} downloaded={null} />);
     expect(screen.getByText("--")).toBeInTheDocument();
     expect(screen.getByText("Set a required ratio to compare against")).toBeInTheDocument();
+  });
+
+  it("shows an infinite ratio before the first download", () => {
+    render(<RatioThresholdCard ratio={null} requiredRatio={1} downloaded={0} />);
+
+    expect(screen.getByText("∞")).toHaveClass("font-display");
+    expect(screen.getByLabelText("Current ratio details")).toHaveClass("text-success");
+    expect(screen.getByText("Nothing downloaded yet")).toBeInTheDocument();
   });
 
   it("covers primary ratio color and initial hidden animation state", () => {
     const rafSpy = vi.spyOn(window, "requestAnimationFrame").mockImplementation(() => 1);
     vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
 
-    const { container } = render(<RatioThresholdCard ratio={1.2} requiredRatio={1} />);
+    const { container } = render(<RatioThresholdCard ratio={1.2} requiredRatio={1} downloaded={1024} />);
 
     expect(container.firstElementChild).toHaveClass("opacity-0");
     expect(screen.getByRole("button", { name: "Current ratio details" })).toHaveClass("text-primary");
@@ -62,7 +70,7 @@ describe("RatioThresholdCard", () => {
     });
     vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
 
-    const { container } = render(<RatioThresholdCard ratio={1.4} requiredRatio={1} />);
+    const { container } = render(<RatioThresholdCard ratio={1.4} requiredRatio={1} downloaded={1024} />);
     expect(container.firstElementChild).toHaveClass("opacity-100");
   });
 });

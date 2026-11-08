@@ -48,6 +48,20 @@ describe("PluginTestResultPanel", () => {
     expect(screen.queryByTestId("plugin-test-error")).toBeNull();
   });
 
+  it("shows an infinite ratio when nothing was downloaded", () => {
+    const result: ApiPluginTestResult = {
+      outcome: "success",
+      steps: [{ name: "profile", method: "GET", path: "/api/user", statusCode: 200 }],
+      stats: { ...stats, ratio: null },
+      failedField: null,
+      error: null,
+    };
+
+    render(<PluginTestResultPanel result={result} />);
+
+    expect(screen.getByTestId("plugin-test-stats")).toHaveTextContent("Ratio∞");
+  });
+
   it("shows an auth failure with the failing HTTP status and the error", () => {
     render(
       <PluginTestResultPanel
