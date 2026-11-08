@@ -628,7 +628,7 @@ describe("ManagePluginsPage", () => {
 
     const value = (screen.getByTestId("plugin-editor") as HTMLTextAreaElement).value;
     expect(value).toBe(NEW_PLUGIN_TEMPLATE);
-    expect(value).toMatch(/^schemaVersion: 1$/m);
+    expect(value).toMatch(/^schemaVersion: 2$/m);
     expect(value).toMatch(/^pluginId: <your-plugin-id>$/m);
     expect(tryGetPluginId(value)).toBeNull();
   });

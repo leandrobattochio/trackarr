@@ -127,7 +127,7 @@ public class PluginsControllerTests
         TestHttp.SetYamlBody(controller, """
             pluginId: future-plugin
             displayName: Future Plugin
-            schemaVersion: 2
+            schemaVersion: 3
             someFutureKey: true
             """);
 
@@ -135,7 +135,7 @@ public class PluginsControllerTests
 
         var badRequest = result.ShouldBeOfType<BadRequestObjectResult>();
         TestHttp.ToJson(badRequest.Value).GetProperty("error").GetString()
-            .ShouldBe("Plugin requires schema version 2, but this trackarr supports up to 1. Update trackarr to use it.");
+            .ShouldBe("Plugin requires schema version 3, but this trackarr supports up to 2. Update trackarr to use it.");
         File.Exists(Path.Combine(fixture.CustomDirectory, "future-plugin.yaml")).ShouldBeFalse();
     }
 
@@ -1124,10 +1124,10 @@ public class PluginsControllerTests
                 })
                 .Build();
             var layout = new PluginStorageLayout(configuration, new FakeHostEnvironment(RootDirectory));
-            var loader = new YamlPluginDefinitionLoader(layout, new FakeApplicationSettingsService());
-            var overrides = new PluginOverrideService(layout, new PluginStateStore(layout), NullLogger<PluginOverrideService>.Instance);
+            var loader = new YamlPluginDefinitionLoader(layout, new PluginBaseStore(layout), new FakeApplicationSettingsService());
+            var overrides = new PluginOverrideService(layout, new PluginStateStore(layout), new PluginBaseStore(layout), NullLogger<PluginOverrideService>.Instance);
             var stateStore = new PluginStateStore(layout);
-            return new PluginsController(loader, layout, overrides, stateStore, new PluginStatusService(loader, layout, stateStore), Integrations);
+            return new PluginsController(loader, layout, overrides, stateStore, new PluginBaseStore(layout), new PluginStatusService(loader, layout, stateStore), Integrations);
         }
 
         public void Dispose()

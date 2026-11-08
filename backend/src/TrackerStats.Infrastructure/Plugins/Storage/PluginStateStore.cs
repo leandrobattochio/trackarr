@@ -12,6 +12,7 @@ public sealed class PluginState
 {
     public Dictionary<string, OfficialPluginState> Official { get; set; } = new(StringComparer.Ordinal);
     public Dictionary<string, OverridePluginState> Overrides { get; set; } = new(StringComparer.Ordinal);
+    public Dictionary<string, OfficialPluginState> Bases { get; set; } = new(StringComparer.Ordinal);
     public DateTimeOffset? LegacyCleanupCompletedAt { get; set; }
     public PluginIndexState? Index { get; set; }
     public PluginDownloadReport? LastDownload { get; set; }
@@ -42,6 +43,7 @@ public sealed class PluginStateStore(PluginStorageLayout layout)
                     ?? new PluginState();
                 state.Official ??= new(StringComparer.Ordinal);
                 state.Overrides ??= new(StringComparer.Ordinal);
+                state.Bases ??= new(StringComparer.Ordinal);
                 state.Updates ??= [];
                 return state;
             }

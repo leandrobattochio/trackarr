@@ -46,7 +46,7 @@ public sealed class PluginDryRunTests : IDisposable
     public PluginDryRunTests()
     {
         _layout = PluginStorageLayout.ForDataDirectory(_root);
-        _loader = new YamlPluginDefinitionLoader(_layout, new FakeApplicationSettingsService());
+        _loader = new YamlPluginDefinitionLoader(_layout, new PluginBaseStore(_layout), new FakeApplicationSettingsService());
     }
 
     public void Dispose()
@@ -433,7 +433,7 @@ public sealed class PluginDryRunTests : IDisposable
     {
         var engine = CreateEngine();
         var dryRun = new PluginDryRunService(
-            _loader, new FakeApplicationSettingsService(), engine, new TemplateInterpolator(), CreateHttpClientFactory());
+            _loader, new PluginBaseStore(_layout), new FakeApplicationSettingsService(), engine, new TemplateInterpolator(), CreateHttpClientFactory());
         return new PluginTestController(_integrations, dryRun).Test(request, CancellationToken.None);
     }
 

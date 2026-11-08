@@ -21,6 +21,7 @@ public sealed record PluginDryRunOutcome(
 
 public sealed class PluginDryRunService(
     IYamlPluginDefinitionLoader loader,
+    Storage.PluginBaseStore bases,
     IApplicationSettingsService settingsService,
     IYamlPluginEngine engine,
     ITemplateInterpolator interpolator,
@@ -61,7 +62,7 @@ public sealed class PluginDryRunService(
 
     private (PluginDefinition?, PluginDryRunRejection?, string?) ResolveYaml(string pluginId, string? yaml)
     {
-        var validation = PluginDefinitionValidator.Validate(yaml ?? string.Empty);
+        var validation = PluginDefinitionValidator.Validate(yaml ?? string.Empty, bases: bases);
         if (validation.Error is not null)
             return (null, PluginDryRunRejection.InvalidRequest, validation.Error);
 

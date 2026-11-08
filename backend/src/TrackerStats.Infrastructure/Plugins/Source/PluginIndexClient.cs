@@ -25,8 +25,10 @@ public sealed class PluginIndexClient(
     }
 
     /// <param name="installed">Installed official plugins from <c>state.json</c>; entries with the same sha256 are not downloaded.</param>
+    /// <param name="installedBases">Installed plugin bases from <c>state.json</c>, compared the same way.</param>
     public async Task<PluginIndexFetchResult> FetchAsync(
         IReadOnlyDictionary<string, OfficialPluginState> installed,
+        IReadOnlyDictionary<string, OfficialPluginState>? installedBases = null,
         CancellationToken cancellationToken = default)
     {
         var source = SourceUrl;
@@ -61,6 +63,10 @@ public sealed class PluginIndexClient(
             return PluginIndexFetchResult.Failure(source, ex.Message, indexSha256);
         }
 
+        var baseFiles = new List<PluginFileFetchResult>(index.Bases.Count);
+        foreach (var entry in index.Bases)
+            baseFiles.Add(await FetchFileAsync(baseUri, entry, installedBases ?? new Dictionary<string, OfficialPluginState>(), cancellationToken));
+
         var files = new List<PluginFileFetchResult>(index.Plugins.Count);
         foreach (var entry in index.Plugins)
             files.Add(await FetchFileAsync(baseUri, entry, installed, cancellationToken));
@@ -69,11 +75,11 @@ public sealed class PluginIndexClient(
             "Plugin index {Uri} ({Sha256}): {Downloaded} downloaded, {Unchanged} unchanged, {Failed} failed",
             indexUri,
             indexSha256,
-            files.Count(file => file.Status == PluginFileFetchStatus.Downloaded),
-            files.Count(file => file.Status == PluginFileFetchStatus.Unchanged),
-            files.Count(file => file.Status == PluginFileFetchStatus.Failed));
+            files.Concat(baseFiles).Count(file => file.Status == PluginFileFetchStatus.Downloaded),
+            files.Concat(baseFiles).Count(file => file.Status == PluginFileFetchStatus.Unchanged),
+            files.Concat(baseFiles).Count(file => file.Status == PluginFileFetchStatus.Failed));
 
-        return new PluginIndexFetchResult(source, indexSha256, index, files, null);
+        return new PluginIndexFetchResult(source, indexSha256, index, files, null) { BaseFiles = baseFiles };
     }
 
     private async Task<PluginFileFetchResult> FetchFileAsync(

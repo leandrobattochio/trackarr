@@ -43,7 +43,8 @@ public sealed record PluginDownloadReport(
     string Source,
     string? IndexSha256,
     string? Error,
-    IReadOnlyList<PluginDownloadPluginResult> Plugins)
+    IReadOnlyList<PluginDownloadPluginResult> Plugins,
+    IReadOnlyList<PluginDownloadPluginResult>? Bases = null)
 {
     public bool Succeeded => Error is null;
 }
@@ -54,4 +55,7 @@ public sealed record PluginUpdateRecord(
     string? FromVersion,
     string ToVersion,
     DateTimeOffset AppliedAt,
-    IReadOnlyList<PluginIndexChangelogEntry> Changelog);
+    IReadOnlyList<PluginIndexChangelogEntry> Changelog,
+    // Set when the update is to a plugin base; PluginId is then the base id.
+    bool IsBase = false,
+    string? DisplayName = null);

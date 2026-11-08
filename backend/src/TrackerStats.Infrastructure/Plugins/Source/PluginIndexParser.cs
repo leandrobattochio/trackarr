@@ -29,28 +29,36 @@ public static partial class PluginIndexParser
         if (document.Plugins.Count == 0)
             throw new FormatException("index.json lists no plugins.");
 
-        var ids = new HashSet<string>(StringComparer.Ordinal);
-        var entries = new List<PluginIndexEntry>(document.Plugins.Count);
-        for (var position = 0; position < document.Plugins.Count; position++)
+        return new PluginIndex(ParseEntries(document.Plugins, "plugins", "plugin"))
         {
-            var entry = ParseEntry(document.Plugins[position], position);
+            Bases = ParseEntries(document.Bases ?? [], "bases", "base")
+        };
+    }
+
+    private static List<PluginIndexEntry> ParseEntries(List<IndexEntryDocument?> documents, string listName, string kind)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        var entries = new List<PluginIndexEntry>(documents.Count);
+        for (var position = 0; position < documents.Count; position++)
+        {
+            var entry = ParseEntry(documents[position], position, listName, kind);
             if (!ids.Add(entry.Id))
-                throw new FormatException($"index.json lists plugin '{entry.Id}' more than once.");
+                throw new FormatException($"index.json lists {kind} '{entry.Id}' more than once.");
             entries.Add(entry);
         }
 
-        return new PluginIndex(entries);
+        return entries;
     }
 
-    private static PluginIndexEntry ParseEntry(IndexEntryDocument? entry, int position)
+    private static PluginIndexEntry ParseEntry(IndexEntryDocument? entry, int position, string listName, string kind)
     {
         if (entry is null)
-            throw new FormatException($"index.json plugins[{position}] is null.");
+            throw new FormatException($"index.json {listName}[{position}] is null.");
 
-        var label = $"index.json plugins[{position}]";
+        var label = $"index.json {listName}[{position}]";
         if (string.IsNullOrEmpty(entry.Id) || !PluginSchema.IsValidPluginId(entry.Id))
             throw new FormatException($"{label} has an invalid id '{entry.Id}'.");
-        label = $"index.json plugin '{entry.Id}'";
+        label = $"index.json {kind} '{entry.Id}'";
         if (string.IsNullOrEmpty(entry.Version) || !PluginSchema.IsSemanticVersion(entry.Version))
             throw new FormatException($"{label} has an invalid version '{entry.Version}'.");
         if (entry.SchemaVersion is not >= 1)
@@ -78,7 +86,7 @@ public static partial class PluginIndexParser
     [GeneratedRegex(@"^[0-9a-f]{64}\z")]
     private static partial Regex Sha256Regex();
 
-    private sealed record IndexDocument(List<IndexEntryDocument?>? Plugins);
+    private sealed record IndexDocument(List<IndexEntryDocument?>? Plugins, List<IndexEntryDocument?>? Bases);
 
     private sealed record IndexEntryDocument(
         string? Id,

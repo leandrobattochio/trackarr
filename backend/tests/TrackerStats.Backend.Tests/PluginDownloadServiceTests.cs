@@ -210,7 +210,7 @@ public sealed class PluginDownloadServiceTests : IDisposable
         Publish(("asc", "1.0.0"));
         await RunAsync();
         var previous = ReadOfficial("asc");
-        Publish(("asc", "2.0.0", 2));
+        Publish(("asc", "2.0.0", 3));
 
         var report = await RunAsync();
 
@@ -221,7 +221,7 @@ public sealed class PluginDownloadServiceTests : IDisposable
         ReadOfficial("asc").ShouldBe(previous);
         var state = _stateStore.Load();
         state.Official["asc"].Version.ShouldBe("1.0.0");
-        state.Index!.Plugins["asc"].SchemaVersion.ShouldBe(2);
+        state.Index!.Plugins["asc"].SchemaVersion.ShouldBe(3);
         state.Updates.ShouldBeEmpty();
         Effective().ShouldHaveSingleItem().IsValid.ShouldBeTrue();
     }
@@ -229,7 +229,7 @@ public sealed class PluginDownloadServiceTests : IDisposable
     [Fact]
     public async Task S18_new_plugin_needing_a_newer_schema_should_not_be_installed()
     {
-        Publish(("asc", "1.0.0", 1), ("newcomer", "1.0.0", 2));
+        Publish(("asc", "1.0.0", 1), ("newcomer", "1.0.0", 3));
 
         var report = await RunAsync();
 
@@ -239,7 +239,7 @@ public sealed class PluginDownloadServiceTests : IDisposable
         File.Exists(_layout.GetPluginPath(PluginOrigin.Official, "newcomer")).ShouldBeFalse();
         var state = _stateStore.Load();
         state.Official.ShouldNotContainKey("newcomer");
-        state.Index!.Plugins["newcomer"].SchemaVersion.ShouldBe(2);
+        state.Index!.Plugins["newcomer"].SchemaVersion.ShouldBe(3);
     }
 
     [Fact]
@@ -368,7 +368,7 @@ public sealed class PluginDownloadServiceTests : IDisposable
         await RunAsync();
         var original = ReadOfficial("asc");
         var edited = WriteFile(PluginOrigin.Official, "asc", PluginYaml("asc", "1.0.0", displayName: "Edited on disk"));
-        new PluginOverrideService(_layout, _stateStore, NullLogger<PluginOverrideService>.Instance)
+        new PluginOverrideService(_layout, _stateStore, new PluginBaseStore(_layout), NullLogger<PluginOverrideService>.Instance)
             .AdoptLocallyModifiedOfficials().ShouldBe(["asc"]);
 
         var report = await RunAsync();
@@ -515,13 +515,14 @@ public sealed class PluginDownloadServiceTests : IDisposable
             client,
             _layout,
             _stateStore,
-            new PluginOverrideService(_layout, _stateStore, NullLogger<PluginOverrideService>.Instance),
+            new PluginBaseStore(_layout),
+            new PluginOverrideService(_layout, _stateStore, new PluginBaseStore(_layout), NullLogger<PluginOverrideService>.Instance),
             services.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<PluginDownloadService>.Instance);
     }
 
     private IReadOnlyList<LoadedYamlPluginDefinition> Effective() =>
-        new YamlPluginDefinitionLoader(_layout, new FakeApplicationSettingsService()).LoadDefinitions();
+        new YamlPluginDefinitionLoader(_layout, new PluginBaseStore(_layout), new FakeApplicationSettingsService()).LoadDefinitions();
 
     private void Publish(params (string Id, string Version)[] plugins) =>
         PublishContent(plugins.Select(plugin => (plugin.Id, plugin.Version, 1, PluginYaml(plugin.Id, plugin.Version))).ToArray());

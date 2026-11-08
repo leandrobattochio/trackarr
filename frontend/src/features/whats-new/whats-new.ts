@@ -3,6 +3,8 @@ import type { ApiPluginUpdate } from "@/features/whats-new/types";
 
 export interface PluginUpdateGroup {
   pluginId: string;
+  isBase: boolean;
+  displayName: string | null;
   fromVersion: string | null;
   toVersion: string;
   changelog: ApiPluginChangelogEntry[];
@@ -51,10 +53,14 @@ export function compareVersions(left: string, right: string) {
 export function groupPluginUpdates(updates: ApiPluginUpdate[]): PluginUpdateGroup[] {
   const groups = new Map<string, PluginUpdateGroup>();
   for (const update of updates) {
-    const group = groups.get(update.pluginId);
+    // A base may share its id with a plugin, so bases are grouped apart.
+    const key = `${update.isBase ? "base" : "plugin"}:${update.pluginId}`;
+    const group = groups.get(key);
     if (!group) {
-      groups.set(update.pluginId, {
+      groups.set(key, {
         pluginId: update.pluginId,
+        isBase: update.isBase ?? false,
+        displayName: update.displayName ?? null,
         fromVersion: update.fromVersion,
         toVersion: update.toVersion,
         changelog: [...update.changelog],

@@ -13,7 +13,8 @@ public enum PluginSchemaCompatibility
 public static partial class PluginSchema
 {
     // Every change to the plugin YAML format must increment this.
-    public const int SupportedPluginSchemaVersion = 1;
+    public const int SupportedPluginSchemaVersion = 2;
+    public const int ExtendsSchemaVersion = 2;
 
     public static PluginSchemaCompatibility GetCompatibility(
         int? schemaVersion,
@@ -110,6 +111,9 @@ public static partial class PluginSchema
             case PluginSchemaCompatibility.Incompatible:
                 return GetIncompatibleMessage(definition.SchemaVersion!.Value);
         }
+
+        if (definition.Extends is not null && definition.SchemaVersion is not >= ExtendsSchemaVersion)
+            return $"Property 'extends' requires 'schemaVersion: {ExtendsSchemaVersion}' or later.";
 
         if (string.IsNullOrWhiteSpace(definition.Version))
             return requireVersion ? "Plugin definition is missing required field 'version'." : null;

@@ -28,8 +28,8 @@ public sealed class PluginOverrideLifecycleTests : IDisposable
     {
         _layout = PluginStorageLayout.ForDataDirectory(_root);
         _stateStore = new PluginStateStore(_layout);
-        _overrides = new PluginOverrideService(_layout, _stateStore, NullLogger<PluginOverrideService>.Instance);
-        _loader = new YamlPluginDefinitionLoader(_layout, new FakeApplicationSettingsService());
+        _overrides = new PluginOverrideService(_layout, _stateStore, new PluginBaseStore(_layout), NullLogger<PluginOverrideService>.Instance);
+        _loader = new YamlPluginDefinitionLoader(_layout, new PluginBaseStore(_layout), new FakeApplicationSettingsService());
     }
 
     public void Dispose()
@@ -313,7 +313,7 @@ public sealed class PluginOverrideLifecycleTests : IDisposable
         return await controller.Update(pluginId, CancellationToken.None);
     }
 
-    private PluginsController CreateController() => new(_loader, _layout, _overrides, _stateStore, new PluginStatusService(_loader, _layout, _stateStore), new InMemoryIntegrationRepository());
+    private PluginsController CreateController() => new(_loader, _layout, _overrides, _stateStore, new PluginBaseStore(_layout), new PluginStatusService(_loader, _layout, _stateStore), new InMemoryIntegrationRepository());
 
     private TrackerPluginRegistry CreateRegistry() =>
         new(

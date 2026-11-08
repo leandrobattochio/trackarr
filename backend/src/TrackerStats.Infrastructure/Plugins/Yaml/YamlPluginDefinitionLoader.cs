@@ -8,6 +8,7 @@ namespace TrackerStats.Infrastructure.Plugins.Yaml;
 
 public sealed class YamlPluginDefinitionLoader(
     PluginStorageLayout layout,
+    PluginBaseStore bases,
     IApplicationSettingsService settingsService) : IYamlPluginDefinitionLoader
 {
     private static readonly PluginOrigin[] FolderOrigins = [PluginOrigin.Official, PluginOrigin.Override, PluginOrigin.Custom];
@@ -160,9 +161,21 @@ public sealed class YamlPluginDefinitionLoader(
         }
     }
 
-    private PluginDefinition DeserializeYamlDefinition(string content, string path) =>
-        _deserializer.Deserialize<PluginDefinition>(content)
-        ?? throw new InvalidOperationException($"Plugin definition file '{path}' could not be deserialized.");
+    private PluginDefinition DeserializeYamlDefinition(string content, string path)
+    {
+        var definition = _deserializer.Deserialize<PluginDefinition>(content)
+            ?? throw new InvalidOperationException($"Plugin definition file '{path}' could not be deserialized.");
+        if (definition.Extends is null)
+            return definition;
+
+        RejectVersionViolation(definition, path);
+        var resolution = PluginBaseResolver.Resolve(content, bases);
+        if (!resolution.Succeeded)
+            throw new InvalidOperationException($"Plugin definition '{path}' is invalid. {resolution.Error}");
+
+        return _deserializer.Deserialize<PluginDefinition>(resolution.Yaml)
+            ?? throw new InvalidOperationException($"Plugin definition file '{path}' could not be deserialized.");
+    }
 
     private static void RejectVersionViolation(PluginDefinition definition, string source)
     {

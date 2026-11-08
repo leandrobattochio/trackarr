@@ -9,6 +9,7 @@ public class PluginDefinition
     public string? Version { get; set; }
     public int? SchemaVersion { get; set; }
     public List<PluginChangelogEntry>? Changelog { get; set; }
+    public string? Extends { get; set; }
     public List<string> BaseUrls { get; set; } = [];
     public List<FieldDefinition> Fields { get; set; } = [];
     public List<FieldDefinition> CustomFields { get; set; } = [];

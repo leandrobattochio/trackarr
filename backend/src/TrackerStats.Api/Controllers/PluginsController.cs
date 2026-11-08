@@ -14,6 +14,7 @@ public class PluginsController(
     PluginStorageLayout layout,
     PluginOverrideService overrides,
     PluginStateStore stateStore,
+    PluginBaseStore bases,
     PluginStatusService statuses,
     IIntegrationRepository integrations) : ControllerBase
 {
@@ -106,7 +107,7 @@ public class PluginsController(
     public async Task<IActionResult> Create(CancellationToken ct)
     {
         var yaml = await ReadRequestBodyAsync(ct);
-        var validation = PluginDefinitionValidator.Validate(yaml, requireSchemaVersion: true);
+        var validation = PluginDefinitionValidator.Validate(yaml, requireSchemaVersion: true, bases: bases);
         if (validation.Error is not null)
             return BadRequest(new { error = validation.Error });
 
@@ -146,7 +147,7 @@ public class PluginsController(
             return NotFound();
 
         var yaml = await ReadRequestBodyAsync(ct);
-        var validation = PluginDefinitionValidator.Validate(yaml, requireSchemaVersion: existing.Origin == PluginOrigin.Custom);
+        var validation = PluginDefinitionValidator.Validate(yaml, requireSchemaVersion: existing.Origin == PluginOrigin.Custom, bases: bases);
         if (validation.Error is not null)
             return BadRequest(new { error = validation.Error });
 

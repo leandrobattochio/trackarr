@@ -7,9 +7,9 @@ namespace TrackerStats.Backend.Tests;
 public class PluginSchemaTests
 {
     [Fact]
-    public void Supported_schema_version_should_be_one()
+    public void Supported_schema_version_should_be_two()
     {
-        PluginSchema.SupportedPluginSchemaVersion.ShouldBe(1);
+        PluginSchema.SupportedPluginSchemaVersion.ShouldBe(2);
     }
 
     [Theory]
@@ -60,8 +60,8 @@ public class PluginSchemaTests
     [Fact]
     public void GetVersionViolation_should_report_higher_schema_version_as_incompatible()
     {
-        PluginSchema.GetVersionViolation(Definition(2, "1.0.0"), requireSchemaVersion: true, requireVersion: true)
-            .ShouldBe("Plugin requires schema version 2, but this trackarr supports up to 1. Update trackarr to use it.");
+        PluginSchema.GetVersionViolation(Definition(3, "1.0.0"), requireSchemaVersion: true, requireVersion: true)
+            .ShouldBe("Plugin requires schema version 3, but this trackarr supports up to 2. Update trackarr to use it.");
     }
 
     [Fact]

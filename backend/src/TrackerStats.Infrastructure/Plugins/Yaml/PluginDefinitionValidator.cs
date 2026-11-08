@@ -35,7 +35,8 @@ public static class PluginDefinitionValidator
     public static PluginDefinitionValidationResult Validate(
         string yaml,
         bool requireSchemaVersion = false,
-        bool requireVersion = false)
+        bool requireVersion = false,
+        IPluginBaseLookup? bases = null)
     {
         if (string.IsNullOrWhiteSpace(yaml))
             return Invalid("Request body must contain YAML.");
@@ -47,11 +48,32 @@ public static class PluginDefinitionValidator
         PluginDefinition? definition;
         try
         {
+            // The plugin as written first, so syntax errors point at the user's lines.
             definition = Deserializer.Deserialize<PluginDefinition>(yaml);
         }
         catch (YamlException ex)
         {
             return Invalid($"Invalid YAML syntax: {ex.Message} (line {ex.Start.Line}, column {ex.Start.Column})");
+        }
+
+        if (definition?.Extends is not null)
+        {
+            var versionViolation = PluginSchema.GetVersionViolation(definition, requireSchemaVersion, requireVersion);
+            if (versionViolation is not null)
+                return Invalid(versionViolation);
+
+            var resolution = PluginBaseResolver.Resolve(yaml, bases);
+            if (!resolution.Succeeded)
+                return Invalid(resolution.Error!);
+
+            try
+            {
+                definition = Deserializer.Deserialize<PluginDefinition>(resolution.Yaml);
+            }
+            catch (YamlException ex)
+            {
+                return Invalid($"Plugin base '{definition.Extends}' is invalid: {ex.Message}");
+            }
         }
 
         if (definition is null)

@@ -27,7 +27,10 @@ public sealed class PluginSnapshotSeeder(
 
     public IReadOnlyList<string> Run()
     {
-        if (Directory.Exists(layout.OfficialDirectory) && Directory.EnumerateFiles(layout.OfficialDirectory, "*.yaml").Any())
+        var seedPlugins = !HasYamlFiles(layout.OfficialDirectory);
+        // Checked on its own: an install upgraded from a trackarr without bases has plugins but no bases yet.
+        var seedBases = !HasYamlFiles(layout.BasesDirectory);
+        if (!seedPlugins && !seedBases)
             return [];
 
         var snapshotDirectory = SnapshotDirectory;
@@ -49,13 +52,57 @@ public sealed class PluginSnapshotSeeder(
             return [];
         }
 
-        Directory.CreateDirectory(layout.OfficialDirectory);
+        var seededBases = seedBases
+            ? Seed(index.Bases, snapshotDirectory, "base", layout.BasesDirectory, layout.GetBasePath)
+            : [];
+        var seeded = seedPlugins
+            ? Seed(index.Plugins, snapshotDirectory, "plugin", layout.OfficialDirectory,
+                pluginId => layout.GetPluginPath(PluginOrigin.Official, pluginId))
+            : [];
+
+        if (seeded.Count > 0 || seededBases.Count > 0)
+        {
+            stateStore.Update(state =>
+            {
+                foreach (var (pluginId, official) in seeded)
+                    state.Official[pluginId] = official;
+                foreach (var (baseId, installedBase) in seededBases)
+                    state.Bases[baseId] = installedBase;
+            });
+        }
+
+        if (seedBases && index.Bases.Count > 0)
+        {
+            logger.LogInformation("Seeded {Count} plugin base(s) from the image snapshot: {BaseIds}",
+                seededBases.Count, string.Join(", ", seededBases.Keys));
+        }
+
+        if (seedPlugins)
+        {
+            logger.LogInformation("Seeded {Count} official plugin(s) from the image snapshot: {PluginIds}",
+                seeded.Count, string.Join(", ", seeded.Keys));
+        }
+
+        return [.. seeded.Keys];
+    }
+
+    private Dictionary<string, OfficialPluginState> Seed(
+        IReadOnlyList<PluginIndexEntry> entries,
+        string snapshotDirectory,
+        string kind,
+        string targetDirectory,
+        Func<string, string> getTargetPath)
+    {
         var seeded = new Dictionary<string, OfficialPluginState>(StringComparer.Ordinal);
-        foreach (var entry in index.Plugins)
+        if (entries.Count == 0)
+            return seeded;
+
+        Directory.CreateDirectory(targetDirectory);
+        foreach (var entry in entries)
         {
             if (PluginSchema.GetCompatibility(entry.SchemaVersion) == PluginSchemaCompatibility.Incompatible)
             {
-                logger.LogWarning("Snapshot plugin {PluginId} {Version} skipped: {Error}", entry.Id, entry.Version,
+                logger.LogWarning("Snapshot {Kind} {Id} {Version} skipped: {Error}", kind, entry.Id, entry.Version,
                     PluginSchema.GetUpdateRequiredMessage(entry.Id, entry.Version, entry.SchemaVersion));
                 continue;
             }
@@ -63,7 +110,7 @@ public sealed class PluginSnapshotSeeder(
             var sourcePath = Path.Combine(snapshotDirectory, entry.Path);
             if (!File.Exists(sourcePath))
             {
-                logger.LogWarning("Snapshot plugin {PluginId} skipped: {Path} is missing", entry.Id, entry.Path);
+                logger.LogWarning("Snapshot {Kind} {Id} skipped: {Path} is missing", kind, entry.Id, entry.Path);
                 continue;
             }
 
@@ -71,25 +118,17 @@ public sealed class PluginSnapshotSeeder(
             var sha256 = PluginStateStore.ComputeSha256(content);
             if (sha256 != entry.Sha256)
             {
-                logger.LogWarning("Snapshot plugin {PluginId} skipped: sha256 of {Path} does not match the index", entry.Id, entry.Path);
+                logger.LogWarning("Snapshot {Kind} {Id} skipped: sha256 of {Path} does not match the index", kind, entry.Id, entry.Path);
                 continue;
             }
 
-            File.WriteAllBytes(layout.GetPluginPath(PluginOrigin.Official, entry.Id), content);
+            File.WriteAllBytes(getTargetPath(entry.Id), content);
             seeded[entry.Id] = new OfficialPluginState(entry.Version, sha256);
         }
 
-        if (seeded.Count > 0)
-        {
-            stateStore.Update(state =>
-            {
-                foreach (var (pluginId, official) in seeded)
-                    state.Official[pluginId] = official;
-            });
-        }
-
-        logger.LogInformation("Seeded {Count} official plugin(s) from the image snapshot: {PluginIds}",
-            seeded.Count, string.Join(", ", seeded.Keys));
-        return [.. seeded.Keys];
+        return seeded;
     }
+
+    private static bool HasYamlFiles(string directory) =>
+        Directory.Exists(directory) && Directory.EnumerateFiles(directory, "*.yaml").Any();
 }
