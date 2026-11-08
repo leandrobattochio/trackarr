@@ -13,6 +13,7 @@ using TrackerStats.Infrastructure.Plugins;
 using TrackerStats.Infrastructure.Plugins.Source;
 using TrackerStats.Infrastructure.Plugins.Storage;
 using TrackerStats.Infrastructure.Plugins.Yaml;
+using TrackerStats.Infrastructure.Proxies;
 using TrackerStats.Infrastructure.Releases;
 using TrackerStats.Infrastructure.Repositories;
 using TrackerStats.Infrastructure.Services;
@@ -41,6 +42,9 @@ builder.Services.AddHangfireServer();
 
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IIntegrationRepository, IntegrationRepository>();
+builder.Services.AddScoped<IProxyRepository, ProxyRepository>();
+builder.Services.AddSingleton<ProxyHandlerCache>();
+builder.Services.AddSingleton<ProxyConnectionTester>();
 builder.Services.AddScoped<IIntegrationSnapshotRepository, IntegrationSnapshotRepository>();
 builder.Services.AddSingleton<IApplicationSettingsService, ApplicationSettingsService>();
 builder.Services.AddScoped<IAboutService, AboutService>();

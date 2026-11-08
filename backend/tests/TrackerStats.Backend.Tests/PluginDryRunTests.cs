@@ -14,6 +14,7 @@ using TrackerStats.Infrastructure.Plugins;
 using TrackerStats.Infrastructure.Plugins.Storage;
 using TrackerStats.Infrastructure.Plugins.Yaml;
 using TrackerStats.Infrastructure.Services;
+using TrackerStats.Infrastructure.Proxies;
 using TrackerStats.PluginEngine;
 using TrackerStats.PluginEngine.Extraction;
 using TrackerStats.PluginEngine.Transforms;
@@ -426,7 +427,7 @@ public sealed class PluginDryRunTests : IDisposable
         {
             _requests.Add(request);
             return _responder(request);
-        })));
+        })), new ProxyHandlerCache());
 
     private Task<IActionResult> Test(PluginTestRequest request)
     {

@@ -353,7 +353,7 @@ public sealed class CustomPluginLifecycleTests : IDisposable
             _integrations,
             _snapshots,
             registry,
-            new FakeTrackerPluginHttpClientFactory(),
+            new InMemoryProxyRepository(),
             validator,
             CreateSyncService(registry),
             new IntegrationRecurringJobScheduler(manager, new FakeJobStorage(new FakeStorageConnection()), scopeFactory),

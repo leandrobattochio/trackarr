@@ -9,6 +9,7 @@ export function buildTracker(overrides: Partial<TrackerIntegration> = {}): Track
     name: "Seedpool",
     payload: {},
     url: "https://seedpool.org/",
+    proxyId: null,
     ratio: 1.5,
     uploaded: 2048,
     downloaded: 1024,

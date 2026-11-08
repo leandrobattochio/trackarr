@@ -93,6 +93,7 @@ Upgrading? Read [Upgrading](https://github.com/leandrobattochio/trackarr/wiki/Up
 
 - Dashboard with totals and a card or a list row per tracker: ratio against the required minimum, uploaded, downloaded, seed bonus, buffer, hit and runs and torrent counts
 - Manual sync, and recurring sync per integration from a cron expression
+- Optional HTTP, SOCKS4 or SOCKS5 proxy per tracker, for trackers that must be reached through one
 - Snapshot history with charts
 - Official tracker plugins downloaded from [`trackarr-plugins`](https://github.com/leandrobattochio/trackarr-plugins) on every start, so tracker fixes arrive without a new image
 - Official plugins you can edit (your copy is kept as an override) and custom plugins, in an editor with validation, completions and a **Test** dry run
@@ -103,6 +104,7 @@ Upgrading? Read [Upgrading](https://github.com/leandrobattochio/trackarr/wiki/Up
 
 - [Installation](https://github.com/leandrobattochio/trackarr/wiki/Installation): Docker Compose, building the image, data storage and backups
 - [Configuration](https://github.com/leandrobattochio/trackarr/wiki/Configuration): every setting and environment variable
+- [Proxies](https://github.com/leandrobattochio/trackarr/wiki/Proxies): reaching a tracker through an HTTP or SOCKS proxy
 - [Using PostgreSQL](https://github.com/leandrobattochio/trackarr/wiki/Using-PostgreSQL): the optional PostgreSQL database
 - [Plugins](https://github.com/leandrobattochio/trackarr/wiki/Plugins): official, override and custom plugins, and the plugin YAML
 - [Upgrading](https://github.com/leandrobattochio/trackarr/wiki/Upgrading): what changes between versions

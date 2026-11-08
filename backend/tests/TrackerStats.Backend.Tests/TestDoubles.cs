@@ -147,7 +147,9 @@ internal sealed class InMemoryIntegrationRepository : IIntegrationRepository
             RequiredRatio = integration.RequiredRatio,
             SeedingTorrents = integration.SeedingTorrents,
             LeechingTorrents = integration.LeechingTorrents,
-            ActiveTorrents = integration.ActiveTorrents
+            ActiveTorrents = integration.ActiveTorrents,
+            ProxyId = integration.ProxyId,
+            Proxy = integration.Proxy
         };
     }
 }
@@ -202,11 +204,51 @@ internal sealed class InMemoryIntegrationSnapshotRepository : IIntegrationSnapsh
 
 internal sealed class FakeTrackerPluginHttpClientFactory : ITrackerPluginHttpClientFactory
 {
-    public HttpClient CreateClient(ITrackerPlugin plugin)
+    public List<TrackerProxy?> Proxies { get; } = [];
+
+    public HttpClient CreateClient(ITrackerPlugin plugin, TrackerProxy? proxy = null)
     {
+        Proxies.Add(proxy);
         var client = new HttpClient();
         plugin.ConfigureHttpClient(client);
         return client;
+    }
+}
+
+internal sealed class InMemoryProxyRepository(IIntegrationRepository? integrations = null) : IProxyRepository
+{
+    private readonly Dictionary<Guid, TrackerProxy> _items = new();
+
+    public Task<IReadOnlyList<TrackerProxy>> ListAsync(CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<TrackerProxy>>(_items.Values.OrderBy(proxy => proxy.Name).ToList());
+
+    public Task<TrackerProxy?> GetByIdAsync(Guid id, CancellationToken ct) =>
+        Task.FromResult(_items.GetValueOrDefault(id));
+
+    public Task<bool> NameExistsAsync(string name, Guid? exceptId, CancellationToken ct) =>
+        Task.FromResult(_items.Values.Any(proxy => proxy.Name == name && proxy.Id != exceptId));
+
+    public async Task<IReadOnlyList<Integration>> ListIntegrationsUsingAsync(Guid proxyId, CancellationToken ct) =>
+        integrations is null
+            ? []
+            : (await integrations.ListAsync(ct)).Where(integration => integration.ProxyId == proxyId).ToList();
+
+    public Task AddAsync(TrackerProxy proxy, CancellationToken ct)
+    {
+        _items[proxy.Id] = proxy;
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateAsync(TrackerProxy proxy, CancellationToken ct)
+    {
+        _items[proxy.Id] = proxy;
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(TrackerProxy proxy, CancellationToken ct)
+    {
+        _items.Remove(proxy.Id);
+        return Task.CompletedTask;
     }
 }
 

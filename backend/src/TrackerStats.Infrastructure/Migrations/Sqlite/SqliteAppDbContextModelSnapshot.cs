@@ -67,6 +67,9 @@ namespace TrackerStats.Infrastructure.Migrations.Sqlite
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ProxyId")
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal?>("Ratio")
                         .HasColumnType("TEXT");
 
@@ -83,6 +86,8 @@ namespace TrackerStats.Infrastructure.Migrations.Sqlite
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ProxyId");
 
                     b.ToTable("Integrations");
                 });
@@ -134,6 +139,46 @@ namespace TrackerStats.Infrastructure.Migrations.Sqlite
                     b.ToTable("IntegrationSnapshots");
                 });
 
+            modelBuilder.Entity("TrackerStats.Domain.Entities.TrackerProxy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Host")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Password")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Port")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Proxies", (string)null);
+                });
+
             modelBuilder.Entity("TrackerStats.Domain.Entities.WhatsNewState", b =>
                 {
                     b.Property<int>("Id")
@@ -157,6 +202,14 @@ namespace TrackerStats.Infrastructure.Migrations.Sqlite
                         {
                             Id = 1
                         });
+                });
+
+            modelBuilder.Entity("TrackerStats.Domain.Entities.Integration", b =>
+                {
+                    b.HasOne("TrackerStats.Domain.Entities.TrackerProxy", null)
+                        .WithMany()
+                        .HasForeignKey("ProxyId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 #pragma warning restore 612, 618
         }

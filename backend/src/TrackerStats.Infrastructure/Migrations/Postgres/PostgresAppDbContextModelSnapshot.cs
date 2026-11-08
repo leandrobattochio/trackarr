@@ -74,6 +74,9 @@ namespace TrackerStats.Infrastructure.Migrations.Postgres
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("ProxyId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal?>("Ratio")
                         .HasColumnType("numeric");
 
@@ -90,6 +93,8 @@ namespace TrackerStats.Infrastructure.Migrations.Postgres
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ProxyId");
 
                     b.ToTable("Integrations");
                 });
@@ -141,6 +146,46 @@ namespace TrackerStats.Infrastructure.Migrations.Postgres
                     b.ToTable("IntegrationSnapshots");
                 });
 
+            modelBuilder.Entity("TrackerStats.Domain.Entities.TrackerProxy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Host")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Password")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("Port")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Proxies", (string)null);
+                });
+
             modelBuilder.Entity("TrackerStats.Domain.Entities.WhatsNewState", b =>
                 {
                     b.Property<int>("Id")
@@ -164,6 +209,14 @@ namespace TrackerStats.Infrastructure.Migrations.Postgres
                         {
                             Id = 1
                         });
+                });
+
+            modelBuilder.Entity("TrackerStats.Domain.Entities.Integration", b =>
+                {
+                    b.HasOne("TrackerStats.Domain.Entities.TrackerProxy", null)
+                        .WithMany()
+                        .HasForeignKey("ProxyId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 #pragma warning restore 612, 618
         }

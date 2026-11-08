@@ -5,6 +5,18 @@ All notable changes to trackarr are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Proxies for trackers that must be reached through one
+  ([#9](https://github.com/leandrobattochio/trackarr/issues/9)). **Settings > Proxies** keeps HTTP,
+  SOCKS4 and SOCKS5 proxies, with an optional username and password, and a **Test** button. Each
+  integration can pick one in its settings; its syncs and plugin tests then go through it. Other
+  requests, such as the plugin download, never use a proxy. A proxy that an integration uses cannot
+  be deleted. Like Sonarr, SOCKS4 resolves the tracker's host name locally, while SOCKS5 lets the
+  proxy resolve it.
+
 ## [0.5.1] - 2026-11-08
 
 ### Added

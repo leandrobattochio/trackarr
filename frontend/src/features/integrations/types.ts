@@ -36,6 +36,7 @@ export interface ApiIntegration {
   dashboard: ApiDashboardConfig | null;
   payload: Record<string, string | null>;
   url: string | null;
+  proxyId?: string | null;
   requiredRatio: number | null;
   lastSyncAt: string | null;
   nextAutomaticSyncAt: string | null;
@@ -70,11 +71,13 @@ export interface ApiPlugin {
 export interface CreateIntegrationDto {
   pluginId: string;
   payload: string;
+  proxyId?: string | null;
 }
 
 export interface UpdateIntegrationDto {
   pluginId: string;
   payload: string;
+  proxyId?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,6 +94,7 @@ export interface TrackerIntegration {
   name: string;
   payload: Record<string, string>;
   url: string | null;
+  proxyId: string | null;
   ratio: number | null;
   uploaded: number | null;
   downloaded: number | null;
@@ -182,6 +186,7 @@ export function mapIntegration(
       Object.entries(integration.payload).map(([key, value]) => [key, value ?? ""]),
     ),
     url: integration.url,
+    proxyId: integration.proxyId ?? null,
     ratio: integration.stats?.ratio ?? null,
     uploaded: integration.stats?.uploadedBytes ?? null,
     downloaded: integration.stats?.downloadedBytes ?? null,

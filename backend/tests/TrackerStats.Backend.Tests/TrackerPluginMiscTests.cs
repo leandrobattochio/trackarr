@@ -1,6 +1,7 @@
 using Shouldly;
 using TrackerStats.Domain.Plugins;
 using TrackerStats.Infrastructure.Plugins;
+using TrackerStats.Infrastructure.Proxies;
 
 namespace TrackerStats.Backend.Tests;
 
@@ -9,7 +10,7 @@ public class TrackerPluginMiscTests
     [Fact]
     public void TrackerPluginHttpClientFactory_should_create_client_and_configure_plugin()
     {
-        var sut = new TrackerPluginHttpClientFactory(new FakeHttpClientFactory());
+        var sut = new TrackerPluginHttpClientFactory(new FakeHttpClientFactory(), new ProxyHandlerCache());
         var plugin = new FakeTrackerPlugin("plugin", configureHttpClient: client =>
         {
             client.BaseAddress = new Uri("https://tracker.test/");

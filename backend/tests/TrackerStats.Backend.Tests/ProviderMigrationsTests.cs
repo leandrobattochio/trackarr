@@ -46,6 +46,7 @@ public sealed class ProviderMigrationsTests : IDisposable
                 "ApplicationSettings",
                 "IntegrationSnapshots",
                 "Integrations",
+                "Proxies",
                 "WhatsNewState",
                 "__EFMigrationsHistory",
                 "__EFMigrationsLock"
@@ -71,7 +72,8 @@ public sealed class ProviderMigrationsTests : IDisposable
 
         using var db = new PostgresAppDbContext(options);
 
-        db.Database.GetMigrations().ShouldBe(["20260406043447_Initial", "20261107231750_WhatsNewState"]);
+        db.Database.GetMigrations().ShouldBe(
+            ["20260406043447_Initial", "20261107231750_WhatsNewState", "20261108064312_AddProxies"]);
     }
 
     [Fact]

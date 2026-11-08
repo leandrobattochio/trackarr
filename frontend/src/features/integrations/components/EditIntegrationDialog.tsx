@@ -13,6 +13,7 @@ import { MetricTooltip } from "@/features/integrations/components/shared/MetricT
 import { usePlugins, useUpdateIntegration } from "@/features/integrations/hooks";
 import type { ApiPlugin, TrackerIntegration } from "@/features/integrations/types";
 import { getAllFields, getInitialFieldValues } from "@/features/integrations/components/add-integration-validation";
+import { ProxySelect } from "@/features/proxies";
 import { IntegrationConfigurationForm } from "@/features/integrations/components/shared/integration-dialog/IntegrationConfigurationForm";
 import { createEditIntegrationFormStrategy } from "@/features/integrations/components/shared/integration-dialog/integrationFormStrategies";
 import { toast } from "sonner";
@@ -39,6 +40,7 @@ function buildInitialFieldValues(plugin: ApiPlugin | undefined, payload: Record<
 export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegrationDialogProps) {
   const [open, setOpen] = useState(false);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [proxyId, setProxyId] = useState<string | null>(tracker.proxyId);
 
   const { data: plugins = [] } = usePlugins();
   const { mutate: updateIntegration, isPending: isUpdating } = useUpdateIntegration();
@@ -53,8 +55,9 @@ export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegra
   useEffect(() => {
     if (open) {
       setFieldValues(buildInitialFieldValues(plugin, tracker.payload));
+      setProxyId(tracker.proxyId);
     }
-  }, [open, tracker.payload, plugin]);
+  }, [open, tracker.payload, tracker.proxyId, plugin]);
 
   function handleOpenChange(value: boolean) {
     setOpen(value);
@@ -74,6 +77,7 @@ export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegra
         dto: {
           pluginId: tracker.pluginId,
           payload: JSON.stringify(fieldValues),
+          proxyId,
         },
       },
       {
@@ -111,6 +115,7 @@ export function EditIntegrationDialog({ tracker, disabled = false }: EditIntegra
         {plugin ? (
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <IntegrationConfigurationForm plugin={plugin} strategy={formStrategy} />
+            <ProxySelect value={proxyId} onChange={setProxyId} />
 
             <Button type="submit" className="w-full" disabled={isUpdating}>
               {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

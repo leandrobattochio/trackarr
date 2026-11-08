@@ -31,6 +31,15 @@ vi.mock("lucide-react", () => ({
   Info: () => <svg data-testid="icon-info" />,
 }));
 
+vi.mock("@/features/proxies/hooks", () => ({
+  useProxies: () => ({
+    data: [
+      { id: "proxy-1", name: "Home VPN", type: "socks5", host: "10.0.0.2", port: 1080, username: null, hasPassword: false },
+      { id: "proxy-2", name: "Office", type: "http", host: "10.0.0.3", port: 3128, username: "alice", hasPassword: true },
+    ],
+  }),
+}));
+
 vi.mock("@/features/integrations/hooks", () => ({
   usePlugins: () => pluginsState,
   useCreateIntegration: () => createMutation,
@@ -298,6 +307,10 @@ describe("AddIntegrationDialog", () => {
     fireEvent.change(passwordInput, { target: { value: "secret" } });
     fireEvent.change(plainPasswordInput, { target: { value: "plain-secret" } });
     fireEvent.change(passkeyInput, { target: { value: "pk" } });
+    const proxySelect = document.getElementById("integration-proxy") as HTMLSelectElement;
+    expect([...proxySelect.options].map((option) => option.text)).toEqual(["No proxy", "Home VPN", "Office"]);
+    expect(proxySelect).toHaveValue("none");
+    fireEvent.change(proxySelect, { target: { value: "proxy-2" } });
 
     fireEvent.submit(screen.getByRole("button", { name: /Connect/i }).closest("form") as HTMLFormElement);
 
@@ -313,6 +326,7 @@ describe("AddIntegrationDialog", () => {
           plainPassword: "plain-secret",
           passkey: "pk",
         }),
+        proxyId: "proxy-2",
       },
       expect.objectContaining({
         onSuccess: expect.any(Function),
