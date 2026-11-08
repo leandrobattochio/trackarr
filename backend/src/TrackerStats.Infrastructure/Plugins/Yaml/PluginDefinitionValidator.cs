@@ -35,7 +35,8 @@ public static class PluginDefinitionValidator
     public static PluginDefinitionValidationResult Validate(
         string yaml,
         bool requireSchemaVersion = false,
-        bool requireVersion = false)
+        bool requireVersion = false,
+        IPluginBaseLookup? bases = null)
     {
         if (string.IsNullOrWhiteSpace(yaml))
             return Invalid("Request body must contain YAML.");
@@ -44,10 +45,14 @@ public static class PluginDefinitionValidator
         if (incompatibilityError is not null)
             return Invalid(incompatibilityError);
 
+        var resolution = PluginBaseResolver.Resolve(yaml, bases);
+        if (!resolution.Succeeded)
+            return Invalid(resolution.Error!);
+
         PluginDefinition? definition;
         try
         {
-            definition = Deserializer.Deserialize<PluginDefinition>(yaml);
+            definition = Deserializer.Deserialize<PluginDefinition>(resolution.Yaml);
         }
         catch (YamlException ex)
         {

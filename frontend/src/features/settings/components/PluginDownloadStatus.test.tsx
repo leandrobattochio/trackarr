@@ -113,4 +113,20 @@ describe("PluginDownloadStatus", () => {
     });
     expect(screen.getByTestId("plugin-download-outcome-asc")).toHaveTextContent("futureOutcome");
   });
+
+  it("lists the plugin bases before the plugins", () => {
+    renderStatus({
+      lastDownload: {
+        ...successReport,
+        bases: [{ baseId: "unit3d", version: "1.1.0", outcome: "updated", message: null }],
+      },
+      lastSuccessfulIndex: null,
+    });
+
+    const row = screen.getByTestId("plugin-download-base-row-unit3d");
+    expect(row).toHaveTextContent("unit3d (base)");
+    expect(within(row).getByText("Updated")).toBeInTheDocument();
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(rows[0]).toBe(row);
+  });
 });

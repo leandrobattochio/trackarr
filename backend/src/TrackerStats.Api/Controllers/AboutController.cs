@@ -54,6 +54,13 @@ public sealed class AboutController(IAboutService aboutService, PluginStateStore
                         outdated = plugin.Outdated,
                         hiddenByCustom = plugin.HiddenByCustom,
                         message = plugin.Message
+                    }),
+                    bases = (report.Bases ?? []).Select(pluginBase => new
+                    {
+                        baseId = pluginBase.PluginId,
+                        version = pluginBase.Version,
+                        outcome = JsonNamingPolicy.CamelCase.ConvertName(pluginBase.Outcome.ToString()),
+                        message = pluginBase.Message
                     })
                 },
             lastSuccessfulIndex = state.Index is null

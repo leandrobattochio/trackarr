@@ -51,7 +51,7 @@ public sealed class PluginSnapshotSeederTests : IDisposable
             state.Official[pluginId].Version.ShouldBe("1.0.0");
         }
 
-        new YamlPluginDefinitionLoader(_layout, new FakeApplicationSettingsService()).LoadDefinitions()
+        new YamlPluginDefinitionLoader(_layout, new PluginBaseStore(_layout), new FakeApplicationSettingsService()).LoadDefinitions()
             .Select(plugin => (plugin.PluginId, plugin.Origin, plugin.IsValid))
             .ShouldBe(FixturePluginIds.Select(id => (id, PluginOrigin.Official, true)), ignoreOrder: true);
     }
@@ -164,7 +164,8 @@ public sealed class PluginSnapshotSeederTests : IDisposable
             client,
             _layout,
             _stateStore,
-            new PluginOverrideService(_layout, _stateStore, NullLogger<PluginOverrideService>.Instance),
+            new PluginBaseStore(_layout),
+            new PluginOverrideService(_layout, _stateStore, new PluginBaseStore(_layout), NullLogger<PluginOverrideService>.Instance),
             services.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<PluginDownloadService>.Instance);
     }

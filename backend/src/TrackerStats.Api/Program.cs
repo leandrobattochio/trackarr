@@ -68,6 +68,7 @@ builder.Services.AddSingleton<IResultMapper, ResultMapper>();
 builder.Services.AddSingleton<IYamlPluginEngine, YamlPluginEngine>();
 builder.Services.AddSingleton<PluginStorageLayout>();
 builder.Services.AddSingleton<PluginStateStore>();
+builder.Services.AddSingleton<PluginBaseStore>();
 builder.Services.AddSingleton<LegacyPluginCleanup>();
 builder.Services.AddSingleton<PluginSnapshotSeeder>();
 builder.Services.AddSingleton<PluginOverrideService>();

@@ -22,6 +22,7 @@ public sealed class PluginStorageLayout
         OfficialDirectory = Path.Combine(PluginsRoot, "official");
         OverridesDirectory = Path.Combine(PluginsRoot, "overrides");
         CustomDirectory = Path.Combine(PluginsRoot, "custom");
+        BasesDirectory = Path.Combine(PluginsRoot, "bases");
         StateFilePath = Path.Combine(PluginsRoot, "state.json");
     }
 
@@ -33,6 +34,7 @@ public sealed class PluginStorageLayout
     public string OfficialDirectory { get; }
     public string OverridesDirectory { get; }
     public string CustomDirectory { get; }
+    public string BasesDirectory { get; }
     public string StateFilePath { get; }
 
     public string GetDirectory(PluginOrigin origin) => origin switch
@@ -45,6 +47,9 @@ public sealed class PluginStorageLayout
 
     public string GetPluginPath(PluginOrigin origin, string pluginId) =>
         Path.Combine(GetDirectory(origin), $"{EnsureValidPluginId(pluginId)}.yaml");
+
+    public string GetBasePath(string baseId) =>
+        Path.Combine(BasesDirectory, $"{EnsureValidPluginId(baseId)}.yaml");
 
     public string GetOverrideBasePath(string pluginId) =>
         Path.Combine(OverridesDirectory, $"{EnsureValidPluginId(pluginId)}{BaseCopySuffix}");

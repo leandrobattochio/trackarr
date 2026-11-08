@@ -12,7 +12,10 @@ public sealed record PluginIndexEntry(
     // Optional: the first trackarr version that supports SchemaVersion.
     string? MinAppVersion = null);
 
-public sealed record PluginIndex(IReadOnlyList<PluginIndexEntry> Plugins);
+public sealed record PluginIndex(IReadOnlyList<PluginIndexEntry> Plugins)
+{
+    public IReadOnlyList<PluginIndexEntry> Bases { get; init; } = [];
+}
 
 public enum PluginFileFetchStatus
 {
@@ -34,6 +37,8 @@ public sealed record PluginIndexFetchResult(
     IReadOnlyList<PluginFileFetchResult> Files,
     string? Error)
 {
+    public IReadOnlyList<PluginFileFetchResult> BaseFiles { get; init; } = [];
+
     public bool Succeeded => Error is null;
 
     public static PluginIndexFetchResult Failure(string source, string error, string? indexSha256 = null) =>

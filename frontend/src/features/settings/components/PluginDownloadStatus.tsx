@@ -113,7 +113,7 @@ export function PluginDownloadStatus({ isLoading, error, status }: PluginDownloa
               </div>
             )}
 
-            {report.plugins.length > 0 && (
+            {(report.plugins.length > 0 || (report.bases?.length ?? 0) > 0) && (
               <div className="overflow-x-auto rounded-lg border border-border/60">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-muted/30 text-xs uppercase text-muted-foreground">
@@ -125,6 +125,25 @@ export function PluginDownloadStatus({ isLoading, error, status }: PluginDownloa
                     </tr>
                   </thead>
                   <tbody>
+                    {(report.bases ?? []).map((pluginBase) => {
+                      const outcome = OUTCOMES[pluginBase.outcome] ?? { label: pluginBase.outcome, className: MUTED };
+                      return (
+                        <tr
+                          key={`base-${pluginBase.baseId}`}
+                          data-testid={`plugin-download-base-row-${pluginBase.baseId}`}
+                          className="border-t border-border/60 align-top"
+                        >
+                          <td className="px-4 py-2 font-medium">{pluginBase.baseId} (base)</td>
+                          <td className="px-4 py-2 text-muted-foreground">{pluginBase.version ?? "-"}</td>
+                          <td className="px-4 py-2">
+                            <Badge variant="outline" className={cn("whitespace-nowrap", outcome.className)}>
+                              {outcome.label}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-2 text-muted-foreground break-all">{pluginBase.message}</td>
+                        </tr>
+                      );
+                    })}
                     {report.plugins.map((plugin) => {
                       const outcome = OUTCOMES[plugin.outcome] ?? { label: plugin.outcome, className: MUTED };
                       return (

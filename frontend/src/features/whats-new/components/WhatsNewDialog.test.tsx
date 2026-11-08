@@ -59,6 +59,27 @@ describe("WhatsNewDialog", () => {
     expect(within(asc).getByText("No changelog for this version.")).toBeInTheDocument();
   });
 
+  it("names a base update after the base", () => {
+    renderDialog({
+      report: whatsNewReport({
+        pluginUpdates: [
+          {
+            id: 3,
+            pluginId: "unit3d",
+            fromVersion: "1.0.0",
+            toVersion: "1.1.0",
+            appliedAt: "2026-11-08T10:00:00Z",
+            changelog: [],
+            isBase: true,
+            displayName: "UNIT3D",
+          },
+        ],
+      }),
+    });
+
+    expect(screen.getByTestId("whats-new-base-unit3d")).toHaveTextContent("UNIT3D base");
+  });
+
   it("says when nothing is new in either section", () => {
     vi.mocked(usePluginCatalog).mockReturnValue({ data: undefined } as never);
     renderDialog({ report: whatsNewReport({ lastReadAt: "2026-11-01T08:00:00Z" }) });

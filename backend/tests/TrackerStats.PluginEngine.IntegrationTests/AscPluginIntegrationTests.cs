@@ -1,3 +1,4 @@
+using TrackerStats.Infrastructure.Plugins.Storage;
 using System.Net;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
@@ -91,7 +92,7 @@ public class AscPluginIntegrationTests
     {
         using var dataDirectory = RepoPluginsDataDirectory.Create();
 
-        return new YamlPluginDefinitionLoader(dataDirectory.Layout, new FakeApplicationSettingsService())
+        return new YamlPluginDefinitionLoader(dataDirectory.Layout, new PluginBaseStore(dataDirectory.Layout), new FakeApplicationSettingsService())
             .LoadDefinitions()
             .Single(definition => definition.PluginId == "asc")
             .Definition!;

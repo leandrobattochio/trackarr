@@ -12,18 +12,18 @@ public static class PluginDefinitionComparer
         .WithNamingConvention(CamelCaseNamingConvention.Instance)
         .Build();
 
-    // Compared after engine defaults, so an explicit default value is not a change.
-    public static bool AreSemanticallyEqual(string left, string right)
+    // Compared after resolving 'extends' and applying engine defaults, so an inherited or default value written out is not a change.
+    public static bool AreSemanticallyEqual(string left, string right, IPluginBaseLookup? bases = null)
     {
-        var leftJson = ToCanonicalJson(left);
-        return leftJson is not null && leftJson == ToCanonicalJson(right);
+        var leftJson = ToCanonicalJson(left, bases);
+        return leftJson is not null && leftJson == ToCanonicalJson(right, bases);
     }
 
-    private static string? ToCanonicalJson(string yaml)
+    private static string? ToCanonicalJson(string yaml, IPluginBaseLookup? bases)
     {
         try
         {
-            var definition = Deserializer.Deserialize<PluginDefinition>(yaml);
+            var definition = Deserializer.Deserialize<PluginDefinition>(PluginBaseResolver.Resolve(yaml, bases).Yaml);
             if (definition is null)
                 return null;
 

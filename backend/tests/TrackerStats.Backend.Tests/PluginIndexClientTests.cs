@@ -199,7 +199,7 @@ public sealed class PluginIndexClientTests : IDisposable
         await cancellation.CancelAsync();
 
         await Should.ThrowAsync<OperationCanceledException>(
-            () => CreateClient(handler, SourceUrl).FetchAsync(Installed(), cancellation.Token));
+            () => CreateClient(handler, SourceUrl).FetchAsync(Installed(), cancellationToken: cancellation.Token));
     }
 
     [Theory]

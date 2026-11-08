@@ -113,7 +113,7 @@ public sealed class PluginValidatorCliTests : IDisposable
         // schemaVersion
         { "test-plugin", ValidYaml.Replace("schemaVersion: 1\n", ""), "Plugin definition is missing required field 'schemaVersion'." },
         { "test-plugin", ValidYaml.Replace("schemaVersion: 1", "schemaVersion: 0"), "Property 'schemaVersion' must be a positive integer." },
-        { "test-plugin", ValidYaml.Replace("schemaVersion: 1", "schemaVersion: 99"), "Plugin requires schema version 99, but this trackarr supports up to 1." },
+        { "test-plugin", ValidYaml.Replace("schemaVersion: 1", "schemaVersion: 99"), "Plugin requires schema version 99, but this trackarr supports up to 2." },
         // version
         { "test-plugin", ValidYaml.Replace("version: 1.0.0\nschemaVersion", "schemaVersion"), "Plugin definition is missing required field 'version'." },
         { "test-plugin", ValidYaml.Replace("version: 1.0.0\nschemaVersion", "version: v1\nschemaVersion"), "Property 'version' must be a semantic version such as 1.2.0." },

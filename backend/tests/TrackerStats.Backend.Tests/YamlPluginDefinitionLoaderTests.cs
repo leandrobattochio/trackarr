@@ -234,7 +234,7 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
     [Fact]
     public void LoadDefinitions_should_report_misnamed_incompatible_plugin_as_invalid()
     {
-        WritePlugin(PluginOrigin.Official, "other.yaml", ValidPluginYaml("future", header: "schemaVersion: 2"));
+        WritePlugin(PluginOrigin.Official, "other.yaml", ValidPluginYaml("future", header: "schemaVersion: 3"));
 
         var definition = CreateLoader().LoadDefinitions().ShouldHaveSingleItem();
 
@@ -330,7 +330,7 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
     {
         var loader = CreateLoaderWith("future.yaml", ValidPluginYaml("future", header: """
             version: 2.0.0
-            schemaVersion: 2
+            schemaVersion: 3
             someFutureKey:
               enabled: true
             """));
@@ -342,7 +342,7 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
         definition.IsValid.ShouldBeFalse();
         definition.Incompatible.ShouldBeTrue();
         definition.Definition.ShouldBeNull();
-        definition.Error.ShouldNotBeNull().ShouldContain("Plugin requires schema version 2, but this trackarr supports up to 1.");
+        definition.Error.ShouldNotBeNull().ShouldContain("Plugin requires schema version 3, but this trackarr supports up to 2.");
     }
 
     [Fact]
@@ -362,7 +362,7 @@ public sealed class YamlPluginDefinitionLoaderTests : IDisposable
         return CreateLoader();
     }
 
-    private YamlPluginDefinitionLoader CreateLoader() => new(_layout, SettingsService);
+    private YamlPluginDefinitionLoader CreateLoader() => new(_layout, new PluginBaseStore(_layout), SettingsService);
 
     private void WritePlugin(PluginOrigin origin, string fileName, string content)
     {

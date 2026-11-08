@@ -15,6 +15,7 @@ public enum PluginOverrideSaveOutcome
 public sealed class PluginOverrideService(
     PluginStorageLayout layout,
     PluginStateStore stateStore,
+    PluginBaseStore bases,
     ILogger<PluginOverrideService> logger)
 {
     private readonly Lock _gate = new();
@@ -173,9 +174,9 @@ public sealed class PluginOverrideService(
             : null;
     }
 
-    private static bool MatchesBase(string yaml, string? baseContent, OverridePluginState? baseState) =>
+    private bool MatchesBase(string yaml, string? baseContent, OverridePluginState? baseState) =>
         baseContent is not null
-            ? PluginDefinitionComparer.AreSemanticallyEqual(yaml, baseContent)
+            ? PluginDefinitionComparer.AreSemanticallyEqual(yaml, baseContent, bases)
             : baseState is not null && PluginStateStore.ComputeSha256(Encoding.UTF8.GetBytes(yaml)) == baseState.BaseSha256;
 
     private void Remove(string pluginId)
@@ -199,6 +200,6 @@ public sealed class PluginOverrideService(
         File.Move(temporaryPath, path, overwrite: true);
     }
 
-    private static string ReadVersion(string yaml) =>
-        PluginDefinitionValidator.Validate(yaml).Definition?.Version ?? "";
+    private string ReadVersion(string yaml) =>
+        PluginDefinitionValidator.Validate(yaml, bases: bases).Definition?.Version ?? "";
 }

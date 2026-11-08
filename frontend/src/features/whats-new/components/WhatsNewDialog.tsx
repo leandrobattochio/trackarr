@@ -61,9 +61,12 @@ function PluginsSection({ updates }: { updates: ApiPluginUpdate[] }) {
   return (
     <div className="space-y-4">
       {groups.map((group) => {
-        const name = plugins.find((plugin) => plugin.pluginId === group.pluginId)?.displayName ?? group.pluginId;
+        const name = group.isBase
+          ? `${group.displayName ?? group.pluginId} base`
+          : plugins.find((plugin) => plugin.pluginId === group.pluginId)?.displayName ?? group.pluginId;
+        const testId = group.isBase ? `whats-new-base-${group.pluginId}` : `whats-new-plugin-${group.pluginId}`;
         return (
-          <article key={group.pluginId} data-testid={`whats-new-plugin-${group.pluginId}`} className="space-y-2">
+          <article key={testId} data-testid={testId} className="space-y-2">
             <h4 className="flex flex-wrap items-baseline gap-2 font-semibold text-foreground">
               {name}
               <span className="text-xs font-normal text-muted-foreground">

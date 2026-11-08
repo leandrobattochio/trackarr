@@ -25,7 +25,7 @@ public sealed class PluginStatusApiTests : IDisposable
     {
         _layout = PluginStorageLayout.ForDataDirectory(_root);
         _stateStore = new PluginStateStore(_layout);
-        _loader = new YamlPluginDefinitionLoader(_layout, new FakeApplicationSettingsService());
+        _loader = new YamlPluginDefinitionLoader(_layout, new PluginBaseStore(_layout), new FakeApplicationSettingsService());
     }
 
     public void Dispose()
@@ -87,7 +87,7 @@ public sealed class PluginStatusApiTests : IDisposable
     {
         InstallOfficial("asc", "1.0.0");
         WriteOverride("asc", "1.0.0", "Mine");
-        SetIndex(("asc", "2.0.0", 2, null));
+        SetIndex(("asc", "2.0.0", 3, null));
 
         var asc = await GetStatusAsync("asc");
 
@@ -136,7 +136,7 @@ public sealed class PluginStatusApiTests : IDisposable
     public async Task S17_a_newer_official_version_needing_a_newer_schema_should_be_incompatible()
     {
         InstallOfficial("asc", "1.0.0");
-        SetIndex(("asc", "1.1.0", 2, "0.5.0"));
+        SetIndex(("asc", "1.1.0", 3, "0.5.0"));
 
         var asc = await GetStatusAsync("asc");
 
@@ -145,26 +145,26 @@ public sealed class PluginStatusApiTests : IDisposable
         asc.GetProperty("latestOfficialVersion").GetString().ShouldBe("1.0.0");
         asc.GetProperty("incompatible").GetBoolean().ShouldBeTrue();
         asc.GetProperty("incompatibleVersion").GetString().ShouldBe("1.1.0");
-        asc.GetProperty("requiredSchemaVersion").GetInt32().ShouldBe(2);
+        asc.GetProperty("requiredSchemaVersion").GetInt32().ShouldBe(3);
         asc.GetProperty("requiredAppVersion").GetString().ShouldBe("0.5.0");
-        asc.GetProperty("incompatibleMessage").GetString().ShouldBe(PluginSchema.GetUpdateRequiredMessage("asc", "1.1.0", 2));
+        asc.GetProperty("incompatibleMessage").GetString().ShouldBe(PluginSchema.GetUpdateRequiredMessage("asc", "1.1.0", 3));
     }
 
     [Fact]
     public async Task S18_a_new_official_id_needing_a_newer_schema_should_be_listed_as_incompatible()
     {
-        SetIndex(("future", "1.0.0", 2, null));
+        SetIndex(("future", "1.0.0", 3, null));
 
         var future = await GetStatusAsync("future");
 
         future.GetProperty("origin").GetString().ShouldBe("official");
         future.GetProperty("displayName").GetString().ShouldBe("future");
         future.GetProperty("definitionValid").GetBoolean().ShouldBeFalse();
-        future.GetProperty("definitionError").GetString().ShouldBe(PluginSchema.GetUpdateRequiredMessage("future", "1.0.0", 2));
+        future.GetProperty("definitionError").GetString().ShouldBe(PluginSchema.GetUpdateRequiredMessage("future", "1.0.0", 3));
         future.GetProperty("version").ValueKind.ShouldBe(JsonValueKind.Null);
         future.GetProperty("incompatible").GetBoolean().ShouldBeTrue();
         future.GetProperty("incompatibleVersion").GetString().ShouldBe("1.0.0");
-        future.GetProperty("requiredSchemaVersion").GetInt32().ShouldBe(2);
+        future.GetProperty("requiredSchemaVersion").GetInt32().ShouldBe(3);
         future.GetProperty("requiredAppVersion").ValueKind.ShouldBe(JsonValueKind.Null);
         future.GetProperty("fields").GetArrayLength().ShouldBe(0);
     }
@@ -195,7 +195,7 @@ public sealed class PluginStatusApiTests : IDisposable
     public async Task A_custom_should_ignore_an_incompatible_official_with_its_id()
     {
         WritePlugin(PluginOrigin.Custom, "asc", PluginYaml("asc", "1.0.0"));
-        SetIndex(("asc", "2.0.0", 2, null));
+        SetIndex(("asc", "2.0.0", 3, null));
 
         var asc = await GetStatusAsync("asc");
 
@@ -355,8 +355,9 @@ public sealed class PluginStatusApiTests : IDisposable
         new(
             _loader,
             _layout,
-            new PluginOverrideService(_layout, _stateStore, NullLogger<PluginOverrideService>.Instance),
+            new PluginOverrideService(_layout, _stateStore, new PluginBaseStore(_layout), NullLogger<PluginOverrideService>.Instance),
             _stateStore,
+            new PluginBaseStore(_layout),
             new PluginStatusService(_loader, _layout, _stateStore),
             _integrations);
 

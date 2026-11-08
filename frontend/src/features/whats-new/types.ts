@@ -26,6 +26,9 @@ export interface ApiPluginUpdate {
   toVersion: string;
   appliedAt: string;
   changelog: ApiPluginChangelogEntry[];
+  // With isBase, pluginId is the id of a plugin base.
+  isBase?: boolean;
+  displayName?: string | null;
 }
 
 export interface ApiWhatsNew {

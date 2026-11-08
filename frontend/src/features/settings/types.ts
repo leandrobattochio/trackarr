@@ -44,6 +44,14 @@ export interface ApiPluginDownloadReport {
   succeeded: boolean;
   error: string | null;
   plugins: ApiPluginDownloadPluginResult[];
+  bases?: ApiPluginDownloadBaseResult[];
+}
+
+export interface ApiPluginDownloadBaseResult {
+  baseId: string;
+  version: string | null;
+  outcome: ApiPluginDownloadOutcome;
+  message: string | null;
 }
 
 export interface ApiPluginDownloadStatus {

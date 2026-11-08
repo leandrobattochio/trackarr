@@ -13,7 +13,7 @@ public class YamlPluginDefinitionLoaderIntegrationTests
     public void LoadDefinitions_should_load_repo_plugin_files_and_apply_defaults()
     {
         using var dataDirectory = RepoPluginsDataDirectory.Create();
-        var sut = new YamlPluginDefinitionLoader(dataDirectory.Layout, SettingsService);
+        var sut = new YamlPluginDefinitionLoader(dataDirectory.Layout, new PluginBaseStore(dataDirectory.Layout), SettingsService);
 
         var definitions = sut.LoadDefinitions();
 
@@ -60,7 +60,7 @@ public class YamlPluginDefinitionLoaderIntegrationTests
                 steps: []
                 """);
 
-            var sut = new YamlPluginDefinitionLoader(layout, SettingsService);
+            var sut = new YamlPluginDefinitionLoader(layout, new PluginBaseStore(layout), SettingsService);
 
             var definitions = sut.LoadDefinitions();
 

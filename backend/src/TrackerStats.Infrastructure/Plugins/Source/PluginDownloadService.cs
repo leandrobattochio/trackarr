@@ -12,6 +12,7 @@ public sealed class PluginDownloadService(
     PluginIndexClient indexClient,
     PluginStorageLayout layout,
     PluginStateStore stateStore,
+    PluginBaseStore bases,
     PluginOverrideService overrides,
     IServiceScopeFactory scopeFactory,
     ILogger<PluginDownloadService> logger)
@@ -26,7 +27,11 @@ public sealed class PluginDownloadService(
             .Where(plugin => File.Exists(layout.GetPluginPath(PluginOrigin.Official, plugin.Key)))
             .ToDictionary(plugin => plugin.Key, plugin => plugin.Value, StringComparer.Ordinal);
 
-        var fetch = await indexClient.FetchAsync(installed, cancellationToken);
+        var installedBases = state.Bases
+            .Where(entry => File.Exists(layout.GetBasePath(entry.Key)))
+            .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
+
+        var fetch = await indexClient.FetchAsync(installed, installedBases, cancellationToken);
         if (!fetch.Succeeded)
         {
             var failed = new PluginDownloadReport(startedAt, DateTimeOffset.UtcNow, fetch.Source, fetch.IndexSha256, fetch.Error, []);
@@ -35,6 +40,8 @@ public sealed class PluginDownloadService(
         }
 
         var run = new Run(state);
+        // Bases first: a plugin that extends a base is validated against the base on disk.
+        var baseResults = fetch.BaseFiles.Select(file => ApplyBase(file, run)).ToList();
         var results = fetch.Files.Select(file => Apply(file, run)).ToList();
 
         var indexIds = fetch.Index!.Plugins.Select(entry => entry.Id).ToHashSet(StringComparer.Ordinal);
@@ -42,7 +49,7 @@ public sealed class PluginDownloadService(
             results.Add(await HandleRemovedAsync(pluginId, run, cancellationToken));
 
         var completedAt = DateTimeOffset.UtcNow;
-        var report = new PluginDownloadReport(startedAt, completedAt, fetch.Source, fetch.IndexSha256, null, results);
+        var report = new PluginDownloadReport(startedAt, completedAt, fetch.Source, fetch.IndexSha256, null, results, baseResults);
         stateStore.Update(current =>
         {
             foreach (var (pluginId, official) in run.OfficialChanges)
@@ -53,11 +60,18 @@ public sealed class PluginDownloadService(
                     current.Official[pluginId] = official;
             }
 
+            foreach (var (baseId, installedBase) in run.BaseChanges)
+                current.Bases[baseId] = installedBase;
+
             current.Index = new PluginIndexState(
                 fetch.Source,
                 fetch.IndexSha256!,
                 completedAt,
                 fetch.Index.Plugins.ToDictionary(
+                    entry => entry.Id,
+                    entry => new IndexedPluginState(entry.Version, entry.SchemaVersion, entry.Sha256, entry.Changelog, entry.MinAppVersion),
+                    StringComparer.Ordinal),
+                fetch.Index.Bases.ToDictionary(
                     entry => entry.Id,
                     entry => new IndexedPluginState(entry.Version, entry.SchemaVersion, entry.Sha256, entry.Changelog, entry.MinAppVersion),
                     StringComparer.Ordinal));
@@ -74,8 +88,70 @@ public sealed class PluginDownloadService(
         logger.LogInformation(
             "Plugin download from {Source} finished: {Outcomes}",
             fetch.Source,
-            string.Join(", ", results.Select(result => $"{result.PluginId} {result.Outcome}")));
+            string.Join(", ", baseResults.Select(result => $"base {result.PluginId} {result.Outcome}")
+                .Concat(results.Select(result => $"{result.PluginId} {result.Outcome}"))));
         return report;
+    }
+
+    // A base removed from the index stays on disk: plugins, overrides and custom plugins may still extend it.
+    private PluginDownloadPluginResult ApplyBase(PluginFileFetchResult file, Run run)
+    {
+        var entry = file.Entry;
+        var basePath = layout.GetBasePath(entry.Id);
+        run.State.Bases.TryGetValue(entry.Id, out var recorded);
+        var installedVersion = File.Exists(basePath) ? recorded?.Version : null;
+
+        PluginDownloadPluginResult Result(PluginDownloadOutcome outcome, string? message = null) =>
+            new(entry.Id, entry.Version, outcome, Message: message);
+
+        if (PluginSchema.GetCompatibility(entry.SchemaVersion) == PluginSchemaCompatibility.Incompatible)
+            return Result(PluginDownloadOutcome.Incompatible, PluginSchema.GetUpdateRequiredMessage($"base {entry.Id}", entry.Version, entry.SchemaVersion));
+
+        switch (file.Status)
+        {
+            case PluginFileFetchStatus.Failed:
+                return Result(PluginDownloadOutcome.Failed, file.Error);
+            case PluginFileFetchStatus.Unchanged:
+                return Result(PluginDownloadOutcome.Unchanged);
+        }
+
+        var parsed = PluginBaseValidator.Validate(Encoding.UTF8.GetString(file.Content!));
+        var contentError = parsed.Error
+            ?? (parsed.BaseId != entry.Id ? $"the file declares baseId '{parsed.BaseId}', but the index lists '{entry.Id}'." : null)
+            ?? (parsed.Version != entry.Version || parsed.SchemaVersion != entry.SchemaVersion
+                ? $"the file declares version {parsed.Version} (schema {parsed.SchemaVersion}), but the index lists {entry.Version} (schema {entry.SchemaVersion})."
+                : null);
+        if (contentError is not null)
+        {
+            logger.LogWarning("Plugin base {BaseId} {Version} rejected: {Error}", entry.Id, entry.Version, contentError);
+            return Result(PluginDownloadOutcome.Failed, $"Rejected {entry.Path}: {contentError}");
+        }
+
+        var existed = File.Exists(basePath);
+        if (existed && recorded is not null && PluginStateStore.ComputeFileSha256(basePath) != recorded.Sha256)
+            return Result(
+                PluginDownloadOutcome.LocallyModified,
+                $"bases/{entry.Id}.yaml was changed on disk, so version {entry.Version} was not written over it.");
+
+        try
+        {
+            WriteAtomically(layout.BasesDirectory, entry.Id, basePath, file.Content!);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(ex, "Could not write {Path}", basePath);
+            return Result(PluginDownloadOutcome.Failed, $"Could not write bases/{entry.Id}.yaml: {ex.Message}");
+        }
+
+        run.BaseChanges[entry.Id] = new OfficialPluginState(entry.Version, entry.Sha256);
+        if (run.State.Index is not null && installedVersion != entry.Version)
+        {
+            run.Updates.Add(new PluginUpdateRecord(
+                0, entry.Id, installedVersion, entry.Version, default, GetChangelogBetween(entry, installedVersion),
+                IsBase: true, DisplayName: parsed.DisplayName));
+        }
+
+        return Result(existed ? PluginDownloadOutcome.Updated : PluginDownloadOutcome.Installed);
     }
 
     private PluginDownloadPluginResult Apply(PluginFileFetchResult file, Run run)
@@ -119,7 +195,7 @@ public sealed class PluginDownloadService(
 
         try
         {
-            WriteOfficial(entry.Id, officialPath, file.Content!);
+            WriteAtomically(layout.OfficialDirectory, entry.Id, officialPath, file.Content!);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -205,18 +281,18 @@ public sealed class PluginDownloadService(
         }
     }
 
-    private void WriteOfficial(string pluginId, string officialPath, byte[] content)
+    private static void WriteAtomically(string directory, string id, string path, byte[] content)
     {
-        Directory.CreateDirectory(layout.OfficialDirectory);
-        var temporaryPath = Path.Combine(layout.OfficialDirectory, $".{pluginId}.download");
+        Directory.CreateDirectory(directory);
+        var temporaryPath = Path.Combine(directory, $".{id}.download");
         File.WriteAllBytes(temporaryPath, content);
-        File.Move(temporaryPath, officialPath, overwrite: true);
+        File.Move(temporaryPath, path, overwrite: true);
     }
 
-    private static string? GetContentError(PluginIndexEntry entry, byte[] content)
+    private string? GetContentError(PluginIndexEntry entry, byte[] content)
     {
         var validation = PluginDefinitionValidator.Validate(
-            Encoding.UTF8.GetString(content), requireSchemaVersion: true, requireVersion: true);
+            Encoding.UTF8.GetString(content), requireSchemaVersion: true, requireVersion: true, bases: bases);
         if (!validation.IsValid)
             return validation.Error;
 
@@ -248,6 +324,7 @@ public sealed class PluginDownloadService(
     {
         public PluginState State { get; } = state;
         public Dictionary<string, OfficialPluginState?> OfficialChanges { get; } = new(StringComparer.Ordinal);
+        public Dictionary<string, OfficialPluginState> BaseChanges { get; } = new(StringComparer.Ordinal);
         public List<PluginUpdateRecord> Updates { get; } = [];
     }
 }

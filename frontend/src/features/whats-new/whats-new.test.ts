@@ -51,6 +51,8 @@ describe("groupPluginUpdates", () => {
     expect(groups).toEqual([
       {
         pluginId: "asc",
+        isBase: false,
+        displayName: null,
         fromVersion: "1.0.0",
         toVersion: "1.2.0",
         changelog: [
@@ -58,7 +60,19 @@ describe("groupPluginUpdates", () => {
           { version: "1.1.0", date: "2026-11-01", notes: "First" },
         ],
       },
-      { pluginId: "seedpool", fromVersion: null, toVersion: "1.0.0", changelog: [] },
+      { pluginId: "seedpool", isBase: false, displayName: null, fromVersion: null, toVersion: "1.0.0", changelog: [] },
+    ]);
+  });
+
+  it("keeps a base apart from a plugin with the same id", () => {
+    const groups = groupPluginUpdates([
+      update({ id: 2, pluginId: "unit3d", isBase: true, displayName: "UNIT3D", fromVersion: "1.0.0", toVersion: "1.1.0" }),
+      update({ id: 1, pluginId: "unit3d", fromVersion: "1.0.0", toVersion: "1.0.1" }),
+    ]);
+
+    expect(groups.map((group) => [group.pluginId, group.isBase, group.displayName, group.toVersion])).toEqual([
+      ["unit3d", true, "UNIT3D", "1.1.0"],
+      ["unit3d", false, null, "1.0.1"],
     ]);
   });
 

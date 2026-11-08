@@ -5,6 +5,30 @@ All notable changes to trackarr are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Plugin bases. A plugin can say `extends: <baseId>` and leave out every key the base defines
+  (`fields`, `customFields`, `http`, `authFailure`, `steps`, `mapping`, `dashboard`); a key the
+  plugin sets replaces the base's key whole. A tracker that runs a known engine, such as UNIT3D,
+  then needs only its name and address. Bases come from `trackarr-plugins` with the official
+  plugins, are checked against `index.json` the same way, are stored in
+  `<Data__Directory>/plugins/bases/` and ship in the image snapshot. A base update reaches every
+  plugin that extends it, overrides and custom plugins included, and shows in What's New and in
+  **Settings > About**. Custom plugins can extend the official bases too.
+- `TrackerStats.PluginValidator` takes `--bases <folder>`, validates every base in it and resolves
+  `extends` with them.
+
+### Changed
+
+- Plugin schema version 2, needed by `extends` and by plugin bases. Plugins on schema version 1 keep
+  working unchanged. trackarr 0.5 and earlier keep the last schema 1 version of an official plugin
+  that moves to schema 2, and ignore the bases.
+- The Help page no longer explains how to edit plugins or the YAML format, and the new plugin
+  template has no comments: both link to the [wiki](https://github.com/leandrobattochio/trackarr/wiki)
+  instead.
+
 ## [0.5.2] - 2026-11-08
 
 ### Added
