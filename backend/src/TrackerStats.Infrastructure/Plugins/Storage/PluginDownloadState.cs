@@ -13,8 +13,7 @@ public sealed record PluginIndexState(
     string Source,
     string Sha256,
     DateTimeOffset FetchedAt,
-    Dictionary<string, IndexedPluginState> Plugins,
-    Dictionary<string, IndexedPluginState>? Bases = null);
+    Dictionary<string, IndexedPluginState> Plugins);
 
 public enum PluginDownloadOutcome
 {

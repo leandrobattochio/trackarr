@@ -6,7 +6,7 @@ describe("NEW_PLUGIN_TEMPLATE", () => {
     expect(NEW_PLUGIN_TEMPLATE).toContain("pluginId: <your-plugin-id>");
     expect(NEW_PLUGIN_TEMPLATE).toContain("displayName: My Tracker");
     expect(NEW_PLUGIN_TEMPLATE).toContain("version: 1.0.0");
-    expect(NEW_PLUGIN_TEMPLATE).toContain("schemaVersion: 1");
+    expect(NEW_PLUGIN_TEMPLATE).toContain("schemaVersion: 2");
     expect(NEW_PLUGIN_TEMPLATE).toContain("baseUrls:");
     expect(NEW_PLUGIN_TEMPLATE).toContain("fields:");
     expect(NEW_PLUGIN_TEMPLATE).toContain("steps:");

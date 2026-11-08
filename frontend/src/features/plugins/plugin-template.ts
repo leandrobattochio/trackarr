@@ -4,7 +4,7 @@ export const NEW_PLUGIN_TEMPLATE = `# How to write a plugin: ${WIKI_URL}/Writing
 pluginId: <your-plugin-id>
 displayName: My Tracker
 version: 1.0.0
-schemaVersion: 1
+schemaVersion: 2
 
 baseUrls:
   - https://tracker.example/

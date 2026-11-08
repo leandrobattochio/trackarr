@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using TrackerStats.Domain.Plugins.Yaml;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
@@ -12,6 +13,9 @@ public sealed record PluginBaseResolution(string Yaml, string? Error)
 public static class PluginBaseResolver
 {
     public const string ExtendsKey = "extends";
+
+    // The registry reloads every plugin on each lookup, so each base would otherwise be parsed once per plugin.
+    private static readonly ConcurrentDictionary<string, PluginBaseParseResult> ParsedBases = new(StringComparer.Ordinal);
 
     public static PluginBaseResolution Resolve(string yaml, IPluginBaseLookup? bases)
     {
@@ -29,7 +33,9 @@ public static class PluginBaseResolver
         if (baseContent is null)
             return new PluginBaseResolution(yaml, $"The plugin extends base '{baseId}', which is not installed.");
 
-        var parsedBase = PluginBaseValidator.Parse(baseContent);
+        if (ParsedBases.Count > 64)
+            ParsedBases.Clear();
+        var parsedBase = ParsedBases.GetOrAdd(baseContent, PluginBaseValidator.Parse);
         if (parsedBase.Error is not null)
             return new PluginBaseResolution(yaml, $"Plugin base '{baseId}' is invalid. {parsedBase.Error}");
         if (parsedBase.BaseId != baseId)

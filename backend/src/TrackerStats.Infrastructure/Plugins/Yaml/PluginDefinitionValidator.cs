@@ -45,18 +45,35 @@ public static class PluginDefinitionValidator
         if (incompatibilityError is not null)
             return Invalid(incompatibilityError);
 
-        var resolution = PluginBaseResolver.Resolve(yaml, bases);
-        if (!resolution.Succeeded)
-            return Invalid(resolution.Error!);
-
         PluginDefinition? definition;
         try
         {
-            definition = Deserializer.Deserialize<PluginDefinition>(resolution.Yaml);
+            // The plugin as written first, so syntax errors point at the user's lines.
+            definition = Deserializer.Deserialize<PluginDefinition>(yaml);
         }
         catch (YamlException ex)
         {
             return Invalid($"Invalid YAML syntax: {ex.Message} (line {ex.Start.Line}, column {ex.Start.Column})");
+        }
+
+        if (definition?.Extends is not null)
+        {
+            var versionViolation = PluginSchema.GetVersionViolation(definition, requireSchemaVersion, requireVersion);
+            if (versionViolation is not null)
+                return Invalid(versionViolation);
+
+            var resolution = PluginBaseResolver.Resolve(yaml, bases);
+            if (!resolution.Succeeded)
+                return Invalid(resolution.Error!);
+
+            try
+            {
+                definition = Deserializer.Deserialize<PluginDefinition>(resolution.Yaml);
+            }
+            catch (YamlException ex)
+            {
+                return Invalid($"Plugin base '{definition.Extends}' is invalid: {ex.Message}");
+            }
         }
 
         if (definition is null)

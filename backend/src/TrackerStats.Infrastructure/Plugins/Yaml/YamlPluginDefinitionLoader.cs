@@ -163,6 +163,12 @@ public sealed class YamlPluginDefinitionLoader(
 
     private PluginDefinition DeserializeYamlDefinition(string content, string path)
     {
+        var definition = _deserializer.Deserialize<PluginDefinition>(content)
+            ?? throw new InvalidOperationException($"Plugin definition file '{path}' could not be deserialized.");
+        if (definition.Extends is null)
+            return definition;
+
+        RejectVersionViolation(definition, path);
         var resolution = PluginBaseResolver.Resolve(content, bases);
         if (!resolution.Succeeded)
             throw new InvalidOperationException($"Plugin definition '{path}' is invalid. {resolution.Error}");

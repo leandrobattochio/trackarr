@@ -46,7 +46,9 @@ public static class PluginValidatorCli
         }
 
         var bases = basesDirectory is null ? null : new PluginBaseStore(basesDirectory);
-        var checks = (bases?.GetInstalledIds().Select(id => (Path: Path.Combine(bases.DirectoryPath, $"{id}.yaml"), IsBase: true)) ?? [])
+        // Every .yaml file, so a base whose file name is not a valid id is reported instead of skipped.
+        IEnumerable<string> baseFiles = basesDirectory is null ? [] : Directory.EnumerateFiles(basesDirectory, "*.yaml").Order(StringComparer.Ordinal);
+        var checks = baseFiles.Select(path => (Path: path, IsBase: true))
             .Concat(paths.Select(path => (Path: path, IsBase: false)))
             .ToList();
 

@@ -86,6 +86,19 @@ public sealed class PluginBaseTests : IDisposable
             ChildYaml("tracker").Replace("schemaVersion: 2", "schemaVersion: 1"), bases: _bases);
 
         validation.Error.ShouldBe("Property 'extends' requires 'schemaVersion: 2' or later.");
+        PluginDefinitionValidator.Validate(ChildYaml("tracker").Replace("schemaVersion: 2", "schemaVersion: 1").Replace("shared", "missing"))
+            .Error.ShouldBe("Property 'extends' requires 'schemaVersion: 2' or later.", "the schema is the problem, not the missing base");
+    }
+
+    [Fact]
+    public void A_syntax_error_in_a_plugin_that_extends_a_base_should_point_at_the_line_as_written()
+    {
+        InstallBase(BaseYaml());
+        var child = "# comment\n\n" + ChildYaml("tracker").Replace("displayName:", "dispalyName:");
+
+        var error = PluginDefinitionValidator.Validate(child, bases: _bases).Error;
+
+        error.ShouldNotBeNull().ShouldContain("(line 4, column 1)");
     }
 
     [Theory]
@@ -181,7 +194,6 @@ public sealed class PluginBaseTests : IDisposable
         File.ReadAllText(_layout.GetBasePath("shared")).ShouldBe(BaseYaml());
         var state = _stateStore.Load();
         state.Bases["shared"].Version.ShouldBe("1.0.0");
-        state.Index!.Bases.ShouldNotBeNull().Keys.ShouldBe(["shared"]);
         state.Updates.ShouldBeEmpty("a first download is not an update");
         Load().ShouldHaveSingleItem().IsValid.ShouldBeTrue();
     }

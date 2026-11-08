@@ -20,19 +20,9 @@ public sealed class PluginBaseStore(string directory) : IPluginBaseLookup
         {
             return File.ReadAllText(Path.Combine(DirectoryPath, $"{baseId}.yaml"));
         }
-        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return null;
         }
     }
-
-    public IReadOnlyList<string> GetInstalledIds() =>
-        Directory.Exists(DirectoryPath)
-            ? Directory.EnumerateFiles(DirectoryPath, "*.yaml", SearchOption.TopDirectoryOnly)
-                .Select(Path.GetFileNameWithoutExtension)
-                .OfType<string>()
-                .Where(PluginSchema.IsValidPluginId)
-                .Order(StringComparer.Ordinal)
-                .ToList()
-            : [];
 }

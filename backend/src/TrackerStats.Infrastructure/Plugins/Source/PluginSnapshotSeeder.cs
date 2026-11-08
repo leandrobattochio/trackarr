@@ -71,7 +71,7 @@ public sealed class PluginSnapshotSeeder(
             });
         }
 
-        if (seedBases)
+        if (seedBases && index.Bases.Count > 0)
         {
             logger.LogInformation("Seeded {Count} plugin base(s) from the image snapshot: {BaseIds}",
                 seededBases.Count, string.Join(", ", seededBases.Keys));

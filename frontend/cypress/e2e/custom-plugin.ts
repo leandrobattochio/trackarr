@@ -37,7 +37,7 @@ Then("the editor should hold the blank template with a pluginId placeholder", ()
     .should((monaco) => {
       const value = getEditor(monaco).getValue();
       expect(value).to.match(/^pluginId: <your-plugin-id>$/m);
-      expect(value).to.match(/^schemaVersion: 1$/m);
+      expect(value).to.match(/^schemaVersion: 2$/m);
     });
 });
 

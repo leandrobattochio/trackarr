@@ -70,10 +70,6 @@ public sealed class PluginDownloadService(
                 fetch.Index.Plugins.ToDictionary(
                     entry => entry.Id,
                     entry => new IndexedPluginState(entry.Version, entry.SchemaVersion, entry.Sha256, entry.Changelog, entry.MinAppVersion),
-                    StringComparer.Ordinal),
-                fetch.Index.Bases.ToDictionary(
-                    entry => entry.Id,
-                    entry => new IndexedPluginState(entry.Version, entry.SchemaVersion, entry.Sha256, entry.Changelog, entry.MinAppVersion),
                     StringComparer.Ordinal));
 
             foreach (var update in run.Updates)
